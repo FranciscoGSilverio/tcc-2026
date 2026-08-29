@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Componentes do projeto — Engenharia de harness para agentes de IA</title>
+<style>
+  :root{
+    --bg:#F4F5F4;
+    --ink:#1B2429;
+    --soft:#5F6E75;
+    --line:#B9C3C1;
+    --frozen:#5C7480;
+    --cond:#5A4B93;
+    --instr:#0E6F66;
+    --gate:#8F2027;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{ box-sizing:border-box }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans); line-height:1.6;
+    padding:clamp(1.25rem,4vw,3rem);
+  }
+  .page{ max-width:1060px; margin:0 auto }
+
+  header{ margin-bottom:1.75rem }
+  .kicker{ font-size:.7rem; letter-spacing:.18em; text-transform:uppercase; color:var(--soft); margin:0 0 .4rem }
+  h1{ font-size:clamp(1.25rem,3vw,1.7rem); margin:0 0 .5rem; font-weight:650; letter-spacing:-.01em }
+  .sub{ margin:0; color:var(--soft); max-width:62ch; font-size:.95rem }
+
+  .board{ background:#fff; border:1px solid var(--line); border-radius:6px; padding:clamp(.75rem,2vw,1.5rem) }
+  svg{ display:block; width:100%; height:auto }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:.4rem 1.4rem; margin-top:1rem; font-size:.78rem; color:var(--soft) }
+  .legend span{ display:flex; align-items:center; gap:.45rem }
+  .sw{ width:11px; height:11px; border-radius:2px; flex:none }
+
+  footer{ margin-top:2rem; border-top:1px solid var(--line); padding-top:1.25rem }
+  .cal-title{ font-size:.7rem; letter-spacing:.18em; text-transform:uppercase; color:var(--soft); margin:0 0 .85rem }
+  .cal{ display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:.5rem }
+  .cal div{ border:1px solid var(--line); border-radius:4px; background:#fff; padding:.55rem .7rem }
+  .cal .id{ font-size:.72rem; font-weight:700; letter-spacing:.06em; color:var(--soft) }
+  .cal .dt{ font-size:.95rem; font-weight:650; display:block; margin:.05rem 0 .15rem }
+  .cal .wh{ font-size:.78rem; color:var(--soft); line-height:1.4 }
+  .cal div.key{ border-color:var(--gate); border-left-width:3px; background:#FCF4F4 }
+  .cal div.key .id, .cal div.key .dt{ color:var(--gate) }
+
+  @media print{
+    body{ background:#fff; padding:0 }
+    .board{ border:0; padding:0 }
+    footer{ break-inside:avoid }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="kicker">TCC · Engenharia de Software · INATEL</p>
+  <h1>Componentes do projeto</h1>
+  <p class="sub">Como as peças conversam entre si: o que entra congelado, o que o runner faz com isso a cada sessão, e o que sai do outro lado.</p>
+</header>
+
+<div class="board">
+<svg viewBox="0 0 1000 880" role="img" aria-label="Diagrama de componentes: entradas congeladas alimentam o runner, que prepara o ambiente, executa a sessão do agente e mede o resultado com instrumentos externos; a saída são dados que geram a análise, o artigo e o plugin.">
+  <defs>
+    <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="#5F6E75"/>
+    </marker>
+    <marker id="arw-i" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="#0E6F66"/>
+    </marker>
+    <style>
+      .bx{ fill:#fff; stroke:#B9C3C1; stroke-width:1.5; rx:5 }
+      .t{ font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; fill:#1B2429 }
+      .ttl{ font-size:14.5px; font-weight:650 }
+      .sm{ font-size:11.5px; fill:#5F6E75 }
+      .cap{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; fill:#5F6E75; font-weight:600 }
+      .ln{ stroke:#5F6E75; stroke-width:1.6; fill:none; marker-end:url(#arw) }
+      .ln-i{ stroke:#0E6F66; stroke-width:1.6; fill:none; marker-end:url(#arw-i); stroke-dasharray:6 4 }
+    </style>
+  </defs>
+
+  <!-- ===== ENTRADAS ===== -->
+  <text class="t cap" x="40" y="26">O que entra</text>
+
+  <rect class="bx" x="40"  y="42" width="215" height="74" stroke="#5C7480"/>
+  <text class="t ttl" x="147" y="72" text-anchor="middle">Repositório-semente</text>
+  <text class="t sm"  x="147" y="92" text-anchor="middle">API de reservas, congelada</text>
+  <text class="t sm"  x="147" y="107" text-anchor="middle">na tag seed-v1</text>
+
+  <rect class="bx" x="275" y="42" width="215" height="74" stroke="#5C7480"/>
+  <text class="t ttl" x="382" y="72" text-anchor="middle">Enunciados</text>
+  <text class="t sm"  x="382" y="92" text-anchor="middle">T1 bem especificada</text>
+  <text class="t sm"  x="382" y="107" text-anchor="middle">T2 ambígua</text>
+
+  <rect class="bx" x="510" y="42" width="215" height="74" stroke="#5A4B93"/>
+  <text class="t ttl" x="617" y="72" text-anchor="middle">Contexto</text>
+  <text class="t sm"  x="617" y="92" text-anchor="middle">P0 cru · P1 CLAUDE.md</text>
+  <text class="t sm"  x="617" y="107" text-anchor="middle">P2 plugin</text>
+
+  <rect class="bx" x="745" y="42" width="215" height="74" stroke="#5A4B93"/>
+  <text class="t ttl" x="852" y="72" text-anchor="middle">Modelo e ordem</text>
+  <text class="t sm"  x="852" y="92" text-anchor="middle">Haiku · Sonnet · Opus</text>
+  <text class="t sm"  x="852" y="107" text-anchor="middle">O1 única · O2 pipeline</text>
+
+  <path class="ln" d="M147,116 L147,182"/>
+  <path class="ln" d="M382,116 L382,182"/>
+  <path class="ln" d="M617,116 L617,182"/>
+  <path class="ln" d="M852,116 L852,182"/>
+
+  <!-- ===== RUNNER ===== -->
+  <rect x="40" y="186" width="920" height="262" rx="7" fill="#FAFBFA" stroke="#1B2429" stroke-width="1.8"/>
+  <text class="t cap" x="62" y="214">Runner — executa uma sessão, sem supervisão</text>
+
+  <rect class="bx" x="66"  y="240" width="262" height="120"/>
+  <text class="t ttl" x="197" y="278" text-anchor="middle">Prepara o ambiente</text>
+  <text class="t sm"  x="197" y="302" text-anchor="middle">clona a semente limpa</text>
+  <text class="t sm"  x="197" y="320" text-anchor="middle">e aplica o contexto P</text>
+
+  <rect class="bx" x="369" y="240" width="262" height="120" stroke="#1B2429"/>
+  <text class="t ttl" x="500" y="278" text-anchor="middle">Sessão do agente</text>
+  <text class="t sm"  x="500" y="302" text-anchor="middle">executa a tarefa na ordem O,</text>
+  <text class="t sm"  x="500" y="320" text-anchor="middle">sozinho, sem humano e sem rede</text>
+
+  <rect class="bx" x="672" y="240" width="262" height="120"/>
+  <text class="t ttl" x="803" y="278" text-anchor="middle">Mede o resultado</text>
+  <text class="t sm"  x="803" y="302" text-anchor="middle">roda os instrumentos</text>
+  <text class="t sm"  x="803" y="320" text-anchor="middle">sobre o que a sessão produziu</text>
+
+  <path class="ln" d="M328,300 L363,300"/>
+  <path class="ln" d="M631,300 L666,300"/>
+
+  <text class="t sm" x="500" y="400" text-anchor="middle" font-style="italic">A sessão é a unidade de dado. Este ciclo roda 55 vezes.</text>
+  <text class="t sm" x="500" y="424" text-anchor="middle" font-style="italic">Falha de infraestrutura invalida a sessão e ela é repetida.</text>
+
+  <!-- ===== INSTRUMENTOS ===== -->
+  <rect x="672" y="514" width="288" height="176" rx="6" fill="#F1F7F6" stroke="#0E6F66" stroke-width="1.8"/>
+  <text class="t cap" x="694" y="542" fill="#0E6F66">Instrumentos</text>
+
+  <rect class="bx" x="694" y="556" width="244" height="36" stroke="#0E6F66"/>
+  <text class="t sm" x="816" y="579" text-anchor="middle" fill="#1B2429">Testes ocultos — só T1</text>
+
+  <rect class="bx" x="694" y="600" width="244" height="36" stroke="#0E6F66"/>
+  <text class="t sm" x="816" y="623" text-anchor="middle" fill="#1B2429">Script de convenções</text>
+
+  <rect class="bx" x="694" y="644" width="244" height="36" stroke="#0E6F66"/>
+  <text class="t sm" x="816" y="667" text-anchor="middle" fill="#1B2429">Avaliador cego</text>
+
+  <path class="ln-i" d="M803,510 L803,366"/>
+  <text class="t sm" x="820" y="470" fill="#0E6F66">entram só aqui,</text>
+  <text class="t sm" x="820" y="486" fill="#0E6F66">com a sessão já encerrada</text>
+
+  <!-- ===== DADOS ===== -->
+  <path class="ln" d="M300,448 L300,508"/>
+
+  <rect x="40" y="514" width="560" height="106" rx="6" fill="#fff" stroke="#B9C3C1" stroke-width="1.5"/>
+  <text class="t cap" x="62" y="542">O que sai de cada sessão</text>
+
+  <rect class="bx" x="62" y="556" width="252" height="46"/>
+  <text class="t sm" x="188" y="584" text-anchor="middle" fill="#1B2429">uma linha em resultados.csv</text>
+
+  <rect class="bx" x="326" y="556" width="252" height="46"/>
+  <text class="t sm" x="452" y="578" text-anchor="middle" fill="#1B2429">diff e transcript arquivados</text>
+  <text class="t sm" x="452" y="594" text-anchor="middle">em sessoes/&lt;id&gt;/</text>
+
+  <!-- ===== ANÁLISE ===== -->
+  <path class="ln" d="M320,620 L320,678"/>
+
+  <rect class="bx" x="190" y="682" width="260" height="66" stroke="#1B2429"/>
+  <text class="t ttl" x="320" y="710" text-anchor="middle">Análise</text>
+  <text class="t sm"  x="320" y="731" text-anchor="middle">compara as células entre si</text>
+
+  <path class="ln" d="M260,748 L180,748 L180,796"/>
+  <path class="ln" d="M380,748 L460,748 L460,796"/>
+
+  <rect class="bx" x="60"  y="800" width="240" height="62"/>
+  <text class="t ttl" x="180" y="828" text-anchor="middle">Artigo</text>
+  <text class="t sm"  x="180" y="848" text-anchor="middle">entregável da banca</text>
+
+  <rect class="bx" x="340" y="800" width="240" height="62"/>
+  <text class="t ttl" x="460" y="828" text-anchor="middle">Plugin</text>
+  <text class="t sm"  x="460" y="848" text-anchor="middle">a condição P2, publicada</text>
+
+  <path class="ln" d="M617,120 L617,180" opacity="0"/>
+</svg>
+</div>
+
+<div class="legend">
+  <span><i class="sw" style="background:#5C7480"></i>artefatos congelados</span>
+  <span><i class="sw" style="background:#5A4B93"></i>condições que variam</span>
+  <span><i class="sw" style="background:#0E6F66"></i>instrumentos de medida</span>
+</div>
+
+<footer>
+  <p class="cal-title">Calendário de entregas</p>
+  <div class="cal">
+    <div><span class="id">M1</span><span class="dt">06/09</span><span class="wh">Enunciados e pontos de decisão escritos</span></div>
+    <div><span class="id">M2</span><span class="dt">13/09</span><span class="wh">Primeira sessão de ponta a ponta; semente congelada</span></div>
+    <div class="key"><span class="id">M3</span><span class="dt">20/09</span><span class="wh">Piloto aprovado; protocolo congelado</span></div>
+    <div><span class="id">M4</span><span class="dt">27/09</span><span class="wh">Grade coletada — 30 sessões</span></div>
+    <div class="key"><span class="id">M5</span><span class="dt">03/10</span><span class="wh">Pré-defesa</span></div>
+    <div><span class="id">M6</span><span class="dt">11/10</span><span class="wh">Coleta completa — mais 25 sessões</span></div>
+    <div><span class="id">M7</span><span class="dt">08/11</span><span class="wh">Artigo escrito e plugin publicado</span></div>
+    <div class="key"><span class="id">M8</span><span class="dt">14/11</span><span class="wh">Entrega do artigo</span></div>
+    <div><span class="id">M9</span><span class="dt">05/12</span><span class="wh">Apresentação à banca</span></div>
+  </div>
+</footer>
+
+</div>
+</body>
+</html>
