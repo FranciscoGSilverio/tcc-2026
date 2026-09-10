@@ -83,6 +83,17 @@ const checks = [
     });
     assert.equal(response.status, 500);
   }],
+  ['booking that points at a user that does not exist', async () => {
+    const ids = await fixture();
+    const response = await call('POST', '/bookings', {
+      roomId: ids.roomId,
+      userId: 'missing-user',
+      title: 'Audit',
+      startsAt: at(24),
+      endsAt: at(25),
+    });
+    assert.equal(response.status, 500);
+  }],
 ];
 
 let failed = 0;
