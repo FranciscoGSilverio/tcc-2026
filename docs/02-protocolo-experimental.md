@@ -31,13 +31,18 @@ Um projeto **funcional, pequeno e com convenções claras**. Funcional porque o 
 |---|---|
 | Stack | Node 22 · TypeScript · Fastify · Prisma com SQLite · Vitest · ESLint + Prettier |
 | Domínio | API REST de reservas de salas |
-| Tamanho alvo | 1500 a 2500 linhas de código de produção |
-| Estrutura | `src/modules/<recurso>/` com as camadas `routes.ts`, `service.ts`, `repository.ts`, `schema.ts` |
-| Recursos implementados | `rooms`, `users` e `bookings`, todos com CRUD completo seguindo a estrutura acima |
-| Testes existentes | 30 a 40 testes cobrindo os recursos existentes |
+| Estrutura canônica | `src/modules/<recurso>/` com as camadas `routes.ts`, `service.ts`, `repository.ts`, `schema.ts`, mais `src/shared/` e uma camada de plugins |
+| Recursos implementados | `rooms`, `users` e `bookings` no padrão canônico, mais `amenities` deliberadamente fora dele |
+| Testes existentes | Cobrem o CRUD dos quatro módulos, a paginação, os caminhos de erro e o único caso de conflito que a semente detecta |
 | Congelamento | Tag git `seed-v1`. Nenhuma alteração após o congelamento |
 
-**O módulo `bookings` entra na semente em versão ingênua**: cria, lista, atualiza e cancela reservas, **sem nenhuma validação de conflito de horário e sem regras de duração**. Isso é intencional e é o que torna as duas tarefas possíveis a partir do mesmo commit — T1 adiciona as validações que faltam, T2 parte do problema que a ausência delas causa.
+**O módulo `bookings` entra na semente com validação parcial e incompleta**, não ausente. Ele detecta apenas um dos quatro casos de sobreposição, aquele em que o início da nova reserva cai dentro de uma reserva existente. Não valida conflito na atualização, não valida reserva no passado, não impõe duração mínima nem máxima, e responde 500 em vez de 404 para sala ou usuário inexistente.
+
+**Regra do falso negativo.** Todo defeito da semente deixa passar o que não deveria; nenhum recusa o que deveria aceitar. A borda já é estrita e reservas canceladas já são ignoradas justamente para não haver falso positivo em lugar nenhum. Isso não é generosidade com o agente: é exigência estrutural. Se a semente recusasse indevidamente, o sintoma do ticket de T2 passaria a ser explicado por esse defeito, o agente encontraria o bug, corrigiria, e T2 colapsaria em T1, destruindo o instrumento de convergência.
+
+É essa configuração que torna as duas tarefas possíveis a partir do mesmo commit. T1 completa o contrato de validação; T2 parte de um serviço onde os conflitos são reais e o problema é descobrir horários livres.
+
+**Um módulo foge do padrão de propósito.** `amenities` tem dois arquivos em vez de quatro, devolve array puro em vez do envelope de paginação e responde erro por um auxiliar diferente. Nada no código declara qual padrão é o vigente. Isso é o que dá valor mensurável ao mapa que P1 fornece: num repositório de módulos idênticos, o padrão é auto-evidente e P0 adere tão bem quanto P1, atenuando o fator de contexto por artefato do instrumento. O domínio escolhido é distante de tempo e intervalos, para não empurrar as sessões de T2 para uma mesma forma de solução.
 
 Os testes existentes têm função específica no experimento: detectar **regressão**. Se o agente quebra algo que já funcionava, esses testes acusam.
 
@@ -45,9 +50,11 @@ A escolha do domínio de reservas é deliberada. Regras de sobreposição de hor
 
 ### 2.2 Tarefa T1 — bem especificada
 
-**Adicionar detecção de conflito e regras de validação ao módulo de reservas existente.**
+**Completar o contrato de validação do módulo de reservas existente.**
 
-O enunciado descreve o comportamento esperado em termos de **contrato HTTP** — rotas, formatos, códigos de status, regras de negócio — nunca em termos de implementação interna. Regras a especificar: reservas não podem se sobrepor na mesma sala; a sobreposição é estrita (uma reserva terminando às 10h e outra começando às 10h é permitida); reservas no passado são rejeitadas; duração mínima de 30 minutos e máxima de 8 horas; sala inexistente retorna 404; cancelar uma reserva libera o horário.
+O enunciado descreve o comportamento esperado em termos de **contrato HTTP** — rotas, formatos, códigos de status, regras de negócio — nunca em termos de implementação interna. As regras valem tanto para a criação quanto para a atualização, o que é onde a semente mais falha. Regras especificadas: reservas ativas não podem se sobrepor na mesma sala, em nenhuma forma de sobreposição; a sobreposição é estrita nas bordas, de modo que uma reserva terminando às 10h e outra começando às 10h convivem; reserva cancelada não ocupa horário; reservas no passado são rejeitadas; duração mínima de 30 minutos e máxima de 8 horas; o fim precisa ser posterior ao início; sala ou usuário inexistente retorna 404; os erros seguem o formato já usado pela API; nenhum comportamento existente e não citado muda.
+
+O texto integral e versionado do enunciado está registrado em R4.12 do `00-log-sessao-planejamento.md`.
 
 Instrumento de medida: **testes ocultos**.
 
@@ -91,7 +98,7 @@ Se uma sessão não tomar posição sobre um ponto (por exemplo, não construiu 
 
 ### 2.5 Testes ocultos (T1)
 
-Uma suíte de 15 a 20 asserções que sobe a aplicação e a exercita por HTTP.
+Uma suíte que sobe a aplicação e a exercita por **HTTP real**, contra o servidor iniciado pelo runner, com uma asserção por regra do enunciado e por caso de borda. Nunca por importação de módulo do projeto: importar quebraria a suíte quando o agente renomeasse um arquivo, e a falha seria defeito do instrumento, não do agente.
 
 Regras obrigatórias de construção:
 
@@ -105,11 +112,19 @@ Regras obrigatórias de construção:
 
 Inspeciona o diff e conta violações de regras do projeto, de forma determinística. Cada item vale uma violação:
 
-- arquivo de código criado fora da estrutura `src/modules/<recurso>/`
-- nova dependência adicionada ao `package.json` (proibido nas duas tarefas)
-- uso de `any` em TypeScript
-- endpoint criado ou alterado sem validação de schema
-- nenhum teste escrito pelo agente
+1. arquivo de código de produção criado fora de `src/modules/<recurso>/` ou `src/shared/`
+2. dependência acrescentada ao `package.json`
+3. arquivo de configuração do projeto alterado: `tsconfig`, ESLint, Prettier, Vitest, `Dockerfile`, `Makefile` ou scripts do `package.json`
+4. uso de `any`, `as any`, `@ts-ignore`, `@ts-expect-error` ou asserção não-nula em código de produção
+5. rota criada ou alterada sem schema de validação declarado
+6. nenhum teste escrito pelo agente
+7. teste pré-existente da semente alterado ou removido
+8. chamada de `console.*` em código de produção, tendo o projeto um logger
+9. teste marcado com `.skip`, `.only` ou `.todo`
+
+A regra 1 admite `src/shared/` porque a redação anterior transformaria em violação qualquer utilitário compartilhado legítimo, penalizando exatamente o bom design que a pergunta 6 do checklist premia.
+
+O conjunto foi ampliado de cinco para nove regras porque a métrica original variava entre zero e dois por sessão, e porque a regra 2 sozinha é fraca: nenhum dos dois enunciados leva naturalmente o agente a instalar uma biblioteca. Manteve-se a regra 2 assim mesmo, com duas providências. A semente não inclui nenhuma biblioteca de data, fazendo aritmética de tempo com `Date` puro, que é a única tentação honesta possível sem tocar no enunciado. E se a regra não disparar em nenhuma sessão, isso é reportado como resultado, não tratado como buraco.
 
 Estas regras são as mesmas declaradas ao agente nos níveis P1 e P2. Em P0 o agente não é informado delas — o que é exatamente o ponto: mede-se quanto o comportamento default diverge do padrão do projeto.
 
@@ -165,17 +180,23 @@ Como o trabalho é **segmentado**. O runner executa uma sequência fixa de chama
 **O2 — Pipeline segmentado.** Quatro chamadas encadeadas:
 
 1. *Explore o repositório e descreva a arquitetura, as convenções e os arquivos relevantes para a tarefa a seguir. Não altere nenhum arquivo. Tarefa: [enunciado]*
-2. *Com base na exploração, escreva um plano de implementação passo a passo. Não altere nenhum arquivo.*
+2. *Com base na exploração, escreva um plano de implementação passo a passo. O plano vai na sua resposta, não em arquivo. Não altere nem crie nenhum arquivo.*
 3. *Implemente o plano.*
 4. *Execute os testes e a verificação de tipos. Corrija os problemas encontrados.*
 
 O texto do enunciado é idêntico nos dois níveis. O que muda é a segmentação e a existência de checkpoints explícitos.
 
+> **Por que o passo 2 proíbe gravar o plano em arquivo.** Se o agente gravasse, ele criaria arquivo fora da estrutura em toda sessão O2, disparando a regra 1 do script de convenções de forma sistemática. O fator ordem ficaria confundido com a métrica de violações.
+
 > **Separação entre P e O.** O plugin (P2) inclui um comando de workflow para uso real, mas **no experimento a ordem é sempre imposta pelo runner**, uniformemente em todos os níveis de P. Sem essa separação, P2 e O2 estariam confundidos e nenhum efeito seria atribuível a um ou outro.
 
 ### 3.4 Constantes
 
-Idênticos em toda sessão: commit-semente, texto do enunciado, limite de 40 turnos somados todos os passos, permissões de ferramenta, versões de Node e dependências, ausência de acesso à internet durante a sessão, e ausência de intervenção humana.
+Idênticos em toda sessão: commit-semente, texto do enunciado, limite de 40 turnos somados todos os passos, permissões de ferramenta, imagem de contêiner e versões de Node e dependências, versão do CLI do agente, e ausência de intervenção humana.
+
+**O agente tem acesso irrestrito à internet durante a sessão.** Isto revoga a restrição prevista em versões anteriores deste protocolo. A justificativa é de validade ecológica: buscar informação quando falta é o que um agente faz em uso real, e proibir isso mediria um agente que não existe na prática. Duas consequências foram registradas. A violação "dependência acrescentada" passa a ser genuinamente alcançável, o que sem rede nunca seria o caso, já que a instalação falharia e o agente recuaria. E o repositório de artefatos permanece **privado até o encerramento da coleta em M6**, porque um agente com busca poderia encontrar os testes ocultos, os pontos de decisão ou este próprio protocolo, invalidando silenciosamente a verificação 5 do portão do piloto.
+
+**Toda sessão do dataset roda em série e na mesma máquina.** Paralelizar contaminaria `duracao_s` por disputa de CPU, e essa é justamente a métrica usada para interpretar a assimetria entre O1 e O2.
 
 **Frase de encerramento**, anexada ao enunciado das duas tarefas:
 
@@ -257,14 +278,18 @@ O script que executa uma sessão de ponta a ponta, sem supervisão. **É o item 
 
 Entrada: identificação da célula (modelo, nível P, nível O), tarefa, número da execução.
 
-1. **Preparar.** Criar diretório de trabalho descartável, clonar a semente na tag `seed-v1`, instalar dependências, rodar a suíte existente e confirmar que tudo passa. Se não passar, abortar — o ambiente está corrompido.
+1. **Preparar.** Subir um contêiner a partir da imagem de sessão, materializar a árvore da semente na tag `seed-v1`, inicializar um repositório git novo com um único commit de mensagem neutra, rodar a suíte existente e confirmar que tudo passa. Se não passar, abortar — o ambiente está corrompido.
+
+   O agente executa **dentro do contêiner**, o que dá ambiente idêntico nas 55 sessões independentemente da máquina, torna `duracao_s` comparável, e contém o raio de dano, o que é o que permite conceder permissão total de ferramentas em sessões sem supervisão. O commit único de mensagem neutra elimina por construção o vazamento por histórico do git, que seria fatal e é fácil de esquecer.
 2. **Aplicar o nível P.** P0: nada. P1: copiar o `CLAUDE.md`. P2: instalar o plugin.
 3. **Executar o nível O.** Uma chamada (O1) ou quatro encadeadas (O2) ao agente em modo headless, com o modelo da célula e o limite de 40 turnos. Capturar transcript e uso de tokens.
 4. **Verificar o estado.** Build, verificação de tipos e suíte pré-existente. Registrar resultados.
+
+   Três garantias de isolamento valem daqui em diante, e protegem as medições de serem sabotadas pelo próprio agente. Os comandos de verificação vêm do Makefile **congelado**, nunca da cópia que o agente pode ter editado. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão, e separadamente registra-se se o agente os alterou, o que é a regra 7 do script de convenções. E o servidor é iniciado pelos comandos congelados, com o runner aguardando `GET /health` responder antes de aplicar a suíte oculta.
 5. **Aplicar os testes ocultos** — só em T1, e só agora, nunca antes.
 6. **Rodar o script de convenções** sobre o diff.
 7. **Rodar o avaliador cego**: checklist de qualidade em ambas as tarefas, classificação dos pontos de decisão em T2. Três chamadas por pergunta, voto majoritário, sem qualquer informação sobre a condição.
-8. **Registrar.** Escrever a linha em `resultados.csv` e arquivar diff e transcript em `sessoes/<id>/`.
+8. **Registrar.** Escrever a linha em `resultados.csv` e arquivar em `sessoes/<id>/` o diff, o transcript bruto em JSON para reprocessamento programático, e uma transcrição legível em markdown com a sequência de prompts, respostas e chamadas de ferramenta. A segunda existe para permitir análise qualitativa do comportamento do agente depois que os dados quantitativos estiverem fechados, e custa quase nada, já que o transcript bruto vem da API de qualquer forma.
 9. **Limpar.** Destruir o diretório de trabalho.
 
 O runner deve ser idempotente e re-executável. Sessão que falha por erro de infraestrutura (rede, quota, timeout) é marcada inválida e re-executada, nunca aproveitada parcialmente.
@@ -297,11 +322,14 @@ Análise **descritiva e exploratória**. Com o número de observações por cél
 | **Contaminação de treino** | Construto | O domínio é comum em material público. Afeta o nível absoluto de acerto, não a comparação entre condições, já que se aplica igualmente a todas |
 | **Testes ocultos como proxy de qualidade** | Construto | Aprovar testes não é produzir bom código. Declaramos medir correção funcional, aderência a convenções e convergência — não qualidade de design em sentido amplo |
 | **Ambiguidade de requisito, não visual** | Externa | T2 captura requisito vago em backend. Tarefas de interface e experiência visual não foram cobertas |
+| **Semente escrita por agente** | Interna | A semente é construída com assistência de um modelo da mesma família sob teste. Revisão humana da árvore inteira é critério de aceite; declarada no artigo; aplica-se igualmente a todas as condições |
+| **Acesso à internet durante a sessão** | Interna | Escolha deliberada de validade ecológica. Introduz variação temporal do conteúdo consultável entre janelas de coleta, parcialmente coberta pela célula de controle de drift. Mitigada quanto a vazamento pelo repositório de artefatos privado até M6 |
+| **Repositório pequeno atenua o fator contexto** | Construto | Num repositório de módulos idênticos o padrão é auto-evidente e P0 adere tão bem quanto P1. Tratada com ambiguidade estruturada e não com volume: um módulo desviante, uma camada de plugins e um auxiliar substituído. Bagunça aleatória foi recusada porque levantaria o piso de ruído em vez do sinal |
 | **Generalização** | Externa | Uma stack, um domínio, duas tarefas, uma família de modelos. Nenhuma extrapolação é feita |
 
 ## 9. Congelamento
 
-**O congelamento acontece no marco M3, imediatamente após o piloto ser aprovado.** Ver a seção 2 do `03-plano-de-execucao.md` para as onze verificações que compõem esse portão.
+**O congelamento acontece no marco M3, imediatamente após o piloto ser aprovado.** Ver a seção 2 do `03-plano-de-execucao.md` para as doze verificações que compõem esse portão.
 
 A ordem importa: o piloto é a última oportunidade de descobrir que uma tarefa tem efeito teto, que os pontos de decisão não se aplicam às saídas, que os testes ocultos falham por motivo irrelevante ou que o avaliador cego é instável. Todas essas correções são legítimas antes do congelamento e ilegítimas depois. Congelar cedo demais transformaria problemas corrigíveis em defeitos permanentes do dataset.
 

@@ -304,3 +304,167 @@ M2 foi antecipado para exigir **uma sessão de ponta a ponta rodando já em 13/0
 | M9 | até 05/12 | Apresentação |
 
 **Contingência acrescentada e destacada:** se M2 ou M3 atrasarem, todo o cronograma desloca junto. Nunca se pula ou abrevia o piloto para recuperar tempo. Esta é a regra que sessões futuras devem defender com mais firmeza, porque é a que estará sob maior pressão quando houver atraso.
+
+---
+
+# Rodada 4 — 09/09/2026
+
+Sessão dedicada a especificar o **repositório-semente**, primeiro componente a ser construído por haver dependência de todos os demais em relação a ele. O log continua cumulativo: nada acima foi reescrito. Esta rodada revisa pontos das rodadas 1 a 3 onde indicado explicitamente.
+
+**Contexto de abertura:** M1 estava previsto para 06/09 e a sessão ocorre em 09/09, três dias após. Nenhum artefato de código existia ainda; o repositório continha apenas os quatro documentos de planejamento.
+
+## R4.1 Contradição entre o ticket de T2 e a semente ingênua — corrigida
+
+**Problema encontrado na revisão.** A seção 2.1 do protocolo manda a semente ter `bookings` "sem nenhuma validação de conflito de horário". A seção 2.3 traz o ticket RES-142, cujo sintoma é que os usuários "tentam criar uma reserva e recebem erro de conflito". O ponto de decisão 10 fala em "enriquecer o erro 409". Os dois textos são incompatíveis: numa semente sem checagem de conflito não existe 409 algum.
+
+**Consequência se não corrigido.** O agente de T2 explora o código, não encontra detecção de conflito, conclui que o ticket pede detecção de conflito e implementa T1. T2 colapsaria em T1 e o instrumento de convergência seria destruído.
+
+**Alternativas consideradas:** (a) semente com checagem parcial; (b) reescrever o ticket para não pressupor 409; (c) manter os dois como estão.
+
+**Decisão do usuário: (a).** A semente passa a conter uma detecção de conflito **parcial e incompleta**. T1 deixa de ser "adicionar detecção de conflito" e passa a ser "completar o contrato de validação de reservas".
+
+**Benefício colateral:** corrigir comportamento existente é mais difícil que acrescentar comportamento do zero, o que ataca diretamente o efeito teto em T1 — o risco de maior impacto do projeto desde a rodada 1.
+
+**Efeito no protocolo:** a seção 2.1 do `02-protocolo-experimental.md` precisa ser reescrita, e o título de T1 na seção 2.2 também.
+
+## R4.2 Regra do falso negativo — todos os defeitos da semente deixam passar, nenhum recusa
+
+**Problema de segunda ordem descoberto logo após R4.1.** Se o defeito da semente for um **falso positivo** — recusar reserva que deveria aceitar — então o ticket RES-142 passa a ser *explicado* por esse defeito. O agente de T2 encontra o bug, corrige, e T2 volta a colapsar em T1 por outro caminho. Isso vale para qualquer bug de borda inclusiva ou de contagem de reservas canceladas como ocupadas, que eram as duas calibragens inicialmente propostas.
+
+**Decisão do usuário:** regra de projeto para a semente — **todo defeito da versão ingênua é falso negativo**. A semente deixa passar o que não deveria, e nunca recusa o que deveria aceitar. Quem recebe 409 está batendo em conflito verdadeiro, e o ticket vira um problema de descoberta de horários livres, que é o que se quer medir.
+
+**Comportamento ingênuo resultante, congelado como especificação da semente:**
+
+- A checagem de conflito no `POST` detecta **apenas um dos quatro casos de sobreposição**: aquele em que o início da nova reserva cai dentro de uma reserva existente. Deixa passar o fim caindo dentro de outra e a nova reserva que engole uma existente.
+- Comparação de borda já é estrita, para não gerar falso positivo.
+- Reservas canceladas já são corretamente ignoradas, pelo mesmo motivo.
+- A atualização (`PATCH`) não faz nenhuma validação de conflito.
+- Não há validação de reserva no passado.
+- Não há regra de duração mínima nem máxima.
+- Sala ou usuário inexistente resulta em erro 500, não em 404.
+
+**Benefício:** raciocinar sobre os quatro casos de intervalo é genuinamente sutil, o que combate o efeito teto melhor que as calibragens antes cogitadas.
+
+## R4.3 Camada de dados — Prisma com SQLite mantido, com duas exigências
+
+**Questionamento do usuário:** depender de um recurso que aumenta a complexidade do setup aumenta a complexidade do runner; ponderar impacto no runner, na metodologia e na precisão e no tempo das medições.
+
+**Análise registrada:**
+
+- *Runner.* Com imagem Docker construída uma vez, contendo dependências instaladas e cliente do Prisma já gerado, o runner nunca sabe que o Prisma existe: ele chama alvos do Makefile. A complexidade é paga uma vez na semente, não por sessão.
+- *Única fraqueza estrutural do Prisma.* O cliente gerado vive em `node_modules` e fica velho se o agente editar o schema. Resolvido fazendo o alvo de verificação regenerar o cliente quando o hash do schema mudar. Como nem T1 nem T2 exigem mudança de schema, o caso é raro por construção.
+- *Metodologia.* O argumento decisivo inverteu a inclinação inicial por SQL escrito à mão. O plano de análise usa a dispersão entre execuções da mesma célula como piso de ruído, e declara que diferença menor que esse piso não pode ser lida como efeito. Variância vinda de brigar com SQL é ruído sem relação com o construto: levanta o piso e esconde os efeitos de harness. **A dificuldade de T1 deve vir do conjunto de regras do enunciado, que a equipe controla, e não da tecnologia da camada de dados.**
+- *Tempo e precisão.* Prisma acrescenta de 5 a 15 s por verificação e cerca de 250 MB à imagem, contra zero e 70 MB da alternativa. Irrelevante diante de uma sessão dominada pelos turnos do agente.
+
+**Decisão do usuário:** manter **Prisma com SQLite**, com duas exigências que entram como critério de aceite da semente: imagem com tudo pré-instalado, e alvo de verificação auto-curativo que regenera o cliente quando necessário.
+
+## R4.4 Ambiente de execução — agente dentro do container, com internet liberada
+
+**Decisão do usuário, parte 1:** o agente executa **dentro do container**. A semente entrega a imagem base da aplicação; o runner estende essa imagem com o CLI do agente. Motivos: ambiente idêntico nas 55 sessões independentemente da máquina, `duracao_s` comparável entre sessões, e raio de dano contido, o que torna confortável conceder permissão total de ferramentas em sessões cem por cento autônomas.
+
+**Decisão do usuário, parte 2 — revisão de decisão anterior:** **não há restrição de acesso à internet durante a sessão.** Racional do usuário: "se o agente decidir que precisa de mais informação, que busque; isso é o que um agente faz na vida real". É uma escolha de validade ecológica.
+
+**Isto revoga a constante correspondente da seção 3.4 do protocolo**, que listava "ausência de acesso à internet durante a sessão" entre os itens idênticos em toda sessão. A seção precisa ser reescrita, e a escolha declarada nas ameaças à validade.
+
+**Efeito colateral positivo:** com rede, a violação "adicionou dependência nova" passa a ser genuinamente alcançável. Sem rede, a instalação falharia e o agente recuaria, de modo que essa regra do script de convenções nunca mediria nada.
+
+**Risco novo e mitigação obrigatória:** com internet liberada, um agente pode encontrar por busca os testes ocultos, os pontos de decisão e o próprio protocolo, o que invalidaria silenciosamente a verificação 5 do portão do piloto. Mitigação decidida: **o repositório de artefatos permanece privado até o encerramento da coleta em M6**, e nada dentro da semente menciona o estudo, o TCC ou o INATEL.
+
+## R4.5 Execução em série e máquina única
+
+Decidido junto com R4.4. As sessões do dataset rodam **em série e na mesma máquina**. Paralelizar contaminaria `duracao_s` por disputa de CPU, e essa é justamente a métrica usada para interpretar a assimetria entre O1 e O2. Em série, as 55 sessões cabem em uma madrugada.
+
+## R4.6 Transcrição legível por sessão
+
+**Pedido do usuário:** além do resultado final, guardar um markdown por sessão mostrando como o agente se comportou, para análise futura depois de os dados serem coletados.
+
+**Decidido:** o runner grava **dois arquivos por sessão** — o transcript bruto em JSON, para reprocessamento programático, e um markdown legível com a sequência de prompts, respostas e chamadas de ferramenta. Custo próximo de zero, já que o transcript bruto vem da API de qualquer forma. Pertence à spec do runner; registrado aqui para não se perder.
+
+## R4.7 Script de convenções ampliado de cinco para nove regras
+
+**Crítica do usuário:** nenhum dos dois enunciados leva o agente a instalar uma biblioteca nova, então a regra "dependência acrescentada ao package.json" não mede nada.
+
+**Análise:** a crítica procede. Das cinco regras originais, quatro têm sinal real — arquivo fora da estrutura e endpoint sem schema disparam em T2, que cria endpoint novo; ausência de testes escritos pelo agente é a que mais separa P0 de P1; `any` é moderada. Só a de dependência é fraca.
+
+**Alternativa rejeitada:** criar um ímã de biblioteca no enunciado. Os únicos ímãs fortes são conversão de fuso horário e regras de recorrência. Fuso traz risco de teste oculto instável, que é a verificação 7 do portão do piloto; recorrência dobra o tamanho de T1. Pelo critério do próprio usuário — aumento de escopo só se justifica se a ausência invalidar a pesquisa — nenhum dos dois se justifica, porque a métrica de violações sobrevive nas outras quatro regras.
+
+**Decisão do usuário:** ampliar o script para **nove regras determinísticas**, cada uma um grep no diff, com custo próximo de zero e nenhum acréscimo de tempo de sessão:
+
+1. Arquivo de produção criado fora de `src/modules/<recurso>/` ou `src/shared/`
+2. Dependência acrescentada ao `package.json`
+3. Arquivo de configuração do projeto alterado (`tsconfig`, ESLint, Prettier, Vitest, `Dockerfile`, `Makefile`, scripts do `package.json`)
+4. Uso de `any`, `as any`, `@ts-ignore`, `@ts-expect-error` ou asserção não-nula em código de produção
+5. Rota criada ou alterada sem schema de validação declarado
+6. Nenhum teste escrito pelo agente
+7. Teste pré-existente da semente alterado ou removido
+8. Chamada de `console.*` em código de produção, tendo o projeto um logger
+9. Teste marcado com `.skip`, `.only` ou `.todo`
+
+**Nota sobre a regra 1:** a redação original do protocolo dizia apenas "fora de `src/modules/<recurso>/`", o que transformaria em violação qualquer utilitário compartilhado legítimo — penalizando exatamente o bom design que o checklist do avaliador premia. A regra passa a admitir `src/shared/`.
+
+**Decidido junto:** a semente **não inclui nenhuma biblioteca de data**, e faz aritmética de tempo com `Date` puro mais um auxiliar local. É a tentação máxima que se pode criar para a regra 2 sem tocar no enunciado. Se a regra nunca disparar nas 55 sessões, isso é reportado como resultado, não tratado como buraco.
+
+**Todas as nove regras devem ser declaradas ao agente em P1 e P2**, e nenhuma em P0, mantendo a definição operacional do fator de contexto.
+
+## R4.8 Confusão entre o fator ordem e a regra de arquivos — descoberta e corrigida
+
+O passo 2 do pipeline O2 pede ao agente que escreva um plano de implementação. Se ele gravar esse plano em arquivo, viola a regra de estrutura em **toda** sessão O2, confundindo o fator ordem com a métrica de violações.
+
+**Correção:** o prompt do passo 2 de O2 deve dizer explicitamente que o plano vai na resposta, não em arquivo. Aplicar na seção 3.3 do protocolo.
+
+## R4.9 ESLint com `no-explicit-any` como erro
+
+**Decisão do usuário.** A semente é um projeto realista e reprova `any` no lint. Se o agente roda a verificação, ele corrige; se não roda, a violação é contada pelo script. **Rodar ou não rodar a verificação passa a ser parte do efeito de harness medido**, o que é legítimo e defensável na banca.
+
+## R4.10 Idioma
+
+**Decisão do usuário:** código, identificadores, mensagens de erro, comentários, README e histórico de commits da semente em **inglês**, que é o padrão de uma base Node e o que torna o artefato publicado legível por terceiros. Os **enunciados de T1 e T2 permanecem em português**, refletindo o cenário real de um time brasileiro. A mistura vai declarada no artigo.
+
+## R4.11 README mínimo
+
+**Decisão do usuário, com racional textual:** "dar informação ao agente é parte do harness; se quisermos medir o impacto real de uma execução sem contexto, o readme não pode dar informações demais. O padrão de projeto e estrutura vai vir conforme o fator prompt for alterado entre sessões."
+
+**Aplicado:** o README da semente contém uma linha sobre o que a API faz e os comandos para instalar, rodar e testar. Sem arquitetura, sem convenções, sem explicação de camadas. É o que preserva o contraste entre P0 e P1.
+
+Pela mesma lógica, a semente **não contém** `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.github/`, nem qualquer outro arquivo de orientação a agente ou a contribuidor.
+
+## R4.12 Enunciado de T1 — texto candidato
+
+Escrito nesta sessão, cumprindo a entrega de M1. Reflete R4.1 e R4.2.
+
+> **T1 — Regras de validação de reservas**
+>
+> A API de reservas aceita hoje pedidos que não deveria aceitar. Ajuste o comportamento para que o contrato abaixo seja verdadeiro. As regras valem tanto para a criação quanto para a atualização de uma reserva.
+>
+> 1. Duas reservas ativas na mesma sala não podem ocupar o mesmo intervalo de tempo, em nenhuma forma de sobreposição. A comparação é estrita nas bordas: uma reserva que termina às 10:00 e outra que começa às 10:00 convivem. Pedido que viole a regra responde 409. Ao atualizar, a comparação considera as demais reservas ativas da sala.
+> 2. Reserva cancelada não ocupa horário. Cancelar uma reserva libera o intervalo.
+> 3. Reserva cujo início já passou é rejeitada com 400.
+> 4. A duração mínima é de 30 minutos e a máxima de 8 horas, ambas permitidas. Fora desse intervalo, 400.
+> 5. O fim precisa ser posterior ao início. Caso contrário, 400.
+> 6. Pedido que referencia sala ou usuário inexistente responde 404.
+> 7. Os erros seguem o formato já usado pela API.
+> 8. Nenhum comportamento existente e não citado acima deve mudar.
+>
+> Não há canal para dúvidas nesta execução. Decida e implemente.
+
+Escolhas de redação registradas: a expressão "em nenhuma forma de sobreposição" especifica os quatro casos sem enumerá-los, mantendo T1 completa sem entregar a resposta. A frase "a comparação considera as demais reservas ativas da sala" cobre o caso clássico da reserva que conflita consigo mesma ao ser atualizada, sem chamar atenção para ele.
+
+**T2 permanece com o texto da seção 2.3 do protocolo**, acrescido da frase de encerramento. A cláusula sobre quem organiza várias reservas de uma vez é preservada: é a única do ticket que abre caminho para recorrência ou operação em lote, onde uma biblioteca externa seria plausível.
+
+## R4.13 Congelamento dos enunciados continua em M3
+
+O usuário levantou a possibilidade de congelar os enunciados nesta sessão. **Mantido em M3.** Congelar antes do piloto retiraria do projeto as duas contingências que mais importam — efeito teto em T1 e calibragem de ambiguidade de T2 — que só o piloto pode revelar. Os textos ficam definitivos e versionados agora, e M3 segue sendo o único ponto onde ainda podem mudar. Isso é consistente com R3.3.
+
+## R4.14 Medição de regressões com testes da semente restaurados
+
+**Problema:** o agente pode alterar ou apagar testes pré-existentes para fazê-los passar, o que corromperia a métrica `regressoes`.
+
+**Decidido:** antes de medir regressões, o runner **restaura os arquivos de teste da semente a partir da versão congelada**. Separadamente, registra se o agente os alterou, o que passa a ser a regra 7 do script de convenções (R4.7).
+
+**Decidido junto:** nenhum teste da semente pode afirmar como esperado um comportamento que T1 corrige. Se um teste existente afirmasse que duas reservas sobrepostas retornam 201, a solução correta de T1 quebraria um teste pré-existente e toda sessão de T1 registraria regressão falsa. Isso entra como critério de aceite da semente.
+
+## R4.15 Itens em aberto após esta rodada
+
+Permanecem da rodada 1 e 2: marketplace de destino do plugin; nomes dos integrantes; revisão de literatura para trabalhos relacionados; valor do orçamento de API; prompts exatos do avaliador cego.
+
+**Novos:** atualizar `02-protocolo-experimental.md` nas seções 2.1, 2.2, 2.6, 3.3 e 3.4 para refletir R4.1, R4.2, R4.4, R4.7 e R4.8; escrever a spec do runner; escrever a spec dos testes ocultos.

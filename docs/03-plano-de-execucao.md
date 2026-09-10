@@ -37,7 +37,7 @@ Adicionalmente, **uma sessão interrompida de propósito** no meio da execução
 
 **As sessões do piloto não integram o dataset.** O protocolo ainda pode mudar em função delas, então usá-las como dado misturaria versões diferentes do protocolo.
 
-### Portão de M3 — as onze verificações
+### Portão de M3 — as doze verificações
 
 O piloto está aprovado quando **todas** forem verdadeiras. Qualquer uma falsa bloqueia o avanço.
 
@@ -56,10 +56,11 @@ O piloto está aprovado quando **todas** forem verdadeiras. Qualquer uma falsa b
 8. Os dez pontos de decisão de T2 são classificáveis nas saídas produzidas — nenhum ficou `ausente` nas três execuções.
 9. As três execuções de T2 não foram nem idênticas nem incomparáveis. Se foram idênticas, o ticket é específico demais; se não há o que comparar, é ambíguo demais.
 10. O avaliador cego tem taxa de desacordo aceitável entre suas três chamadas. Perguntas com desacordo alto são reescritas antes do congelamento.
+11. A sessão de fumaça em P0 e as sessões em P2 **não produzem a mesma contagem de violações de convenção**. Se produzirem, o padrão da semente ficou auto-evidente demais e o fator de contexto está sendo medido atenuado. Ainda há tempo de corrigir antes do congelamento; depois, não.
 
 **Viabilidade**
 
-11. O custo médio por sessão é conhecido, e a extrapolação para as 55 sessões cabe no orçamento de API.
+12. O custo médio por sessão é conhecido, e a extrapolação para as 55 sessões cabe no orçamento de API.
 
 ### Depois do portão
 
@@ -77,7 +78,7 @@ Passando M3, **o protocolo é congelado**. Correções identificadas pelo piloto
 
 O marco mais pesado do projeto em horas de trabalho.
 
-*Entregas:* repositório-semente completo (`rooms`, `users`, `bookings` ingênuo), testado e congelado na tag `seed-v1` · suíte de testes ocultos de T1 · runner v1 · uma sessão executada do início ao fim gravando uma linha no CSV.
+*Entregas:* repositório-semente completo (`rooms`, `users`, `bookings` com validação parcial, e `amenities` fora do padrão), testado e congelado na tag `seed-v1` · suíte de testes ocultos de T1 · runner v1 · uma sessão executada do início ao fim gravando uma linha no CSV.
 
 *Portão:* a semente roda com um comando e todos os testes passam · a suíte oculta foi validada contra implementação de referência humana, provando que 100% é alcançável · o runner completou uma sessão sem intervenção.
 
@@ -87,7 +88,7 @@ Não precisa estar bonito nem completo em métricas. Precisa fechar o ciclo.
 
 *Entregas:* script de convenções · prompts do avaliador cego (checklist e classificador) com voto majoritário · runner completo com todas as métricas · `CLAUDE.md` de P1 · configuração P2 funcional · seis sessões de piloto · **protocolo congelado**.
 
-*Portão:* as onze verificações da seção 2.
+*Portão:* as doze verificações da seção 2.
 
 > **Sobre a configuração P2.** Ela precisa existir aqui como conjunto funcional de arquivos — CLAUDE.md, skills e rules instaláveis no repositório de trabalho. Não precisa ser um plugin empacotado, publicado ou documentado. Sem P2 funcional, duas das seis células da grade não podem rodar; sem plugin publicado, nada trava.
 
@@ -137,17 +138,17 @@ Depois de M5 sobram seis semanas para 25 sessões desassistidas, uma análise e 
 
 ## 5. Critérios de pronto por artefato
 
-**Repositório-semente:** roda com um comando · todos os testes passam · build e verificação de tipos limpos · README com os comandos · três módulos seguindo o mesmo padrão estrutural · `bookings` sem validação de conflito nem regras de duração · tag `seed-v1`.
+**Repositório-semente:** os critérios de aceite completos estão em `superpowers/specs/2026-09-09-repositorio-semente-design.md`, seção 11, em oito grupos. Os que não podem faltar: roda com um comando a partir de clone limpo · verificação passa dentro da imagem Docker · três módulos canônicos e um deliberadamente desviante · **regra do falso negativo verificada caso a caso**, nenhum comportamento da semente recusa pedido que o contrato de T1 aceitaria · nenhum teste da semente afirma comportamento que T1 corrige · nenhum arquivo dirigido a agente e nenhum termo do estudo em toda a árvore · lastro inerte comprovadamente inerte · revisão humana da árvore inteira · tag `seed-v1`.
 
 **Enunciado de tarefa:** T1 descreve apenas contrato HTTP e regras verificáveis · T2 descreve sintoma sem indicar causa nem solução · ambos terminam com a frase de encerramento padrão · texto congelado em arquivo versionado.
 
-**Testes ocultos (T1):** 15 a 20 asserções · nenhuma importa módulo interno · cada asserção rastreia para uma frase do enunciado · validados contra implementação de referência humana · armazenados fora do repositório-semente.
+**Testes ocultos (T1):** uma asserção por regra do enunciado e por caso de borda · exercitam a aplicação por HTTP real contra o servidor iniciado pelo runner · nenhuma importa módulo interno · cada asserção rastreia para uma frase do enunciado · validados contra implementação de referência humana · armazenados fora do repositório-semente.
 
 **Pontos de decisão (T2):** dez pontos com categorias fechadas mais `ausente` · nenhum respondido pelo enunciado · lista congelada antes de qualquer sessão do dataset.
 
 **Avaliador cego:** recebe apenas diff e enunciado · modelo fixo, independente do modelo sob teste · três chamadas por pergunta com voto majoritário · taxa de desacordo registrada · prompts congelados.
 
-**Runner:** executa uma sessão sem intervenção · aplica os testes ocultos apenas após o término · invoca o avaliador cego · grava linha completa no CSV · arquiva diff e transcript · limpa o diretório · marca falhas de infraestrutura como inválidas e permite re-execução.
+**Runner:** executa uma sessão sem intervenção, com o agente dentro do contêiner · usa os comandos de verificação vindos do Makefile congelado, nunca da cópia que o agente pode ter editado · restaura os testes da semente antes de medir regressão · aplica os testes ocultos apenas após o término · invoca o avaliador cego · grava linha completa no CSV · arquiva diff, transcript bruto em JSON e transcrição legível em markdown · limpa o contêiner · marca falhas de infraestrutura como inválidas e permite re-execução.
 
 **Artigo:** modelo INATEL · figuras sem cor · resumo e abstract com no máximo 150 palavras · ameaças à validade presentes · artefatos referenciados e acessíveis.
 

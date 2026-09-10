@@ -105,7 +105,7 @@ Disso decorrem duas consequências que a equipe deve ter claras:
 | **T2 ambígua demais**: saídas tão distintas que nem os pontos de decisão se aplicam | Alto | Validar no piloto; se ocorrer, acrescentar ao ticket uma restrição de escopo que estreite sem revelar a solução |
 | **Avaliador cego instável** entre suas próprias chamadas | Médio | Voto majoritário de três; taxa de desacordo medida no piloto e reportada. Perguntas com desacordo alto são reescritas antes do congelamento |
 | Custo de API acima do previsto | Médio | O piloto mede o custo real por sessão; as células de modelo podem ser reduzidas a um modelo |
-| Instrumentação quebra durante a coleta | Alto | Piloto com portão de onze verificações antes de qualquer coleta; protocolo congelado logo após |
+| Instrumentação quebra durante a coleta | Alto | Piloto com portão de doze verificações antes de qualquer coleta; protocolo congelado logo após |
 | Versão do modelo muda entre janelas | Médio | Versão e data por sessão; célula de controle re-executada |
 | Indisponibilidade de integrante | Médio | Coleta desassistida; folga preservada nas semanas 9 e 10 |
 
