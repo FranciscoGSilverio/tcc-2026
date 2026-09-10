@@ -5,7 +5,7 @@ export default defineConfig({
     globalSetup: ['./tests/helpers/global-setup.ts'],
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
-    env: { DATABASE_URL: 'file:./data/test.db', NODE_ENV: 'test' },
+    env: { DATABASE_URL: 'file:../data/test.db', NODE_ENV: 'test' },
     include: ['tests/**/*.test.ts'],
   },
 });

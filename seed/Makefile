@@ -3,8 +3,8 @@ SHELL := /bin/bash
 CACHE   := .cache
 SCHEMA  := prisma/schema.prisma
 STAMP   := $(CACHE)/schema.sha
-DB_URL  := file:./data/app.db
-DB      := prisma/data/app.db
+DB_URL  := file:../data/app.db
+DB      := data/app.db
 
 .PHONY: setup verify typecheck lint format build test clean db-reset
 

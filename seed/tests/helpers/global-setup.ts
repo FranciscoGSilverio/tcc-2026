@@ -7,7 +7,7 @@ export default function setup(): void {
     'npx',
     ['prisma', 'db', 'push', '--skip-generate', '--force-reset', '--accept-data-loss'],
     {
-      env: { ...process.env, DATABASE_URL: 'file:./data/test.db' },
+      env: { ...process.env, DATABASE_URL: 'file:../data/test.db' },
       stdio: 'ignore',
     },
   );
