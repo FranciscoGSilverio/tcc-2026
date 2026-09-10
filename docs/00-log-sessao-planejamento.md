@@ -468,3 +468,19 @@ O usuário levantou a possibilidade de congelar os enunciados nesta sessão. **M
 Permanecem da rodada 1 e 2: marketplace de destino do plugin; nomes dos integrantes; revisão de literatura para trabalhos relacionados; valor do orçamento de API; prompts exatos do avaliador cego.
 
 **Novos:** atualizar `02-protocolo-experimental.md` nas seções 2.1, 2.2, 2.6, 3.3 e 3.4 para refletir R4.1, R4.2, R4.4, R4.7 e R4.8; escrever a spec do runner; escrever a spec dos testes ocultos.
+
+## R4.16 Onde vive a verificação dos falsos negativos
+
+Descoberto ao escrever o plano de implementação, e não é óbvio.
+
+A regra do falso negativo (R4.2) precisa ser verificada antes do congelamento: alguém tem que provar que a semente realmente aceita uma reserva que engole outra, uma reserva no passado, uma reserva de dez horas. Mas **essas são exatamente as afirmações proibidas na suíte da semente**, porque T1 as torna falsas e elas produziriam regressão falsa em toda sessão de T1.
+
+**Decidido:** a verificação vive em `tools/seed-audit/false-negatives.mjs`, na raiz do repositório de artefatos, fora da árvore da semente, e roda por HTTP contra o servidor antes do congelamento. Nunca é copiada para dentro de uma sessão.
+
+O mesmo diretório abriga os demais roteiros de aceite: ausência de vazamento, contagens de estrutura e prova de inércia do lastro. Manter a semente inocente e a auditoria do lado de fora é o que torna os dois verificáveis sem se contaminarem.
+
+## R4.17 Escolhas técnicas fixadas no plano de implementação
+
+Registradas por serem irreversíveis depois do congelamento: validação de schema por TypeBox, evitando dependência de biblioteca de formatos; módulo desviante chamado `amenities`, escolhido por ser distante de tempo e intervalos; auxiliar alternativo chamado `http-reply.ts`, sem qualquer marcação de obsoleto no nome ou em comentário; e as duas imperfeições do serviço de usuários construídas de forma **redundante com o schema**, de modo que nenhuma delas jamais recusa um pedido sozinha, preservando a regra do falso negativo.
+
+**Documentos produzidos nesta rodada:** `superpowers/specs/2026-09-09-repositorio-semente-design.md` e `superpowers/plans/2026-09-09-repositorio-semente.md`.
