@@ -6,7 +6,7 @@ STAMP   := $(CACHE)/schema.sha
 DB_URL  := file:../data/app.db
 DB      := data/app.db
 
-.PHONY: setup verify typecheck lint format build test clean db-reset
+.PHONY: setup verify typecheck lint format build test clean db-reset start dev
 
 setup:
 	@[ -d node_modules ] || npm ci
@@ -41,3 +41,9 @@ test: setup
 
 clean:
 	@rm -rf dist data .cache coverage
+
+start: build
+	@npm start
+
+dev: setup
+	@npm run dev
