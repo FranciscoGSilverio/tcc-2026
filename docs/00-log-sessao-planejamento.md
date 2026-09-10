@@ -484,3 +484,54 @@ O mesmo diretório abriga os demais roteiros de aceite: ausência de vazamento, 
 Registradas por serem irreversíveis depois do congelamento: validação de schema por TypeBox, evitando dependência de biblioteca de formatos; módulo desviante chamado `amenities`, escolhido por ser distante de tempo e intervalos; auxiliar alternativo chamado `http-reply.ts`, sem qualquer marcação de obsoleto no nome ou em comentário; e as duas imperfeições do serviço de usuários construídas de forma **redundante com o schema**, de modo que nenhuma delas jamais recusa um pedido sozinha, preservando a regra do falso negativo.
 
 **Documentos produzidos nesta rodada:** `superpowers/specs/2026-09-09-repositorio-semente-design.md` e `superpowers/plans/2026-09-09-repositorio-semente.md`.
+
+---
+
+# Rodada 5 — 10/09/2026
+
+Sessão de construção do **repositório-semente**, executada a partir do plano de implementação por doze subagentes, um por tarefa, cada um seguido de revisão independente. Registro do que foi construído, dos defeitos que o plano tinha e das decisões tomadas durante a execução sem consulta ao usuário.
+
+## R5.1 Resultado
+
+A semente vive em `seed/`, na branch `seed-repo`. Dezesseis commits, cinquenta e nove testes passando, verificação completa a frio em 7,8 segundos, imagem de contêiner construindo e passando a verificação inteira por dentro.
+
+Quatro módulos. `rooms`, `users` e `bookings` no padrão canônico de quatro camadas; `amenities` deliberadamente fora dele, em dois arquivos, devolvendo array puro em vez do envelope de paginação, respondendo erro por um auxiliar diferente e registrado sem prefixo de rota. Nada no código declara qual dos dois padrões é o vigente.
+
+Os roteiros de aceite vivem em `tools/seed-audit/`, fora da árvore da semente, conforme R4.16. São quatro: verificação dos falsos negativos por HTTP, checagem de vazamento, checagem de estrutura e prova de inércia do lastro. Todos os três roteiros de shell foram provados falhando quando deveriam falhar, duas vezes cada, com violações diferentes escolhidas pelo implementador e pelo revisor.
+
+**Pendente e deliberadamente não executado por agente:** a revisão humana da árvore inteira e a criação da tag `seed-v1`. A primeira existe porque a base foi escrita com assistência de agente, e um agente executá-la anularia seu propósito. A segunda depende da primeira. O checklist está em `tools/seed-audit/CHECKLIST.md` com os campos automáticos preenchidos.
+
+## R5.2 Defeitos do plano descobertos na execução
+
+Cinco, todos encontrados pelos implementadores e confirmados de forma independente pelos revisores. Registrados porque revelam armadilhas do ambiente que valem para o runner também.
+
+1. **`prisma db push` sem a variável de conexão.** O plano encadeava comandos com ponto e vírgula terminando num `echo`, então a falha era mascarada e o carimbo de cache era gravado mesmo sem banco criado.
+2. **Caminho relativo do SQLite.** O Prisma resolve o caminho do banco a partir do diretório do `schema.prisma`, não do diretório de trabalho. O plano colocaria o banco em `prisma/data/`, quebrando o alvo de limpeza e fazendo um banco de desenvolvimento entrar na imagem Docker, já que o arquivo de exclusão do contexto é resolvido a partir da raiz.
+3. **Encapsulamento do Fastify.** Registrar os plugins transversais com `register` os isola num contexto próprio, de modo que o tratador de erro global não valeria para as rotas dos módulos, que são registradas em contextos irmãos. O envelope de erro do projeto simplesmente não se aplicaria onde mais importa.
+4. **Campos de data no schema de resposta.** Declarados como texto, reprovam na checagem de tipos contra o `Date` que o Prisma devolve. Resolvido com um auxiliar compartilhado que mantém o schema emitido como texto e o tipo estático como data.
+5. **`make start` sem a variável de conexão.** O servidor subia e a saúde respondia, mas o primeiro pedido que tocava o banco devolvia erro interno. Como é esse o comando do contrato com o runner, seria uma falha silenciosa em todas as sessões.
+
+## R5.3 Decisões tomadas durante a execução
+
+Tomadas sem consulta, para não parar a execução. Todas foram julgadas sólidas pela revisão final.
+
+| Decisão | Racional | Custo se errada |
+|---|---|---|
+| Banco em `seed/data/`, com URL relativa ao diretório do schema | Alternativa era manter em `prisma/data/` e remendar limpeza e contexto do Docker em separado, deixando dois diretórios de mesmo nome e um `mkdir` morto | Quatro linhas de configuração |
+| Auxiliar de data extraído para `src/shared/schema.ts` | Antes que dois módulos o replicassem; `bookings` sozinho precisa dele em quatro campos. Acrescenta alvo legítimo de reuso, que é o que a pergunta 6 do checklist do avaliador mede | Mover uma linha de volta |
+| `make start` funciona sem variável de ambiente, por export no topo do Makefile | É o comando do contrato com o runner. Risco descartado por prova: a suíte não cai no banco da aplicação, porque a configuração do Vitest sobrepõe o valor herdado | Voltar para atribuição por alvo |
+| Teste "contida" sai de trinta minutos exatos para duração folgada | Estava encostado numa fronteira que T1 vai definir, e era a única afirmação da suíte que dependia de convenção externa | Dois números num teste |
+| Pacotes de sistema da imagem sem versão fixada | Fixar versões de apt em Debian slim quebra o build quando o espelho remove a versão antiga, trocando divergência por falha total. A reprodutibilidade vem de construir a imagem uma vez e reusar | Uma nota nas ameaças à validade |
+| `engines` continua em Node 22 | O ambiente autoritativo é o contêiner, que fixa a base por digest | Um aviso no desenvolvimento local |
+| Execução em série, sem paralelizar tarefas | Três tarefas colidem no mesmo arquivo de registro de rotas, e a única independente copia a árvore e roda a verificação nela | Tempo de parede |
+| Verificação da metade "usuário inexistente" acrescentada ao verificador | O roteiro estava mais estreito que a regra que promete guardar, que cobre sala **ou** usuário | Oito linhas num script fora da semente |
+
+## R5.4 Limitações conhecidas do instrumento
+
+- **As checagens de estrutura são textuais, não semânticas.** Contam arquivos e procuram palavras fixas, então uma violação escrita com outro nome escaparia. Limitação inerente a auditoria por busca; a rede de segurança é o item de revisão humana do checklist.
+- **A verificação de tipos não cobre os testes** nem o carregador de dados de demonstração, porque o `tsconfig` inclui apenas `src`. Falhas de tipo em teste aparecem como falha de teste.
+- **O auxiliar de paginação não é testado nas bordas** de limite zero, negativo ou deslocamento fracionário.
+
+## R5.5 Próximos passos
+
+Revisão humana da árvore e tag `seed-v1`. Depois disso, a semente destrava os quatro artefatos que dependem dela: testes ocultos de T1, runner, script de convenções e as configurações de contexto P1 e P2.
