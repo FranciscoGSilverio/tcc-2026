@@ -71,6 +71,17 @@ describe('users', () => {
     expect(response.json().name).toBe('Ada B. Lovelace');
   });
 
+  it('updates a user while keeping its own email', async () => {
+    const created = await createUser('ada@example.com');
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/users/${created.json().id}`,
+      payload: { email: 'ada@example.com', name: 'Ada B. Lovelace' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.statusCode).not.toBe(409);
+  });
+
   it('deletes a user', async () => {
     const created = await createUser('ada@example.com');
     const id = created.json().id;
