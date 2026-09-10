@@ -15,3 +15,15 @@ cd seed && make db-reset && make start &
 # aguarde GET /health responder 200
 node tools/seed-audit/false-negatives.mjs
 ```
+
+## Ordem de execução do aceite
+
+```bash
+./tools/seed-audit/check-no-leak.sh
+./tools/seed-audit/check-structure.sh
+./tools/seed-audit/check-ballast-inert.sh
+cd seed && make db-reset && (make start &) && sleep 5
+node ../tools/seed-audit/false-negatives.mjs
+```
+
+Depois, percorrer `CHECKLIST.md` e preencher os itens de revisão humana.
