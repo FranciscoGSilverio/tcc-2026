@@ -1,9 +1,10 @@
 SHELL := /bin/bash
 
+export DATABASE_URL ?= file:../data/app.db
+
 CACHE   := .cache
 SCHEMA  := prisma/schema.prisma
 STAMP   := $(CACHE)/schema.sha
-DB_URL  := file:../data/app.db
 DB      := data/app.db
 
 .PHONY: setup verify typecheck lint format build test clean db-reset start dev
@@ -14,7 +15,7 @@ setup:
 	@current=$$(sha256sum $(SCHEMA) | cut -d' ' -f1); \
 	if [ ! -f "$(STAMP)" ] || [ ! -f "$(DB)" ] || [ "$$current" != "$$(cat $(STAMP))" ]; then \
 	  npx prisma generate >/dev/null; \
-	  DATABASE_URL=$(DB_URL) npx prisma db push --skip-generate --accept-data-loss >/dev/null; \
+	  npx prisma db push --skip-generate --accept-data-loss >/dev/null; \
 	  echo "$$current" > $(STAMP); \
 	fi
 

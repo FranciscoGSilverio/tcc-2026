@@ -158,7 +158,7 @@ describe('bookings', () => {
 
   it('rejects a booking fully contained in an active booking', async () => {
     await book(24, 25);
-    const response = await book(24.25, 24.75, 'Inside');
+    const response = await book(24.1, 24.85, 'Inside');
     expect(response.statusCode).toBe(409);
   });
 
