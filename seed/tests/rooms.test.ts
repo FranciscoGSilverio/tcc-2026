@@ -89,6 +89,17 @@ describe('rooms', () => {
     expect(response.json().capacity).toBe(12);
   });
 
+  it('updates a room keeping its own name', async () => {
+    const created = await createRoom('Aurora');
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/rooms/${created.json().id}`,
+      payload: { name: 'Aurora', capacity: 12 },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().capacity).toBe(12);
+  });
+
   it('deletes a room', async () => {
     const created = await createRoom('Aurora');
     const id = created.json().id;

@@ -1,6 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
-
-const DateString = Type.Unsafe<Date>(Type.String());
+import { DateString } from '../../shared/schema.js';
 
 export const RoomResponse = Type.Object({
   id: Type.String(),
