@@ -148,4 +148,36 @@ describe('bookings', () => {
     expect((await app.inject({ method: 'DELETE', url: `/bookings/${id}` })).statusCode).toBe(204);
     expect((await app.inject({ method: 'GET', url: `/bookings/${id}` })).statusCode).toBe(404);
   });
+
+  it('rejects a booking whose start falls inside an active booking', async () => {
+    await book(24, 25);
+    const response = await book(24.5, 25.5, 'Overlap');
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
+  });
+
+  it('rejects a booking fully contained in an active booking', async () => {
+    await book(24, 25);
+    const response = await book(24.25, 24.75, 'Inside');
+    expect(response.statusCode).toBe(409);
+  });
+
+  it('accepts a booking that starts exactly when another ends', async () => {
+    await book(24, 25);
+    const response = await book(25, 26, 'Adjacent');
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('accepts a booking in a slot released by a cancellation', async () => {
+    const first = await book(24, 25);
+    await app.inject({ method: 'POST', url: `/bookings/${first.json().id}/cancel` });
+    const response = await book(24.5, 25.5, 'Reused slot');
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('reports which booking caused the conflict', async () => {
+    const first = await book(24, 25);
+    const response = await book(24.5, 25.5, 'Overlap');
+    expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+  });
 });

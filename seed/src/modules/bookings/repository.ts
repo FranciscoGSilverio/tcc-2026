@@ -1,5 +1,6 @@
 import type { Booking, Prisma } from '@prisma/client';
 import { prisma } from '../../db/client.js';
+import { BOOKING_ACTIVE } from './schema.js';
 
 export interface BookingData {
   roomId: string;
@@ -21,6 +22,17 @@ export interface BookingFilter {
 
 export function create(data: BookingData): Promise<Booking> {
   return prisma.booking.create({ data });
+}
+
+export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Booking | null> {
+  return prisma.booking.findFirst({
+    where: {
+      roomId,
+      status: BOOKING_ACTIVE,
+      startsAt: { lte: startsAt },
+      endsAt: { gt: startsAt },
+    },
+  });
 }
 
 export function findById(id: string): Promise<Booking | null> {

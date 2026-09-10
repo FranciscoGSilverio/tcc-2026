@@ -1,5 +1,5 @@
 import type { Booking } from '@prisma/client';
-import { notFound } from '../../shared/errors.js';
+import { bookingConflict, notFound } from '../../shared/errors.js';
 import {
   normalizeLimit,
   normalizeOffset,
@@ -14,6 +14,12 @@ import type { CreateBookingInput, ListBookingsInput, UpdateBookingInput } from '
 export async function createBooking(input: CreateBookingInput): Promise<Booking> {
   const startsAt = parseInstant(input.startsAt);
   const endsAt = parseInstant(input.endsAt);
+
+  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
+  if (conflict) {
+    throw bookingConflict(conflict.id);
+  }
+
   return repository.create({
     roomId: input.roomId,
     userId: input.userId,
