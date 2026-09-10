@@ -3,6 +3,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'ROOM_NAME_TAKEN'
   | 'EMAIL_TAKEN'
+  | 'AMENITY_NAME_TAKEN'
   | 'BOOKING_CONFLICT'
   | 'INTERNAL_ERROR';
 
