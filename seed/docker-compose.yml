@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    image: meeting-rooms-api:1.0.0
+    ports:
+      - '3000:3000'
+    environment:
+      PORT: '3000'
+      DATABASE_URL: 'file:../data/app.db'
+      LOG_LEVEL: 'info'

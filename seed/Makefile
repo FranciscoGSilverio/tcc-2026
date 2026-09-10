@@ -6,8 +6,9 @@ CACHE   := .cache
 SCHEMA  := prisma/schema.prisma
 STAMP   := $(CACHE)/schema.sha
 DB      := data/app.db
+IMAGE   := meeting-rooms-api:1.0.0
 
-.PHONY: setup verify typecheck lint format build test clean db-reset start dev
+.PHONY: setup verify typecheck lint format build test clean db-reset start dev image demo-data
 
 setup:
 	@[ -d node_modules ] || npm ci
@@ -48,3 +49,9 @@ start: build
 
 dev: setup
 	@npm run dev
+
+image:
+	@docker build -t $(IMAGE) .
+
+demo-data: setup
+	@npx tsx prisma/demo-data.ts
