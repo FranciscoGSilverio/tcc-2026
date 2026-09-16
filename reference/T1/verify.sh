@@ -4,7 +4,18 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 PORT="${PORT:-3311}"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"; kill %1 2>/dev/null || true' EXIT
+# kill %1 alone is not reliable here: make start runs npm start runs node
+# dist/server.js, and a SIGTERM to the backgrounded make job does not always
+# reach that grandchild (observed in practice: the job control kill printed
+# "Terminated" for make while node kept the port bound). fuser -k targets
+# whatever is actually listening on the port, regardless of the process tree.
+# PORT and TMP are already final at this point, so expand them now rather
+# than at trap-execution time.
+trap "kill %1 2>/dev/null || true
+fuser -k -TERM $PORT/tcp 2>/dev/null || true
+sleep 0.2
+fuser -k -KILL $PORT/tcp 2>/dev/null || true
+rm -rf '$TMP'" EXIT
 
 echo "== extracting a clean seed =="
 git -C "$REPO" archive HEAD seed | tar -x -C "$TMP"

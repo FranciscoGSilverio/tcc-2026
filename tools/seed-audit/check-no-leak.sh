@@ -35,4 +35,23 @@ else
   echo "ok"
 fi
 
+echo "== research artefacts must stay outside the seed =="
+leaked=0
+for name in hidden-tests reference run.mjs reference.patch; do
+  if find "$SEED_DIR" -not -path '*/node_modules/*' -not -path '*/.git/*' -name "$name" -print | grep .; then
+    leaked=1
+  fi
+done
+if grep -rInE 'hidden-tests|reference/T1' "$SEED_DIR" \
+  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist \
+  --exclude-dir=data --exclude-dir=.cache --exclude=package-lock.json; then
+  leaked=1
+fi
+if [ "$leaked" -eq 1 ]; then
+  echo "FAIL: research artefacts reachable from the seed"
+  status=1
+else
+  echo "ok"
+fi
+
 exit $status
