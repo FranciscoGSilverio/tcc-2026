@@ -254,6 +254,62 @@ check('5.2', 5, 'end equal to start is rejected', async () => {
   return { expected: 400, actual: response.status };
 });
 
+check('6.1', 6, 'create referencing a room that does not exist', async () => {
+  const ids = await fixture();
+  const response = await call('POST', '/bookings', {
+    roomId: `missing-${unique()}`,
+    userId: ids.userId,
+    title: 'Audit',
+    startsAt: hours(24),
+    endsAt: hours(25),
+  });
+  return { expected: 404, actual: response.status };
+});
+
+check('6.2', 6, 'create referencing a user that does not exist', async () => {
+  const ids = await fixture();
+  const response = await call('POST', '/bookings', {
+    roomId: ids.roomId,
+    userId: `missing-${unique()}`,
+    title: 'Audit',
+    startsAt: hours(24),
+    endsAt: hours(25),
+  });
+  return { expected: 404, actual: response.status };
+});
+
+check('6.3', 6, 'update referencing a room that does not exist', async () => {
+  const ids = await fixture();
+  const created = await book(ids, 24, 25);
+  const response = await call('PATCH', `/bookings/${created.body?.id}`, {
+    roomId: `missing-${unique()}`,
+  });
+  return { expected: 404, actual: response.status };
+});
+
+check('7.1', 7, 'the conflict error keeps the existing envelope and code', async () => {
+  const ids = await fixture();
+  await book(ids, 24, 25);
+  const response = await book(ids, 24.5, 25.5);
+  return {
+    expected: { status: 409, envelope: true, code: 'BOOKING_CONFLICT' },
+    actual: {
+      status: response.status,
+      envelope: hasErrorEnvelope(response.body),
+      code: response.body?.error?.code ?? null,
+    },
+  };
+});
+
+check('7.2', 7, 'a rule 3 or 4 rejection keeps the existing envelope', async () => {
+  const ids = await fixture();
+  const response = await book(ids, -48, -47);
+  return {
+    expected: { status: 400, envelope: true },
+    actual: { status: response.status, envelope: hasErrorEnvelope(response.body) },
+  };
+});
+
 async function main() {
   try {
     await fetch(`${BASE}/health`);
