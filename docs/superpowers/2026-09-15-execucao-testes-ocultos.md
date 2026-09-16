@@ -254,3 +254,102 @@ $ echo $?
 $ git status --short
 (vazio, após o commit da Task 5)
 ```
+
+---
+
+## 10. Correção de um defeito acidental no manipulador de erros (16/09/2026)
+
+**Defeito, fora dos cinco deliberados da seção 5.2 da spec:** `seed/src/plugins/error-handler.ts` descartava o `statusCode` que o próprio Fastify já atribui a erros de framework. Sintoma reproduzido manualmente: `POST /bookings/:id/cancel` sem corpo e sem `content-type` respondia 200 (correto); a mesma chamada com `content-type: application/json` e corpo vazio respondia 500, porque o Fastify rejeita corpo vazio com esse cabeçalho com um erro `statusCode: 400` que o catch-all da semente não reconhecia. `hidden-tests/T1/run.mjs` já contornava esse defeito de propósito (comentário em `call()`), então ele nunca afetou a linha de base medida.
+
+**Correção:** um ramo novo em `error-handler.ts`, entre a checagem de validação de schema e o catch-all, que honra qualquer `statusCode` 4xx que o Fastify já tenha definido, respondendo com o mesmo envelope e o código `VALIDATION_ERROR` já existente. Nenhuma dependência nova, nenhuma reestruturação do manipulador. Um teste foi acrescentado a `seed/tests/health.test.ts`, ao lado dos testes existentes de envelope de erro.
+
+**A armadilha verificada, não assumida:** o defeito deliberado "sala ou usuário inexistente vira 500" depende do catch-all. `PrismaClientKnownRequestError` carrega `code` (ex.: `P2025`) mas não carrega `statusCode` — confirmado instanciando a classe diretamente (`'statusCode' in e` → `false`). Por isso o novo ramo, que só olha `statusCode`, nunca intercepta erros do Prisma, e o defeito deliberado permanece.
+
+### 10.1 Sintoma antes e depois
+
+```
+$ curl -s -o /dev/null -w "status=%{http_code}\n" -X POST $BASE/bookings/$ID/cancel
+status=200
+$ curl -s -w "status=%{http_code}\n" -X POST $BASE/bookings/$ID/cancel -H 'content-type: application/json'
+{"error":{"code":"VALIDATION_ERROR","message":"Body cannot be empty when content-type is set to 'application/json'","details":{}}}
+status=400
+```
+
+### 10.2 Os cinco defeitos deliberados sobrevivem
+
+```
+$ BASE_URL=http://localhost:3901 node tools/seed-audit/false-negatives.mjs
+ok   end falls inside an existing booking and start is before it
+ok   new booking engulfs an existing one
+ok   update moves a booking on top of another
+ok   booking that starts in the past
+ok   booking shorter than thirty minutes
+ok   booking longer than eight hours
+ok   booking whose end is before its start
+ok   booking that points at a room that does not exist
+ok   booking that points at a user that does not exist
+
+all expected gaps are present
+exit=0
+```
+
+### 10.3 Linha de base da suíte oculta, inalterada
+
+```
+$ BASE_URL=http://localhost:3310 node hidden-tests/T1/run.mjs
+"total": 26, "passed": 13, "rate": 0.5
+byRule: 1: 7/10, 2: 2/2, 3: 1/3, 4: 2/4, 5: 0/2, 6: 0/3, 7: 1/2
+```
+
+Idêntico, regra por regra, à linha de base registrada nas seções 1 e 2 deste documento.
+
+### 10.4 `make verify` na semente
+
+```
+$ cd seed && make verify
+...
+ Test Files  7 passed (7)
+      Tests  64 passed (64)
+```
+
+63 testes originais mais o teste novo do envelope de erro.
+
+### 10.5 `./reference/T1/verify.sh`, do zero, contra a árvore já com a correção
+
+```
+$ PORT=3312 ./reference/T1/verify.sh
+== extracting a clean seed ==
+== applying the reference patch ==
+patching file seed/src/modules/bookings/repository.ts
+patching file seed/src/modules/bookings/service.ts
+patching file seed/tests/bookings.test.ts
+== seed suite must still pass, meaning zero regressions ==
+ Test Files  7 passed (7)
+      Tests  79 passed (79)
+== hidden suite must score 100% ==
+hidden suite: 26/26
+reference is valid
+$ echo $?
+0
+```
+
+O patch de referência não conflita: toca apenas `seed/src/modules/bookings/{repository,service}.ts` e `seed/tests/bookings.test.ts`, disjuntos do arquivo corrigido. 79 = 78 da referência (seção 5) mais o teste novo do error-handler.
+
+### 10.6 Os três scripts de auditoria
+
+```
+$ ./tools/seed-audit/check-no-leak.sh; echo exit=$?
+ok / ok / ok / ok
+exit=0
+$ ./tools/seed-audit/check-structure.sh; echo exit=$?
+ok em todas as checagens
+exit=0
+$ ./tools/seed-audit/check-ballast-inert.sh; echo exit=$?
+Tests  64 passed (64)
+ballast is inert
+exit=0
+```
+
+### 10.7 Estado final
+
+Servidores das portas 3901, 3310, 3311 e 3312 todos derrubados e confirmados livres após cada uso. `git status --short` vazio após o commit desta rodada.
