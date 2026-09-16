@@ -393,3 +393,176 @@ Nenhuma tag `seed-v1` existe. O item H (revisão humana da árvore inteira, nome
 5. Um quase-caso de afirmação proibida em `database.test.ts` (item 5 da lista de proibições), que não cruza a linha mas testa o mesmo território.
 
 Nenhum desses achados é uma das imperfeições deliberadas documentadas na spec (bookings, amenities, users) — todos são achados de auditoria sobre a própria infraestrutura de verificação e a suíte de testes.
+
+---
+
+## Rodada 2 — fechamento dos cinco achados e do item pendente do grupo D
+
+**Contexto:** esta rodada retoma um trabalho interrompido. Ao começar, `git diff` mostrava
+duas alterações não commitadas: quatro testes já adicionados a `seed/tests/amenities.test.ts`
+e edições parciais em `tools/seed-audit/CHECKLIST.md`. Cada item abaixo foi conferido por
+execução real antes de aceitar o que já estava feito.
+
+### Achado 1 — critério de data absoluta (grupo E)
+
+O item estava sem marcar e descrevia o achado como não resolvido. Reescrevi o texto do
+item para refletir o que o critério realmente protege — uma FIXTURE cujo instante vem do
+calendário, não um parser testado com um literal ISO — mantendo o grep amplo como
+mecanismo e nomeando a única ocorrência aceitável com sua justificativa, de modo que uma
+segunda ocorrência ainda reprova o critério.
+
+```
+$ grep -rnE '[12][0-9]{3}-[01][0-9]-[0-3][0-9]' seed/tests
+seed/tests/shared.test.ts:50:    expect(parseInstant('2030-01-01T10:00:00.000Z').getTime()).toBe(
+```
+
+Uma única ocorrência, confirmada como a esperada (`shared.test.ts:48-53`, teste "parses an
+ISO instant", compara o literal contra `Date.UTC(2030, 0, 1, 10, 0, 0)` — o próprio parser
+sob teste, não uma fixture de negócio). Item marcado.
+
+### Achado 2 — contagem de checagens do `false-negatives.mjs` (grupo B)
+
+Confirmado por leitura do script (`tools/seed-audit/false-negatives.mjs`): o array `checks`
+tem 9 entradas. O checklist já dizia "nove" e a nota de discrepância antiga já tinha sido
+substituída por uma explicação (regra combinada sala/usuário conta como duas lacunas,
+elevando 8 para 9). `tools/seed-audit/README.md` nunca citou um número de checagens — nada
+para corrigir ali. Confirmado com o servidor rodando:
+
+```
+$ BASE_URL=http://localhost:3100 node tools/seed-audit/false-negatives.mjs
+ok   end falls inside an existing booking and start is before it
+ok   new booking engulfs an existing one
+ok   update moves a booking on top of another
+ok   booking that starts in the past
+ok   booking shorter than thirty minutes
+ok   booking longer than eight hours
+ok   booking whose end is before its start
+ok   booking that points at a room that does not exist
+ok   booking that points at a user that does not exist
+
+all expected gaps are present
+```
+
+(Uma primeira tentativa falhou por eu ter subido o servidor com `DATABASE_URL=file:./data/app.db`
+em vez de `file:../data/app.db`, caminho errado relativo ao `prisma/schema.prisma` — erro
+meu de operação, não do código; refeito com `make db-reset && make start`, todas as 9
+passaram.)
+
+### Achado 3 — quatro caminhos de erro de amenities cobertos por teste
+
+Os quatro testes já estavam presentes em `seed/tests/amenities.test.ts`, no mesmo estilo
+das vizinhas (`app.inject`, `expect(response.statusCode)`, `expect(response.json().error.code)`):
+
+- `rejects a payload without a name` → `POST /amenities` com `{}` → 400 `VALIDATION_ERROR`
+- `answers 404 when deleting an amenity that does not exist` → `DELETE /amenities/missing` → 404 `NOT_FOUND`
+- `answers 404 when linking an amenity that does not exist to a real room` → `PUT /rooms/:id/amenities/missing` → 404 `NOT_FOUND`
+- `answers 404 when unlinking from a room that does not exist` → `DELETE /rooms/missing/amenities/:id` → 404 `NOT_FOUND`
+
+`cd seed && make verify` confirma 63/63 testes, exit 0 (era 59 antes destas quatro).
+
+**Prova de que cada teste é load-bearing.** Para cada um, uma linha em
+`seed/src/modules/amenities/routes.ts` foi temporariamente quebrada, o teste correspondente
+rodado isoladamente com `npx vitest run tests/amenities.test.ts -t "<nome>"`, e a mudança
+revertida com `git checkout -- src/modules/amenities/routes.ts`. `git diff --stat src`
+verificado vazio depois de cada uma das quatro rodadas.
+
+1. **Payload inválido → 400.** Quebra: `name: Type.String(...)` → `name: Type.Optional(Type.String(...))`
+   na linha 14 (schema `CreateAmenityBody`). Resultado: `expected 500 to be 400` — `{}` passa
+   a validação, `insertAmenity(undefined, ...)` estoura no Prisma, vira 500.
+2. **Deletar amenity inexistente → 404.** Quebra: `if (!amenity)` → `if (false)` na linha 44
+   (guarda de `DELETE /amenities/:id`). Resultado: `expected 500 to be 404` — o código segue
+   e tenta `amenity.id` sobre `null`.
+3. **Vincular amenity inexistente a sala real → 404.** Quebra: `if (!amenity)` → `if (false)`
+   na linha 58 (segunda guarda de `PUT /rooms/:roomId/amenities/:amenityId`, a de amenity,
+   não a de sala). Resultado: `expected 500 to be 404`.
+4. **Desvincular de sala inexistente → 404.** Quebra: `if (!room)` → `if (false)` na linha 68
+   (guarda de sala de `DELETE /rooms/:roomId/amenities/:amenityId`). Resultado:
+   `expected 500 to be 404`.
+
+Nas quatro rodadas, `git diff --stat src` voltou vazio depois do `git checkout`, e
+`git status --short` no repositório ficou limpo ao final de todas elas.
+
+### Achados 4 e 5 — notas (grupo D e grupo E)
+
+Ambas já estavam registradas no checklist como notas de uma linha sob o grupo correto:
+
+- Grupo D: nota sobre termos banidos no histórico de commits deste repositório de
+  artefatos, confirmada real —
+
+  ```
+  $ git log --all --oneline | grep -iE 'harness|claude|anthropic|semente'
+  5ded883 Registrar a construção da semente no log de planejamento
+  5a492c8 feat: add database schema and test harness
+  ffc5187 Plano de implementação do repositório-semente
+  ee81a77 Spec do repositório-semente e correções no protocolo
+  $ git log --all | grep -iE 'claude|anthropic'
+      Claude-Session: https://claude.ai/code/session_...
+      Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+      Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+  ```
+
+  Inerte porque o runner (seção 10 da spec) materializa a cópia como repositório novo a
+  partir só da árvore de `seed/` na tag, com um único commit de mensagem neutra — este
+  histórico nunca chega à sessão do agente.
+
+- Grupo E: nota sobre `database.test.ts:31-44` ("rejects a booking that points at a room
+  that does not exist"), que exercita a rejeição de chave estrangeira do Prisma diretamente
+  via `prisma.booking.create`, não um código HTTP — continua verdadeiro depois que as
+  validações que faltam forem implementadas, porque a restrição do banco não muda.
+
+Nenhuma mudança necessária em nenhuma das duas.
+
+### Item pendente do grupo D — materialização com commit único
+
+A tag `seed-v1` ainda não existe (`git tag -l` vazio), então o mecanismo foi exercitado
+contra `HEAD` (`19230d89e65bf06a05e4a7f2f67b8877c34c51e9`, o mesmo antes desta rodada, já
+que as duas alterações de trabalho ainda não tinham sido commitadas nesse ponto):
+
+```
+$ TMPDIR=$(mktemp -d)
+$ git archive HEAD:seed | tar -x -C "$TMPDIR"
+$ cd "$TMPDIR" && git init -q
+$ git add -A
+$ git -c user.email=audit@example.com -c user.name=audit commit -q -m "seed"
+$ git rev-list --count HEAD
+1
+$ git log --oneline
+eb6d7a4 seed
+$ make verify 2>&1 | tail -20
+...
+ Test Files  7 passed (7)
+      Tests  59 passed (59)
+EXIT: 0
+$ cd / && rm -rf "$TMPDIR"
+```
+
+Um único commit, mensagem neutra ("seed"), `make verify` passa (59/59 — contagem do
+conteúdo commitado em `HEAD` nesse momento, antes das quatro novas asserções de amenities
+entrarem no histórico). Diretório temporário apagado depois. Item já estava marcado com
+esta evidência pela rodada anterior; reexecutei o mecanismo do zero para confirmar que a
+alegação bate com a realidade, e bateu. Repetir contra a tag `seed-v1` assim que ela
+existir.
+
+### Verificação final
+
+```
+$ cd seed && make verify
+...
+ ✓ tests/bookings.test.ts (16 tests) 1081ms
+ ✓ tests/amenities.test.ts (11 tests) 377ms
+ ✓ tests/rooms.test.ts (11 tests) 313ms
+ ✓ tests/users.test.ts (9 tests) 200ms
+ ✓ tests/shared.test.ts (10 tests) 1ms
+ ✓ tests/database.test.ts (3 tests) 94ms
+ ✓ tests/health.test.ts (3 tests) 25ms
+
+ Test Files  7 passed (7)
+      Tests  63 passed (63)
+EXIT: 0
+```
+
+Nenhum servidor nem container deixado rodando: porta 3100 confirmada livre
+(`ss -ltnp | grep 3100` sem saída) e `ps aux | grep dist/server.js` sem processo, depois de
+cada subida usada para verificação manual nesta rodada. `git status --short` limpo antes do
+commit desta rodada, restrito às duas alterações em escopo
+(`seed/tests/amenities.test.ts`, `tools/seed-audit/CHECKLIST.md`) mais este relatório.

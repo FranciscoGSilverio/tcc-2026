@@ -85,4 +85,36 @@ describe('amenities', () => {
     expect(response.statusCode).toBe(204);
     expect((await app.inject({ method: 'GET', url: '/amenities' })).json()).toHaveLength(0);
   });
+
+  it('rejects a payload without a name', async () => {
+    const response = await app.inject({ method: 'POST', url: '/amenities', payload: {} });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('answers 404 when deleting an amenity that does not exist', async () => {
+    const response = await app.inject({ method: 'DELETE', url: '/amenities/missing' });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe('NOT_FOUND');
+  });
+
+  it('answers 404 when linking an amenity that does not exist to a real room', async () => {
+    const room = await createRoom('Aurora');
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/rooms/${room.json().id}/amenities/missing`,
+    });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe('NOT_FOUND');
+  });
+
+  it('answers 404 when unlinking from a room that does not exist', async () => {
+    const amenity = await createAmenity('Projector');
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/rooms/missing/amenities/${amenity.json().id}`,
+    });
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe('NOT_FOUND');
+  });
 });
