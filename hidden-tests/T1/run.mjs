@@ -15,7 +15,13 @@ const unique = () =>
 async function call(method, path, body) {
   const response = await fetch(`${BASE}${path}`, {
     method,
-    headers: { 'content-type': 'application/json' },
+    // Only set the JSON content-type when there is a body. Sending it on a
+    // bodyless request (e.g. the cancel endpoint) trips an unrelated seed
+    // defect: an empty body with this header is rejected by Fastify's
+    // default JSON parser with an error the seed's error handler does not
+    // recognise, so it falls through to a 500 that has nothing to do with
+    // the rule under test.
+    headers: body === undefined ? {} : { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await response.text();
@@ -144,6 +150,108 @@ check('1.10', 1, 'update moves a booking to a free slot', async () => {
     endsAt: hours(41),
   });
   return { expected: 200, actual: response.status };
+});
+
+check('2.1', 2, 'create over the range of a cancelled booking', async () => {
+  const ids = await fixture();
+  const first = await book(ids, 24, 25);
+  await call('POST', `/bookings/${first.body?.id}/cancel`);
+  const response = await book(ids, 24.5, 25.5);
+  return { expected: 201, actual: response.status };
+});
+
+check('2.2', 2, 'update into the range of a cancelled booking', async () => {
+  const ids = await fixture();
+  const first = await book(ids, 24, 25);
+  await call('POST', `/bookings/${first.body?.id}/cancel`);
+  const moved = await book(ids, 40, 41);
+  const response = await call('PATCH', `/bookings/${moved.body?.id}`, {
+    startsAt: hours(24.1),
+    endsAt: hours(24.85),
+  });
+  return { expected: 200, actual: response.status };
+});
+
+check('3.1', 3, 'create a booking that starts in the past', async () => {
+  const ids = await fixture();
+  const response = await book(ids, -48, -47);
+  return { expected: 400, actual: response.status };
+});
+
+check('3.2', 3, 'update a booking to start in the past', async () => {
+  const ids = await fixture();
+  const created = await book(ids, 24, 25);
+  const response = await call('PATCH', `/bookings/${created.body?.id}`, {
+    startsAt: hours(-48),
+    endsAt: hours(-47),
+  });
+  return { expected: 400, actual: response.status };
+});
+
+check('3.3', 3, 'create a booking that starts in the future', async () => {
+  const ids = await fixture();
+  const response = await book(ids, 24, 25);
+  return { expected: 201, actual: response.status };
+});
+
+check('4.1', 4, 'exactly thirty minutes is accepted', async () => {
+  const ids = await fixture();
+  const response = await call('POST', '/bookings', {
+    roomId: ids.roomId,
+    userId: ids.userId,
+    title: 'Audit',
+    startsAt: minutes(24 * 60),
+    endsAt: minutes(24 * 60 + 30),
+  });
+  return { expected: 201, actual: response.status };
+});
+
+check('4.2', 4, 'twenty-nine minutes is rejected', async () => {
+  const ids = await fixture();
+  const response = await call('POST', '/bookings', {
+    roomId: ids.roomId,
+    userId: ids.userId,
+    title: 'Audit',
+    startsAt: minutes(24 * 60),
+    endsAt: minutes(24 * 60 + 29),
+  });
+  return { expected: 400, actual: response.status };
+});
+
+check('4.3', 4, 'exactly eight hours is accepted', async () => {
+  const ids = await fixture();
+  const response = await call('POST', '/bookings', {
+    roomId: ids.roomId,
+    userId: ids.userId,
+    title: 'Audit',
+    startsAt: minutes(24 * 60),
+    endsAt: minutes(24 * 60 + 8 * 60),
+  });
+  return { expected: 201, actual: response.status };
+});
+
+check('4.4', 4, 'eight hours and one minute is rejected', async () => {
+  const ids = await fixture();
+  const response = await call('POST', '/bookings', {
+    roomId: ids.roomId,
+    userId: ids.userId,
+    title: 'Audit',
+    startsAt: minutes(24 * 60),
+    endsAt: minutes(24 * 60 + 8 * 60 + 1),
+  });
+  return { expected: 400, actual: response.status };
+});
+
+check('5.1', 5, 'end before start is rejected', async () => {
+  const ids = await fixture();
+  const response = await book(ids, 25, 24);
+  return { expected: 400, actual: response.status };
+});
+
+check('5.2', 5, 'end equal to start is rejected', async () => {
+  const ids = await fixture();
+  const response = await book(ids, 24, 24);
+  return { expected: 400, actual: response.status };
 });
 
 async function main() {
