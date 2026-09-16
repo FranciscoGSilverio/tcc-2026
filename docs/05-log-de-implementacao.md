@@ -25,7 +25,7 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 | Implementação de referência de T1 | **Pronta.** 26/26, zero regressões | `reference/T1/` | Nada |
 | Script de convenções | Não existe | — | Tudo |
 | Prompts do avaliador cego | Não existem | — | Tudo |
-| Runner mínimo | Spec escrita | `docs/superpowers/specs/2026-09-16-runner-minimo-design.md` | Plano e implementação |
+| Runner mínimo | Spec e plano escritos | `docs/superpowers/plans/2026-09-16-runner-minimo.md` | Implementação, sete tarefas |
 | Runner completo | Não existe, sem spec | — | Fica para depois da primeira sessão crua |
 | Configuração P1 | Não existe | — | Pode ser escrita já |
 | Configuração P2 | Não existe | — | Obrigatória antes da coleta |
