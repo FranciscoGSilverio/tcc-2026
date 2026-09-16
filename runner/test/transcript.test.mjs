@@ -1,0 +1,66 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { readTranscript, toMarkdown } from '../lib/transcript.mjs';
+
+const fixture = readFileSync(new URL('./fixtures/transcript-minimal.jsonl', import.meta.url), 'utf8');
+
+test('reads the final result event', () => {
+  const parsed = readTranscript(fixture);
+  assert.equal(parsed.numTurns, 1);
+  assert.equal(parsed.stopReason, 'end_turn');
+  assert.equal(parsed.isError, false);
+  assert.ok(parsed.costUsd > 0);
+});
+
+test('separates the four token counters', () => {
+  const parsed = readTranscript(fixture);
+  assert.equal(parsed.tokens.input, 2);
+  assert.equal(parsed.tokens.output, 4);
+  assert.equal(parsed.tokens.cacheCreate, 39696);
+  assert.equal(parsed.tokens.cacheRead, 0);
+});
+
+test('reads the exact model identifier and the cli version', () => {
+  const parsed = readTranscript(fixture);
+  assert.match(parsed.model, /^claude-/);
+  assert.ok(parsed.cliVersion.length > 0);
+});
+
+test('counts tool calls, which is zero in this fixture', () => {
+  assert.equal(readTranscript(fixture).toolCalls, 0);
+});
+
+test('counts tool calls when the transcript has them', () => {
+  const withTool = [
+    JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-sonnet-5', claude_code_version: '2.1.0', session_id: 'x' }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'ok' }, { type: 'tool_use', name: 'Bash' }] } }),
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read' }] } }),
+    JSON.stringify({ type: 'result', subtype: 'success', num_turns: 2, stop_reason: 'end_turn', is_error: false, total_cost_usd: 1, duration_ms: 10, usage: { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }, modelUsage: { 'claude-sonnet-5': {} } }),
+  ].join('\n');
+  assert.equal(readTranscript(withTool).toolCalls, 2);
+});
+
+test('fails loudly when there is no result event', () => {
+  const noResult = JSON.stringify({ type: 'system', subtype: 'init', model: 'm', claude_code_version: 'v', session_id: 's' });
+  assert.throws(() => readTranscript(noResult), /result/i);
+});
+
+test('survives a malformed line without losing the rest', () => {
+  const broken = `not json\n${fixture}`;
+  assert.equal(readTranscript(broken).numTurns, 1);
+});
+
+test('detects a rate limit event', () => {
+  const limited = [
+    JSON.stringify({ type: 'rate_limit_event', rate_limit_info: {} }),
+    fixture.trim().split('\n').pop(),
+  ].join('\n');
+  assert.equal(readTranscript(limited).rateLimited, true);
+});
+
+test('renders markdown naming the model and the turn count', () => {
+  const markdown = toMarkdown(readTranscript(fixture));
+  assert.match(markdown, /claude-/);
+  assert.match(markdown, /1/);
+});
