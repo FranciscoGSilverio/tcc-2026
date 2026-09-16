@@ -29,4 +29,14 @@ describe('health and error envelope', () => {
     const response = await app.inject({ method: 'GET', url: '/health' });
     expect(response.headers['x-request-id']).toBeTruthy();
   });
+
+  it('answers a bodyless JSON request with the error envelope, not a crash', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/bookings/00000000-0000-0000-0000-000000000000/cancel',
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('VALIDATION_ERROR');
+  });
 });

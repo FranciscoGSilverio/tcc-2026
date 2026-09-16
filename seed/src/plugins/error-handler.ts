@@ -21,6 +21,11 @@ export async function errorHandlerPlugin(app: FastifyInstance): Promise<void> {
       return;
     }
 
+    if (typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500) {
+      reply.code(error.statusCode).send(errorBody('VALIDATION_ERROR', error.message));
+      return;
+    }
+
     request.log.error({ err: error }, 'unhandled error');
     reply.code(500).send(errorBody('INTERNAL_ERROR', 'Unexpected error'));
   });
