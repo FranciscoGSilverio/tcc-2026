@@ -591,3 +591,55 @@ Lição registrada para as regras restantes: **elas foram escritas antes da seme
 T1 e T2 saíram do log e do protocolo e passaram a viver em `tasks/`, cada um contendo exatamente o texto que o agente recebe e nada mais. Metadados ficam no README daquele diretório, nunca dentro do enunciado. O texto de T2 foi conferido caractere a caractere contra a seção 2.3 do protocolo.
 
 **Novo item em aberto:** o cabeçalho de T1 traz o rótulo `T1`, enquanto T2 traz um identificador realista de ticket. Decidir antes de M3 se T1 recebe um identificador realista também, para que os dois pareçam itens de backlog em vez de itens de um experimento. Não foi alterado agora porque R4.13 declara os textos definitivos até M3.
+
+---
+
+# Rodada 7 — 15/09/2026
+
+Decisões do usuário sobre os itens em aberto após a validação da semente, e a reconferência das nove regras de convenção contra a semente construída.
+
+## R7.1 Rótulo de T1 mantido, de propósito
+
+O enunciado de T1 começa com o rótulo `T1`, enquanto T2 chega como `RES-142`. Foi levantado que os dois deveriam parecer itens de backlog e não itens de um experimento.
+
+**Decisão do usuário: manter como está.** "Isso é proposital, vamos manter dessa forma pra ver como o agente se sai com esses marcadores."
+
+Passa a ser objeto de observação, não defeito. Se o comportamento do agente diferir de forma perceptível entre os dois enunciados por causa do rótulo, isso é achado a reportar, não ruído a corrigir.
+
+## R7.2 Sonda de efeito teto roda depois dos testes ocultos, e mede mais que teto
+
+**Decisão do usuário:** a sessão de agente cru só é rodada quando os testes ocultos estiverem prontos. O objetivo é mais amplo do que eu havia proposto: além do efeito teto, validar **se as métricas que o experimento coleta fazem sentido** numa sessão real.
+
+Isso muda a ordem: testes ocultos, depois implementação de referência, depois a sessão crua. E torna a sessão crua um ensaio do instrumento inteiro, não só uma sonda de um risco.
+
+## R7.3 Implementação de referência escrita por agente
+
+**Decisão do usuário:** a referência será escrita por um agente, não por uma pessoa. Esse agente não faz parte da avaliação, sabe exatamente o que está fazendo, e produz a resposta mínima aceitável. O usuário verifica o resultado, mas a implementação é inteiramente decidida pelo agente.
+
+**Isto revisa R6.2 e a seção 2.5 do protocolo**, que exigiam autoria humana. A consequência precisa ser declarada no artigo: a prova de que cem por cento é alcançável passa a vir de um agente da mesma família sob teste, o que é uma evidência mais fraca do que autoria humana independente.
+
+**Premissa que eu assumi e que precisa ser desmentida se estiver errada:** o agente de referência vê o enunciado e a semente, e **nunca os testes ocultos**. Se ele vir os testes, a referência deixa de provar que o enunciado é suficiente e passa a provar apenas que os testes são satisfazíveis, que é uma afirmação quase vazia. Toda a força do instrumento está nessa cegueira.
+
+## R7.4 Prioridade: chegar a uma sessão crua de ponta a ponta antes de qualquer cerimônia
+
+**Instrução do usuário, e ela reorienta o plano:** o objetivo é ter a semente e os testes prontos para validação e então rodar uma sessão crua de ponta a ponta. Essa sessão é o dado mais importante, mais que qualquer revisão de relatório. Ela informa se a coleta de dados está correta e se existe algo na semente ou nos testes que trave a execução.
+
+**Consequência:** a tag de congelamento, a revisão formal da árvore e o restante da cerimônia deixam de ser pré-requisito do trabalho seguinte. Isso não os cancela, apenas os tira do caminho crítico. E revoga minha recomendação anterior de escrever a spec completa do runner antes dos testes: o caminho mais curto até a primeira sessão passa por um **runner mínimo**, capaz de preparar a cópia de trabalho, executar o agente com o enunciado e aplicar os testes ocultos, e não pelo runner completo com todas as métricas.
+
+Isso também realinha o projeto com a definição original de M2, que sempre foi "uma sessão executada do início ao fim", e não "runner completo".
+
+## R7.5 Reconferência das nove regras de convenção contra a semente construída
+
+As regras foram escritas antes de a semente existir. Confrontadas com a estrutura real, quatro estavam mal calibradas.
+
+| Regra | Situação | Correção |
+|---|---|---|
+| 1, estrutura de arquivos | Estreita demais pela segunda vez | Passa a admitir `src/plugins/`, além de módulos e compartilhados. Sete arquivos de produção legítimos vivem fora dos dois primeiros |
+| 3, configuração alterada | Faltavam arquivos, incluindo o mais grave | Passa a enumerar também `prisma/schema.prisma`, `docker-compose.yml`, `.dockerignore`, `.prettierrc`, `.editorconfig` e `.gitignore`. Alterar o modelo de dados era um ato de grande impacto e não contava nada |
+| 4, escapes de tipo | Ambígua sobre um uso legítimo | Escopo fixado em `src/`. E registrado que reusar o auxiliar `DateString`, que usa `Type.Unsafe`, **não é violação**: contá-lo penalizaria o reuso que o checklist do avaliador premia |
+| 8, `console` em produção | Escopo indefinido | Fixado em `src/`. O carregador de dados de demonstração é script de desenvolvimento, não produção |
+| 2, 5, 6, 7, 9 | Passaram sem ajuste | Regra 5 verificada por contagem: 21 rotas, 21 schemas |
+
+**Decisão de implementação registrada:** as regras 4 e 8 são detectadas rodando o ESLint da semente com a **configuração congelada**, e não por expressão regular sobre o diff. Detectar asserção não-nula por busca textual é frágil, e a configuração da semente já reprova exatamente essas duas coisas. O congelamento da configuração é necessário porque alterá-la é, ela mesma, uma violação da regra 3.
+
+**Lição que vale para os instrumentos restantes:** tudo que foi escrito antes de a semente existir precisa ser reconferido contra ela antes de virar texto de P1 ou código de medição. Isso inclui os dez pontos de decisão de T2, que até agora nunca foram confrontados com nenhuma saída real.

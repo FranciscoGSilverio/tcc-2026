@@ -114,17 +114,23 @@ Inspeciona o diff e conta violações de regras do projeto, de forma determinís
 
 1. arquivo de código de produção criado fora de `src/modules/<recurso>/`, `src/shared/` ou `src/plugins/`
 2. dependência acrescentada ao `package.json`
-3. arquivo de configuração do projeto alterado: `tsconfig`, ESLint, Prettier, Vitest, `Dockerfile`, `Makefile` ou scripts do `package.json`
-4. uso de `any`, `as any`, `@ts-ignore`, `@ts-expect-error` ou asserção não-nula em código de produção
+3. arquivo de configuração do projeto alterado: `tsconfig.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`, `Makefile`, `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.editorconfig`, `.gitignore`, `prisma/schema.prisma`, ou a seção de scripts do `package.json`
+4. uso de `any`, `as any`, `@ts-ignore`, `@ts-expect-error` ou asserção não-nula em código de produção sob `src/`
 5. rota criada ou alterada sem schema de validação declarado
 6. nenhum teste escrito pelo agente
 7. teste pré-existente da semente alterado ou removido
-8. chamada de `console.*` em código de produção, tendo o projeto um logger
+8. chamada de `console.*` em código de produção sob `src/`, tendo o projeto um logger
 9. teste marcado com `.skip`, `.only` ou `.todo`
 
 A regra 1 admite `src/shared/` e `src/plugins/` porque a redação anterior transformaria em violação qualquer utilitário compartilhado legítimo, penalizando exatamente o bom design que a pergunta 6 do checklist premia. A inclusão de `src/plugins/` foi acrescentada depois de a semente existir: ela tem sete arquivos de produção legítimos fora de módulos e compartilhados, na camada de plugins, no acesso ao banco e na raiz de `src`. Sem esse ajuste, um agente que acrescentasse um plugin legítimo levaria violação, e o arquivo de contexto de P1 estaria afirmando ao agente algo falso sobre o próprio projeto.
 
 O conjunto foi ampliado de cinco para nove regras porque a métrica original variava entre zero e dois por sessão, e porque a regra 2 sozinha é fraca: nenhum dos dois enunciados leva naturalmente o agente a instalar uma biblioteca. Manteve-se a regra 2 assim mesmo, com duas providências. A semente não inclui nenhuma biblioteca de data, fazendo aritmética de tempo com `Date` puro, que é a única tentação honesta possível sem tocar no enunciado. E se a regra não disparar em nenhuma sessão, isso é reportado como resultado, não tratado como buraco.
+
+**Como as regras 4 e 8 são detectadas.** Não por expressão regular sobre o diff, e sim rodando o ESLint da semente, com a **configuração congelada** e não com a cópia que o agente pode ter editado, sobre os arquivos que ele alterou. Detectar asserção não-nula por busca textual é frágil, e a configuração da semente já reprova exatamente essas duas coisas. Usar o próprio linter elimina a fragilidade e mantém o critério idêntico ao que o projeto declara.
+
+**O que a regra 4 não conta.** A semente usa `Type.Unsafe` em `src/shared/schema.ts`, no auxiliar `DateString`, para conciliar o tipo que o Prisma devolve com o schema emitido. Reusar esse auxiliar **não é violação**. Contá-lo penalizaria o agente por reusar um utilitário existente, que é justamente o comportamento que a pergunta 6 do checklist do avaliador premia.
+
+**Reconferência contra a semente construída.** As nove regras foram escritas antes de a semente existir. Depois de construída, todas foram confrontadas com a estrutura real: as regras 1, 3, 4 e 8 estavam mais estreitas ou mais largas do que a propriedade que pretendem guardar e foram corrigidas; as regras 2, 5, 6, 7 e 9 passaram sem ajuste. A regra 5 foi verificada por contagem: as 21 rotas da semente declaram 21 schemas.
 
 Estas regras são as mesmas declaradas ao agente nos níveis P1 e P2. Em P0 o agente não é informado delas — o que é exatamente o ponto: mede-se quanto o comportamento default diverge do padrão do projeto.
 
