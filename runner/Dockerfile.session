@@ -7,8 +7,10 @@ USER root
 # job-control kill unreliable against `make start` (it can print
 # "Terminated" while node keeps the port bound) and settled on
 # `fuser -k` against the port instead. psmisc provides fuser.
+# `patch` is not installed either, and the reference fake needs it to
+# apply reference/T1/reference.patch.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends psmisc \
+  && apt-get install -y --no-install-recommends psmisc patch \
   && rm -rf /var/lib/apt/lists/*
 
 # npm install -g @anthropic-ai/claude-code races its own postinstall
