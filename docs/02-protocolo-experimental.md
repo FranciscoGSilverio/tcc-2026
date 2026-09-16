@@ -106,7 +106,15 @@ Regras obrigatórias de construção:
 2. **Testam apenas o contrato descrito no enunciado.** Nunca importam módulos internos, nunca dependem de nomes de função, classe ou arquivo. Se um teste falha porque o agente nomeou algo diferente, o teste está errado, não o agente.
 3. **Cada asserção rastreia para uma frase do enunciado.** Teste que verifica comportamento não pedido deve ser removido, ou o enunciado está incompleto.
 4. **São escritos antes do desenvolvimento do plugin**, para evitar calibração inconsciente ao comportamento que já sabemos que o plugin produz.
-5. **São validados contra uma implementação de referência escrita por um humano da equipe**, para provar que é possível aprovar em 100%.
+5. **São validados contra uma implementação de referência**, para provar que é possível aprovar em 100%.
+
+> **Autoria da referência.** Versões anteriores deste protocolo exigiam que a referência fosse escrita por um humano da equipe. Ela passa a ser escrita por um agente, que não integra a avaliação, sabe exatamente o papel que cumpre e pode consultar os testes ocultos. O agente decide a implementação; a equipe verifica o resultado.
+>
+> A consequência precisa ser declarada no artigo: a prova de que cem por cento é alcançável passa a vir de um agente da mesma família sob teste, evidência mais fraca do que autoria humana independente.
+>
+> Ela também responde uma pergunta mais estreita. Com acesso aos testes, a referência prova que **os testes são satisfazíveis** e fixa o mínimo aceitável. Ela não prova que **o enunciado sozinho basta** para alguém passar neles. Essa segunda pergunta é respondida por outro artefato, a sessão de agente cru descrita abaixo, que é cega aos testes por construção.
+
+> **Sessão de agente cru como ensaio do instrumento.** Antes do piloto, uma sessão é executada em T1 sem nenhum contexto, com os testes ocultos aplicados ao final. Ela responde duas coisas que nada mais responde antes de M3: se o enunciado sozinho leva a uma implementação aprovada, e se as métricas que o experimento coleta fazem sentido quando extraídas de uma sessão real. Serve também como sonda antecipada de efeito teto, que é o risco de maior impacto do projeto e até aqui não tinha nenhuma verificação antes do piloto.
 
 ### 2.6 Script de convenções
 

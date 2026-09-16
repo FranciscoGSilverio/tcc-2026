@@ -1,6 +1,6 @@
 # Log de Implementação
 
-**Atualizado em:** 15/09/2026
+**Atualizado em:** 15/09/2026 (segunda revisão do dia)
 
 ## Para que serve este documento
 
@@ -22,10 +22,11 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 | Enunciados T1 e T2 | Versionados | `tasks/` | Congelamento em M3 |
 | Pontos de decisão de T2 | Escritos, nunca testados | `docs/02`, seção 2.4 | Validar contra saídas reais |
 | Testes ocultos de T1 | Não existem | — | Tudo |
-| Implementação de referência de T1 | Não existe | — | Tudo |
+| Implementação de referência de T1 | Não existe | — | Tudo. Escrita por agente, com acesso aos testes |
 | Script de convenções | Não existe | — | Tudo |
 | Prompts do avaliador cego | Não existem | — | Tudo |
-| Runner | Não existe, sem spec | — | Tudo, inclusive a spec |
+| Runner mínimo | Não existe | — | O suficiente para executar uma sessão de ponta a ponta |
+| Runner completo | Não existe, sem spec | — | Fica para depois da primeira sessão crua |
 | Configuração P1 | Não existe | — | Pode ser escrita já |
 | Configuração P2 | Não existe | — | Obrigatória antes da coleta |
 
@@ -35,25 +36,30 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 
 A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de retrabalho.
 
-1. **Validar a semente pelo checklist**, executado por agente e com comandos, nunca por leitura de código. `tools/seed-audit/CHECKLIST.md`. Inclui subir o serviço e exercitar as rotas.
-2. **Revisão humana da árvore e tag `seed-v1`.** É o único item que não pode ser feito por agente, e trava todo o resto.
-3. **Escrever os testes ocultos de T1**, a partir do enunciado apenas, sem olhar para nenhuma implementação.
-4. **Escrever a implementação de referência de T1**, por quem não viu os testes ocultos. Serve para falsificar o enunciado e a suíte, não para definir a resposta certa.
-5. **Rodar uma sessão de agente cru em T1**, sem contexto nenhum, como sonda de efeito teto. Se um agente sem harness já passa em quase tudo, T1 precisa endurecer antes do piloto.
-6. **Escrever duas soluções de sondagem para T2**, deliberadamente diferentes entre si, para testar se os dez pontos de decisão são classificáveis e para calibrar o prompt do classificador.
+1. **Spec conjunta dos testes ocultos e da implementação de referência.** Os dois são o mesmo instrumento visto de dois lados e não fazem sentido separados.
+2. **Escrever os testes ocultos de T1**, a partir do enunciado apenas.
+3. **Escrever a implementação de referência de T1**, por agente, com acesso aos testes. Prova que a suíte é satisfazível e fixa o mínimo aceitável.
+4. **Runner mínimo:** preparar a cópia de trabalho, executar o agente com o enunciado, aplicar os testes ocultos. Só isso.
+5. **Primeira sessão crua de ponta a ponta em T1**, sem contexto nenhum. É o dado mais importante desta fase. Responde se o enunciado sozinho basta, se as métricas fazem sentido extraídas de uma sessão real, e se há efeito teto.
+6. **Corrigir o que a sessão crua revelar**, seja no enunciado, nos testes, na semente ou no runner.
 7. **Script de convenções**, oito regras, sobre o diff.
-8. **Prompts do avaliador cego**, checklist e classificador, calibrados com os diffs dos itens 4, 5 e 6.
-9. **Spec do runner**, depois plano, depois construção. É o maior risco de cronograma do projeto.
+8. **Duas soluções de sondagem para T2**, deliberadamente diferentes, para testar se os dez pontos de decisão são classificáveis e calibrar o prompt do classificador.
+9. **Prompts do avaliador cego**, checklist e classificador.
 10. **Configurações P1 e P2.**
-11. **Piloto (M3).**
+11. **Runner completo**, com todas as métricas.
+12. **Revisão humana da árvore e tag `seed-v1`.** Saiu do caminho crítico, mas continua obrigatória antes da coleta.
+13. **Piloto (M3).**
 
 O item 10 pode ser antecipado a qualquer momento: as convenções já existem no código, então escrever P1 é trabalho mecânico.
+
+**O que mudou nesta ordem e por quê.** A prioridade passou a ser chegar a uma sessão crua de ponta a ponta antes de qualquer cerimônia. Essa sessão é o dado mais importante desta fase, porque informa se a coleta está correta e se há algo na semente ou nos testes que trave a execução. Isso tira o congelamento do caminho crítico e substitui "spec completa do runner" por "runner mínimo", realinhando o projeto com a definição original de M2, que sempre foi uma sessão executada do início ao fim.
 
 ## Itens em aberto
 
 **De metodologia:**
-- O cabeçalho do enunciado de T1 traz o rótulo `T1`, enquanto o de T2 traz um identificador realista de ticket. Decidir antes de M3 se T1 também recebe um identificador realista, para que os dois pareçam itens de backlog e não itens de um experimento.
-- Os dez pontos de decisão de T2 nunca foram testados contra nenhuma saída. O item 6 acima é o que resolve.
+- Os dez pontos de decisão de T2 nunca foram testados contra nenhuma saída. O item 8 acima é o que resolve.
+- As sete perguntas do checklist do avaliador cego foram escritas antes de a semente existir, e nunca foram reconferidas contra ela. As regras de convenção passaram por essa reconferência e quatro das nove estavam mal calibradas. As perguntas precisam do mesmo tratamento antes de virarem prompt.
+- A pergunta 1 do checklist mede aderência ao padrão canônico, não qualidade em sentido amplo, porque a semente tem um módulo que deliberadamente não possui camada de serviço. Precisa ser rotulada assim no artigo.
 
 **Administrativos, abertos desde a rodada 1 do planejamento:**
 - Valor do orçamento de API, e custo por sessão.
@@ -81,3 +87,4 @@ Lista curta, só para dar noção de ritmo.
 - **09/09** — Spec e plano de implementação do repositório-semente escritos. Protocolo corrigido em cinco seções.
 - **10/09** — Semente construída: doze tarefas, dezoito commits, cinquenta e nove testes, imagem de contêiner verificada por dentro. Quatro roteiros de auditoria, todos provados falhando quando devem falhar.
 - **15/09** — Enunciados movidos para arquivos versionados. Regra 1 do script de convenções corrigida contra a estrutura real da semente.
+- **15/09** — Semente validada por auditoria: vinte itens verificados por comando, serviço saudável de ponta a ponta, sessenta e três testes. Regras de convenção reconferidas contra a semente real; quatro estavam mal calibradas e uma foi removida por exigir análise de sintaxe.

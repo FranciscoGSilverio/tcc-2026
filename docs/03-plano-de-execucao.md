@@ -80,7 +80,7 @@ O marco mais pesado do projeto em horas de trabalho.
 
 *Entregas:* repositório-semente completo (`rooms`, `users`, `bookings` com validação parcial, e `amenities` fora do padrão), testado e congelado na tag `seed-v1` · suíte de testes ocultos de T1 · runner v1 · uma sessão executada do início ao fim gravando uma linha no CSV.
 
-*Portão:* a semente roda com um comando e todos os testes passam · a suíte oculta foi validada contra implementação de referência humana, provando que 100% é alcançável · o runner completou uma sessão sem intervenção.
+*Portão:* a semente roda com um comando e todos os testes passam · a suíte oculta foi validada contra a implementação de referência, provando que 100% é alcançável · uma sessão de agente cru em T1 foi executada e medida · o runner completou uma sessão sem intervenção.
 
 Não precisa estar bonito nem completo em métricas. Precisa fechar o ciclo.
 
@@ -142,7 +142,7 @@ Depois de M5 sobram seis semanas para 25 sessões desassistidas, uma análise e 
 
 **Enunciado de tarefa:** T1 descreve apenas contrato HTTP e regras verificáveis · T2 descreve sintoma sem indicar causa nem solução · ambos terminam com a frase de encerramento padrão · texto congelado em arquivo versionado.
 
-**Testes ocultos (T1):** uma asserção por regra do enunciado e por caso de borda · exercitam a aplicação por HTTP real contra o servidor iniciado pelo runner · nenhuma importa módulo interno · cada asserção rastreia para uma frase do enunciado · validados contra implementação de referência humana · armazenados fora do repositório-semente.
+**Testes ocultos (T1):** uma asserção por regra do enunciado e por caso de borda · exercitam a aplicação por HTTP real contra o servidor iniciado pelo runner · nenhuma importa módulo interno · nenhuma afirma string de código de erro que a semente ainda não produz · cada asserção rastreia para uma frase do enunciado · validados contra a implementação de referência · armazenados fora do repositório-semente.
 
 **Pontos de decisão (T2):** dez pontos com categorias fechadas mais `ausente` · nenhum respondido pelo enunciado · lista congelada antes de qualquer sessão do dataset.
 
