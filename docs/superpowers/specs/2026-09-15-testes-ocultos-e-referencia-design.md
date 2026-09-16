@@ -107,7 +107,11 @@ A suíte escreve um objeto JSON na saída padrão:
 
 **O código de saída não reflete o resultado da medição.** É zero sempre que a suíte conseguiu rodar, inclusive quando a sessão tirou zero. É diferente de zero apenas quando a suíte não conseguiu falar com o servidor.
 
-A distinção é load-bearing para o runner: sessão que foi mal é **dado**; suíte que não rodou é **falha de infraestrutura**, e o protocolo manda registrar a primeira e invalidar a segunda.
+A distinção é load-bearing para o runner: sessão que foi mal é **dado**, e precisa ser registrada.
+
+**Emenda de 16/09, e ela corrige uma leitura incompleta acima.** O código diferente de zero informa apenas que **a suíte não mediu**. Ele não diz por quê, e não classifica a sessão. Se o servidor não sobe porque o agente quebrou a aplicação, isso é dado e a sessão vale zero; se não sobe porque o ambiente falhou, isso é infraestrutura e a sessão é descartada.
+
+**Quem decide é o runner**, por uma fronteira temporal: ele prova que a aplicação respondia **antes** de entregá-la ao agente, e a partir daí qualquer falha do servidor é atribuível ao que o agente fez. Ver a seção 5 da spec do runner mínimo.
 
 ## 6. A implementação de referência
 
