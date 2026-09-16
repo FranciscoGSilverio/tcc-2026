@@ -21,8 +21,8 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 | Auditoria da semente | Pronta | `tools/seed-audit/` | Nada |
 | Enunciados T1 e T2 | Versionados | `tasks/` | Congelamento em M3 |
 | Pontos de decisão de T2 | Escritos, nunca testados | `docs/02`, seção 2.4 | Validar contra saídas reais |
-| Testes ocultos de T1 | Não existem | — | Tudo |
-| Implementação de referência de T1 | Não existe | — | Tudo. Escrita por agente, com acesso aos testes |
+| Testes ocultos de T1 | Spec escrita, não implementados | `docs/superpowers/specs/2026-09-15-testes-ocultos-e-referencia-design.md` | Plano e implementação |
+| Implementação de referência de T1 | Spec escrita, não implementada | mesma spec acima | Plano e implementação. Escrita por agente, com acesso aos testes |
 | Script de convenções | Não existe | — | Tudo |
 | Prompts do avaliador cego | Não existem | — | Tudo |
 | Runner mínimo | Não existe | — | O suficiente para executar uma sessão de ponta a ponta |
@@ -36,7 +36,7 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 
 A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de retrabalho.
 
-1. **Spec conjunta dos testes ocultos e da implementação de referência.** Os dois são o mesmo instrumento visto de dois lados e não fazem sentido separados.
+1. ~~**Spec conjunta dos testes ocultos e da implementação de referência.**~~ Escrita em 15/09.
 2. **Escrever os testes ocultos de T1**, a partir do enunciado apenas.
 3. **Escrever a implementação de referência de T1**, por agente, com acesso aos testes. Prova que a suíte é satisfazível e fixa o mínimo aceitável.
 4. **Runner mínimo:** preparar a cópia de trabalho, executar o agente com o enunciado, aplicar os testes ocultos. Só isso.
