@@ -7,6 +7,13 @@ const MINUTE = 60_000;
 const at = (offsetMs) => new Date(Date.now() + offsetMs).toISOString();
 const hours = (h) => at(h * HOUR);
 const minutes = (m) => at(m * MINUTE);
+// Same as `hours`, but offset from a caller-supplied anchor instant instead
+// of a fresh Date.now() read. Two checks (1.5 and 1.6) need a second
+// booking's boundary to land on the exact millisecond of a first booking's
+// boundary; computing each independently races against the real network and
+// database latency between the two HTTP calls, which shifts the boundary by
+// a few milliseconds in whichever direction the calls happen to drift.
+const hoursFrom = (anchor, h) => new Date(anchor + h * HOUR).toISOString();
 
 let sequence = 0;
 const unique = () =>
@@ -45,13 +52,13 @@ async function fixture() {
   return { roomId: room.body?.id, userId: user.body?.id };
 }
 
-async function book(ids, fromHours, toHours, title = 'Audit') {
+async function book(ids, fromHours, toHours, title = 'Audit', anchor) {
   return call('POST', '/bookings', {
     roomId: ids.roomId,
     userId: ids.userId,
     title,
-    startsAt: hours(fromHours),
-    endsAt: hours(toHours),
+    startsAt: anchor === undefined ? hours(fromHours) : hoursFrom(anchor, fromHours),
+    endsAt: anchor === undefined ? hours(toHours) : hoursFrom(anchor, toHours),
   });
 }
 
@@ -98,15 +105,17 @@ check('1.4', 1, 'new booking contained in an existing one', async () => {
 
 check('1.5', 1, 'new booking starts exactly when another ends', async () => {
   const ids = await fixture();
-  await book(ids, 24, 25);
-  const response = await book(ids, 25, 26);
+  const anchor = Date.now();
+  await book(ids, 24, 25, 'Audit', anchor);
+  const response = await book(ids, 25, 26, 'Audit', anchor);
   return { expected: 201, actual: response.status };
 });
 
 check('1.6', 1, 'new booking ends exactly when another starts', async () => {
   const ids = await fixture();
-  await book(ids, 24, 25);
-  const response = await book(ids, 23, 24);
+  const anchor = Date.now();
+  await book(ids, 24, 25, 'Audit', anchor);
+  const response = await book(ids, 23, 24, 'Audit', anchor);
   return { expected: 201, actual: response.status };
 });
 
