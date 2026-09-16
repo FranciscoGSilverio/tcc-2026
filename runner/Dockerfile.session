@@ -1,6 +1,16 @@
 FROM meeting-rooms-api:1.0.0
 
 USER root
+
+# The seed's own image has neither pkill nor fuser. Killing the server
+# between phases needs one of them: reference/T1/verify.sh already found
+# job-control kill unreliable against `make start` (it can print
+# "Terminated" while node keeps the port bound) and settled on
+# `fuser -k` against the port instead. psmisc provides fuser.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends psmisc \
+  && rm -rf /var/lib/apt/lists/*
+
 # npm install -g @anthropic-ai/claude-code races its own postinstall
 # (install.cjs) against the network fetch of the platform-native optional
 # dependency (@anthropic-ai/claude-code-linux-x64): observed directly on

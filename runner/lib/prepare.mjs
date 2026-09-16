@@ -41,6 +41,16 @@ function initHistory(name) {
   }
 }
 
+// Neither pkill nor plain job-control kill reliably stops `make start`
+// (node dist/server.js) in the session image: reference/T1/verify.sh hit
+// the same problem and settled on fuser against the port itself, so this
+// mirrors that fix rather than trusting a process-name match again.
+function killServer(name, port = 3000) {
+  exec(name, ['sh', '-c', `fuser -k -TERM ${port}/tcp 2>/dev/null || true`]);
+  exec(name, ['sh', '-c', 'sleep 0.2']);
+  exec(name, ['sh', '-c', `fuser -k -KILL ${port}/tcp 2>/dev/null || true`]);
+}
+
 async function assertServesBeforeHandover(name, hostPort) {
   const reset = exec(name, ['sh', '-c', 'cd /app && make db-reset && make build']);
   if (reset.status !== 0) {
@@ -53,7 +63,7 @@ async function assertServesBeforeHandover(name, hostPort) {
     try {
       const response = await fetch(`http://localhost:${hostPort}/health`);
       if (response.ok) {
-        exec(name, ['sh', '-c', 'pkill -f "node dist/server.js" || true']);
+        killServer(name);
         return;
       }
     } catch {
