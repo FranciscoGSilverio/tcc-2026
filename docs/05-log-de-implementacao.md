@@ -1,6 +1,6 @@
 # Log de Implementação
 
-**Atualizado em:** 16/09/2026
+**Atualizado em:** 16/09/2026 (segunda revisão)
 
 ## Para que serve este documento
 
@@ -25,12 +25,12 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 | Implementação de referência de T1 | **Pronta.** 26/26, zero regressões | `reference/T1/` | Nada |
 | Script de convenções | Não existe | — | Tudo |
 | Prompts do avaliador cego | Não existem | — | Tudo |
-| Runner mínimo | Spec e plano escritos | `docs/superpowers/plans/2026-09-16-runner-minimo.md` | Implementação, sete tarefas |
+| Runner mínimo | **Construído e provado por três sessões falsas.** Falta a primeira sessão real | `runner/` | Rodar a sessão real, que gasta orçamento |
 | Runner completo | Não existe, sem spec | — | Fica para depois da primeira sessão crua |
 | Configuração P1 | Não existe | — | Pode ser escrita já |
 | Configuração P2 | Não existe | — | Obrigatória antes da coleta |
 
-**Resumo em uma linha:** a semente e o instrumento de T1 estão prontos; falta o runner mínimo para fechar uma sessão de ponta a ponta.
+**Resumo em uma linha:** semente, instrumento de T1 e runner mínimo prontos e provados; falta rodar a primeira sessão real.
 
 ## Próximos passos, em ordem
 
@@ -39,7 +39,7 @@ A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de ret
 1. ~~**Spec conjunta dos testes ocultos e da implementação de referência.**~~ Escrita em 15/09.
 2. ~~**Escrever os testes ocultos de T1.**~~ Feito em 15/09. Linha de base medida em 13 de 26.
 3. ~~**Escrever a implementação de referência de T1.**~~ Feita em 15/09. Marca 26 de 26, zero regressões.
-4. **Runner mínimo:** preparar a cópia de trabalho, executar o agente com o enunciado, aplicar os testes ocultos. Só isso.
+4. ~~**Runner mínimo.**~~ Feito em 16/09. Provado por três sessões falsas, sem gastar orçamento.
 5. **Primeira sessão crua de ponta a ponta em T1**, sem contexto nenhum. É o dado mais importante desta fase. Responde se o enunciado sozinho basta, se as métricas fazem sentido extraídas de uma sessão real, e se há efeito teto.
 6. **Corrigir o que a sessão crua revelar**, seja no enunciado, nos testes, na semente ou no runner.
 7. **Script de convenções**, oito regras, sobre o diff.
@@ -92,3 +92,4 @@ Lista curta, só para dar noção de ritmo.
 - **15/09** — Suíte oculta de T1 escrita e medida contra a semente intocada: vinte e seis asserções, **treze aprovadas**, exatamente metade, confirmando a previsão do plano regra por regra. Isso importa porque a faixa real de `taxa_aceitacao` começa nesse valor e não em zero: uma sessão que pontue a linha de base não fez nada.
 - **15/09** — Suíte oculta de T1 pronta: 26 asserções, linha de base de 13 contra a semente intocada, batendo com a previsão do plano regra por regra. Implementação de referência marcando 26 de 26 com zero regressões, verificável do zero por roteiro próprio.
 - **16/09** — Corrigido um defeito não enumerado da semente: o tratador de erro descartava o status que o Fastify já definia, devolvendo erro interno onde cabia 400. Os cinco defeitos deliberados sobreviveram e a linha de base não se moveu.
+- **16/09** — Runner mínimo construído e provado por três sessões falsas, sem gastar orçamento: uma que não faz nada pontua a linha de base, uma que aplica a referência pontua o máximo, e uma que quebra a aplicação é **registrada como dado com nota zero** em vez de descartada, que era a propriedade mais cara de errar.
