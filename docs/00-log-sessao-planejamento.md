@@ -657,3 +657,48 @@ As regras foram escritas antes de a semente existir. Confrontadas com a estrutur
 **Registrado junto, para não virar omissão:** o laço entre a regra 5, que pergunta apenas se existe teste escrito pelo agente, e a pergunta 5 do checklist, que avalia se os testes existentes olham comportamento observável. As duas são mantidas por medirem coisas diferentes, mas `violacoes` e `qualidade` nunca podem ser citadas no artigo como evidências independentes do mesmo efeito.
 
 **Também registrado:** a pergunta 1 do checklist, sobre lógica nova na camada de serviço, mede **aderência ao padrão canônico** e não qualidade em sentido amplo, já que a semente tem um módulo que deliberadamente não possui camada de serviço. Precisa ser rotulada assim no artigo.
+
+---
+
+# Rodada 8 — 16/09/2026
+
+Planejamento do ambiente de execução, feito antes de especificar o runner.
+
+## R8.1 O que falta não é separar repositórios, é um contrato de materialização
+
+**Pergunta do usuário:** com tudo num repositório só, é preciso algum setup para separar os testes ocultos da semente antes de o runner rodar?
+
+**Análise.** Existem quatro vias pelas quais os artefatos do estudo poderiam chegar ao agente. Três já estão fechadas: o sistema de arquivos, porque só `seed/` é materializado; o histórico do git, porque a cópia de trabalho nasce como repositório novo com um commit de mensagem neutra; e a rede, porque o repositório de artefatos fica privado até o fim da coleta.
+
+A quarta é a única que nasce junto com o runner: **montar o diretório errado dentro do contêiner**. E separar repositórios não a fecha, porque as duas árvores estariam na mesma máquina de qualquer forma. O que fecha é o runner montar exatamente um diretório e verificar o que montou.
+
+## R8.2 A suíte oculta roda do host, e nunca entra no contêiner
+
+**Decisão do usuário.** O runner sobe o servidor dentro do contêiner, publica a porta e executa a suíte a partir do host, por HTTP.
+
+**Isto revoga o passo 5 da seção 6 do protocolo**, que mandava copiar os testes ocultos para dentro da cópia de trabalho depois do fim da sessão.
+
+**Por que importa mais do que parece.** A mudança não acrescenta uma mitigação: ela **remove** a classe de risco que a verificação 5 do portão do piloto existe para vigiar. Não há ordem a garantir nem vestígio a limpar quando o artefato nunca chega ao sistema de arquivos que o agente enxerga. Isso só é possível porque a suíte foi construída como script sem dependências que fala HTTP, decisão tomada na spec dos testes ocultos por outro motivo, o de ficar imune ao tooling que o agente possa ter quebrado.
+
+O mesmo raciocínio vale para o enunciado, que chega como prompt e nunca como arquivo.
+
+## R8.3 Separação dos repositórios adiada
+
+**Decisão do usuário:** manter uma árvore só por enquanto.
+
+**Racional.** A separação é trabalho de empacotamento para publicação, não de isolamento, e o contrato de materialização é idêntico com uma ou duas árvores. Fazê-la agora acrescentaria sincronização entre árvores justamente na fase em que o runner mais vai mudar, e não antecipa nada, porque o repositório de artefatos segue privado até o fim da coleta de qualquer maneira.
+
+## R8.4 O que passa a ser exigência do runner
+
+Registrado aqui para entrar na spec:
+
+1. **Imagem de sessão** derivada da imagem da semente, acrescentando o CLI do agente.
+2. **Materialização codificada**: extrair apenas `seed/`, iniciar repositório novo, um commit de mensagem neutra.
+3. **Verificar o que o agente vai ver**, e não o que achamos que entregamos: rodar a checagem de vazamento **contra a cópia materializada**, não contra `seed/`.
+4. **Segredo fora da árvore**: a chave de API entra por variável de ambiente e nunca por arquivo na cópia de trabalho, senão aparece no diff da sessão.
+5. **Uma única montagem**, de saída, onde o runner grava diff e transcrições.
+6. **Derrubada garantida** de contêiner e servidor mesmo quando a sessão falha.
+
+## R8.5 A primeira sessão roda só com T1
+
+**Decisão do usuário, na mesma conversa.** T2 não tem testes por construção, conforme R2.2, e o que falta para ela é o classificador dos pontos de decisão mais duas soluções de sondagem. Como o instrumento de T1 está inteiro e o de T2 não, a primeira sessão de ponta a ponta exercita o runner com o instrumento mais simples, descobrindo os defeitos do runner antes de exercitar o mais delicado.

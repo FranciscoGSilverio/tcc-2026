@@ -307,7 +307,13 @@ Entrada: identificação da célula (modelo, nível P, nível O), tarefa, númer
 4. **Verificar o estado.** Build, verificação de tipos e suíte pré-existente. Registrar resultados.
 
    Três garantias de isolamento valem daqui em diante, e protegem as medições de serem sabotadas pelo próprio agente. Os comandos de verificação vêm do Makefile **congelado**, nunca da cópia que o agente pode ter editado. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão, e separadamente registra-se se o agente os alterou, o que é a regra 6 do script de convenções. E o servidor é iniciado pelos comandos congelados, com o runner aguardando `GET /health` responder antes de aplicar a suíte oculta.
-5. **Aplicar os testes ocultos** — só em T1, e só agora, nunca antes.
+5. **Aplicar os testes ocultos** — só em T1, e **de fora do contêiner**.
+
+   O runner sobe o servidor dentro do contêiner, publica a porta e executa a suíte a partir do host, por HTTP. **Os testes ocultos nunca entram na cópia de trabalho**, em momento nenhum, porque a suíte é um script sem dependências que fala HTTP e não precisa estar lá.
+
+   Isto revoga a redação anterior, que mandava copiá-los para dentro depois do fim da sessão. A mudança não é uma mitigação a mais: ela **remove** a classe de risco que a verificação 5 do portão do piloto existe para vigiar. Não há ordem a garantir nem vestígio a limpar quando o artefato nunca chega ao sistema de arquivos que o agente enxerga.
+
+   Efeito colateral: a medição fica imune ao que o agente fez com o tooling do projeto. Se ele remover o Vitest ou quebrar a configuração de teste, a suíte oculta continua rodando.
 6. **Rodar o script de convenções** sobre o diff.
 7. **Rodar o avaliador cego**: checklist de qualidade em ambas as tarefas, classificação dos pontos de decisão em T2. Três chamadas por pergunta, voto majoritário, sem qualquer informação sobre a condição.
 8. **Registrar.** Escrever a linha em `resultados.csv` e arquivar em `sessoes/<id>/` o diff, o transcript bruto em JSON para reprocessamento programático, e uma transcrição legível em markdown com a sequência de prompts, respostas e chamadas de ferramenta. A segunda existe para permitir análise qualitativa do comportamento do agente depois que os dados quantitativos estiverem fechados, e custa quase nada, já que o transcript bruto vem da API de qualquer forma.
