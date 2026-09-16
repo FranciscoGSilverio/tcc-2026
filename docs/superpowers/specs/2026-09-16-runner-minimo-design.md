@@ -95,6 +95,9 @@ Sem o teste de prontidão do passo 5, "o servidor não sobe" é ambíguo: pode s
 | CLI do agente não inicia | Servidor não sobe **depois** da sessão |
 | API indisponível ou com limite atingido | Qualquer pontuação na suíte oculta, inclusive zero |
 | Erro do próprio runner | Qualquer número de regressões |
+| Teto de tempo de parede atingido | |
+
+**Sobre o teto de tempo de parede.** É coisa diferente do limite de turnos e existe para a execução noturna não ficar presa numa chamada pendurada. Bater nele é falha de infraestrutura, porque indica processo travado e não trabalho lento: um agente que consome muitos turnos bate no limite de turnos, que é dado, muito antes de bater no teto de tempo.
 
 **Por que a assimetria importa.** Descartar sessão ruim removeria justamente as piores execuções do dataset. Isso empurraria todas as condições para cima e é o viés mais difícil de detectar depois, porque o dataset resultante parece limpo. O protocolo já diz que uma sessão em que o agente foi mal não é descartada, é dado; esta seção é o que torna essa regra operacional.
 
@@ -111,23 +114,47 @@ O runner mínimo preenche seis das nove métricas. As três restantes dependem d
 | `duracao_s` | Tempo de parede apenas da fase de execução do agente | Preenchida |
 | `custo_usd` | Tokens do transcript, mais tabela de preços versionada | Preenchida |
 | `n_tool_calls` | Contagem de invocações de ferramenta no transcript | Preenchida |
-| `travou` | Turnos excedidos, ou sem diff, ou build quebrado, ou servidor não sobe | Preenchida |
+| `travou` | Turnos excedidos, ou sem diff, ou build quebrado, ou servidor não sobe | Preenchida, com as causas separadas na seção 6.3 |
 | `violacoes` | Script de convenções | Vazia, o script não existe |
 | `qualidade` | Checklist do avaliador cego | Vazia, os prompts não existem |
 | `decisoes` | Classificador de pontos de decisão | Vazia, é exclusiva de T2 |
 
-**O CSV nasce com o esquema completo, com as colunas vazias.** A forma do dataset estabiliza agora, e o trabalho seguinte preenche colunas em vez de reformatar o arquivo, o que evitaria ter que reprocessar sessões já coletadas.
+### 6.1 O dataset é um arquivo só
 
-Colunas, por grupo:
+**CSV e dataset são a mesma coisa:** `resultados.csv`, uma linha por sessão. Identidade, reprodutibilidade, situação, métricas, tokens brutos e caminhos ficam todos na mesma linha. Os grupos abaixo são uma forma de descrever as colunas, não arquivos separados.
 
 - **Identidade:** id da sessão, tarefa, modelo, versão exata do modelo, nível de contexto, nível de ordem, número da execução, início, fim.
 - **Reprodutibilidade:** digest da imagem de sessão, versão do CLI do agente.
 - **Situação:** válida ou inválida, e o motivo quando inválida.
-- **Métricas:** as nove da tabela acima.
+- **Métricas:** as da tabela acima, com `decisoes` desdobrada em dez colunas.
+- **Diagnóstico:** contagem de turnos, e as três causas de `travou` separadas.
 - **Custo em bruto:** tokens de entrada, de saída, de leitura de cache e de escrita de cache, separados, mais a versão da tabela de preços.
 - **Artefatos:** caminho do diff, caminho do transcript.
 
+**O CSV nasce com o esquema completo, com as colunas vazias**, para que o trabalho seguinte preencha colunas em vez de reformatar o arquivo, o que obrigaria a reprocessar sessões já coletadas.
+
 **Por que os tokens brutos e não só o valor.** Preço muda. Um dataset que guarda apenas o valor final não permite recalcular; com as contagens brutas e a versão da tabela, sim. Custa quatro colunas.
+
+**Por que `decisoes` vira dez colunas.** Ela é um vetor de dez posições, uma por ponto de decisão de T2. Vetor em célula de CSV vira string que a análise depois precisa desmontar, e desmontar string é onde se perde dado em silêncio.
+
+### 6.2 O que não achata, e por isso não vai para o CSV
+
+Duas coisas não cabem numa linha e ficam no diretório da sessão, em um arquivo de resultado:
+
+- **O resultado asserção por asserção** da suíte oculta, que é o que permite reler uma sessão sem reexecutá-la.
+- **As respostas individuais das três chamadas do avaliador cego** por pergunta. A métrica de confiabilidade do protocolo é a taxa de desacordo entre essas três chamadas, e ela não existe se só o voto majoritário for guardado.
+
+A divisão é: **o CSV guarda o agregado que a análise consome, e o diretório da sessão guarda o detalhe que a sustenta.**
+
+### 6.3 Diagnóstico de sessão travada
+
+`travou` é a soma de três condições distintas: limite de turnos estourado, ausência de diff, e build ou checagem de tipos quebrados ao final. O protocolo congelou a métrica composta, que permanece.
+
+Mas composta ela não serve para diagnóstico: vindo verdadeira, não se sabe qual das três ocorreu. Por isso o CSV guarda **também as três causas em colunas próprias**, mais a contagem de turnos consumidos.
+
+**Isto existe por causa do limite de quarenta turnos.** O número é arbitrário e vai continuar arbitrário até haver dado. O risco que ele carrega não é rejeitar sessão, porque estourar o limite é dado registrado, e sim **truncar trabalho de forma desigual entre condições**: a ordem segmentada gasta quatro chamadas encadeadas contra uma da instrução única, então um teto comum morde mais um lado. O protocolo já declara essa assimetria como ameaça à validade, e nunca a mediu.
+
+Com a contagem de turnos gravada, o portão do piloto ganha uma verificação: **nenhuma sessão do piloto pode ter batido no limite.** Se alguma bater, o número sobe antes do congelamento, com evidência em vez de palpite.
 
 ## 7. Como o runner é testado sem gastar orçamento
 
