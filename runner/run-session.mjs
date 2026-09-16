@@ -50,6 +50,12 @@ async function main() {
   const model = argument('--model', 'claude-sonnet-5');
   const runNumber = argument('--run', '1');
   const fake = argument('--fake', null);
+  // Configurable so the runner's own tests never write to the real
+  // dataset: a fixed path meant a `node --test` run would silently
+  // append fake sessions to the file the actual collection lands in.
+  const datasetPath = resolve(
+    argument('--dataset', process.env.RUNNER_DATASET_PATH ?? join(REPO, 'resultados.csv')),
+  );
 
   const sessionId = `${task}-${pLevel}-${oLevel}-${Date.now().toString(36)}`;
   const outDir = join(REPO, 'sessions', sessionId);
@@ -124,7 +130,7 @@ async function main() {
     stop(name);
   }
 
-  appendRow(join(REPO, 'resultados.csv'), row);
+  appendRow(datasetPath, row);
   process.stdout.write(`${JSON.stringify(row, null, 2)}\n`);
 }
 

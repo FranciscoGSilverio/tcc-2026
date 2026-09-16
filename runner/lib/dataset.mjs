@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const DECISION_COLUMNS = Array.from({ length: 10 }, (_, index) => `decisao_${index + 1}`);
 
@@ -32,6 +32,20 @@ export function appendRow(csvPath, row) {
 
   if (!existsSync(csvPath)) {
     writeFileSync(csvPath, `${COLUMNS.join(',')}\n`);
+  } else {
+    // A schema change after the file already exists must fail loudly, not
+    // silently misalign new rows under an old header: a value that used
+    // to land in `travou` would keep landing there under a header that no
+    // longer calls that column `travou`, and nothing about writing the row
+    // would notice.
+    const existingHeader = readFileSync(csvPath, 'utf8').split('\n', 1)[0];
+    const expectedHeader = COLUMNS.join(',');
+    if (existingHeader !== expectedHeader) {
+      throw new Error(
+        `${csvPath} has a header that does not match the current schema; ` +
+        `refusing to append a row that would misalign silently`,
+      );
+    }
   }
 
   appendFileSync(csvPath, `${COLUMNS.map((column) => escape(row[column])).join(',')}\n`);

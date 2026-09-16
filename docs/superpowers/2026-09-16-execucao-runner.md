@@ -240,7 +240,7 @@ Limpo depois do commit desta tarefa (ver abaixo). Acrescentado um `.gitignore` n
 
 ### `resultados.csv`
 
-Cabeçalho + 3 sessões falsas, 41 colunas — confirmado acima.
+Cabeçalho + 3 sessões falsas, 41 colunas — confirmado acima, no estado deste arquivo **na primeira rodada da Task 6**. Esse arquivo tinha um defeito de acumulação silenciosa entre execuções da suíte, corrigido na seção seguinte ("Correções pós-validação"); ao final desta tarefa, `resultados.csv` foi apagado, não existe mais no repositório.
 
 ---
 
@@ -254,6 +254,111 @@ Cabeçalho + 3 sessões falsas, 41 colunas — confirmado acima.
 6. **`.gitignore` na raiz**: criado, ignorando `/sessions/`, para manter `git status --short` limpo entre rodadas — não existia nenhum antes desta execução.
 
 Nenhum desvio afetou o escopo (T1, P0, O1) nem introduziu dependências além da biblioteca padrão do Node. Nenhum teste foi enfraquecido para passar — em particular, o teste do substituto `break` está exatamente como o plano especifica, e passa porque o runner foi corrigido (a causa raiz do `pkill`/`fuser` ausente), não porque a asserção foi relaxada.
+
+---
+
+## Correções pós-validação: integridade do dataset
+
+O coordenador validou a entrega por comando independente e encontrou um defeito real que eu não tinha visto: `run-session.mjs` gravava sempre em `join(REPO, 'resultados.csv')`, caminho fixo no código. Cada `node --test` roda os três substitutos em `end-to-end.test.mjs`, então cada rodada da suíte acrescentava três linhas de sessão falsa ao dataset real — o mesmo arquivo versionado que vai receber a coleta. Medido pelo coordenador: o arquivo foi de dez para treze linhas numa única rodada, com doze linhas falsas acumuladas de execuções anteriores que passaram despercebidas nesta entrega, porque meu relatório só descreveu a rodada final (três linhas), não a história de quantas vezes a suíte tinha rodado até ali.
+
+Três correções, nesta ordem.
+
+### 1. Destino do dataset configurável
+
+`run-session.mjs` agora aceita `--dataset <caminho>` ou a variável de ambiente `RUNNER_DATASET_PATH`, com `resultados.csv` na raiz do repositório como padrão — o comportamento de antes, preservado para quando o runner roda de verdade:
+
+```js
+const datasetPath = resolve(
+  argument('--dataset', process.env.RUNNER_DATASET_PATH ?? join(REPO, 'resultados.csv')),
+);
+...
+appendRow(datasetPath, row);
+```
+
+### 2. O teste de ponta a ponta aponta para um arquivo temporário
+
+`runner/test/end-to-end.test.mjs` agora cria um CSV de descarte por rodada de arquivo de teste (`mkdtempSync` + `--dataset <esse caminho>` em cada chamada a `run-session.mjs`) em vez de deixar `run-session.mjs` cair no padrão. Prova, com hash real do arquivo, rodada em duas execuções completas e consecutivas da suíte inteira do runner:
+
+```
+$ sha256sum resultados.csv
+379c9a434c4bdb307beac654028848437f0d8f4bdeb9ab96c3f282e131cd0b04  resultados.csv   # (arquivo criado só com o cabeçalho, para ter algo a comparar)
+
+$ cd runner && node --test        # rodada 1: 32/32 PASS
+$ sha256sum ../resultados.csv
+379c9a434c4bdb307beac654028848437f0d8f4bdeb9ab96c3f282e131cd0b04  ../resultados.csv   # inalterado
+
+$ node --test                     # rodada 2: 32/32 PASS
+$ sha256sum ../resultados.csv
+379c9a434c4bdb307beac654028848437f0d8f4bdeb9ab96c3f282e131cd0b04  ../resultados.csv   # inalterado, mesmo hash
+
+$ wc -l ../resultados.csv
+1 ../resultados.csv   # continua só o cabeçalho
+```
+
+Duas rodadas completas e consecutivas da suíte inteira (32 testes cada, incluindo os três substitutos de ponta a ponta) não mudaram um único byte do arquivo.
+
+**Nota sobre uma falha isolada observada:** numa execução anterior a essas duas, sob a mesma carga (contêineres Docker subindo em paralelo para vários arquivos de teste ao mesmo tempo), uma sessão de `end-to-end.test.mjs` voltou `status: invalid` em vez de `valid` uma única vez, sem se repetir nas duas rodadas seguintes nem em nenhuma execução anterior desta tarefa. Não investiguei a fundo porque não voltou a acontecer e não é o defeito que esta rodada corrige; registro aqui para não esconder o que vi. Se se repetir, é candidato a investigação de disputa de recurso (CPU/disco) sob paralelismo pesado de contêineres, não um defeito de lógica do runner.
+
+### 3. `appendRow` confere o cabeçalho quando o arquivo já existe
+
+Antes, `appendRow` só escrevia o cabeçalho quando o arquivo não existia; se o esquema mudasse depois de o arquivo já existir, linhas novas cairiam em colunas erradas sem aviso nenhum. Agora, quando o arquivo já existe, a primeira linha é lida e comparada byte a byte com `COLUMNS.join(',')`; se não bater, `appendRow` lança erro e não escreve nada:
+
+```js
+} else {
+  const existingHeader = readFileSync(csvPath, 'utf8').split('\n', 1)[0];
+  const expectedHeader = COLUMNS.join(',');
+  if (existingHeader !== expectedHeader) {
+    throw new Error(
+      `${csvPath} has a header that does not match the current schema; ` +
+      `refusing to append a row that would misalign silently`,
+    );
+  }
+}
+```
+
+Coberto por um teste novo em `runner/test/dataset.test.mjs` (`refuses to append under a header that does not match the current schema`), que escreve um cabeçalho antigo de propósito, confirma que `appendRow` lança erro contendo "header", e confirma que o arquivo permanece exatamente com o cabeçalho antigo — nada foi acrescentado por baixo do erro.
+
+```
+✔ the schema carries every group the spec lists
+✔ the ten decision columns of the ambiguous task exist
+✔ an empty row has one key per column and no extras
+✔ writes the header once and appends rows under it
+✔ quotes a value that carries a comma, so the row keeps its shape
+✔ refuses a row carrying a column the schema does not know
+✔ refuses to append under a header that does not match the current schema
+ℹ tests 7, pass 7, fail 0
+```
+
+### `resultados.csv` apagado
+
+Removido do repositório, junto com `sessions/` (saída de teste da validação desta rodada). O arquivo continha só sessões falsas; a primeira sessão real recria o arquivo a partir do esquema em `runner/lib/dataset.mjs`, que é a única fonte de verdade sobre as colunas. Deixar um arquivo só com cabeçalho versionado duplicaria esse esquema em dois lugares — o próprio defeito que a correção 3 existe para fechar.
+
+### Confirmação final desta rodada
+
+```
+$ cd runner && node --test
+ℹ tests 32
+ℹ pass 32
+ℹ fail 0
+
+$ ls resultados.csv
+ls: cannot access 'resultados.csv': No such file or directory
+
+$ git status --short
+ D resultados.csv
+ M runner/lib/dataset.mjs
+ M runner/run-session.mjs
+ M runner/test/dataset.test.mjs
+ M runner/test/end-to-end.test.mjs
+(limpo depois do commit desta rodada)
+
+$ docker ps -a --format '{{.Names}}' | grep -Ei 'session|runner'
+(vazio)
+
+$ cd seed && make verify
+Test Files  7 passed (7)
+     Tests  64 passed (64)
+```
 
 ---
 

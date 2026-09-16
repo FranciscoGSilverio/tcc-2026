@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { COLUMNS, emptyRow, appendRow } from '../lib/dataset.mjs';
@@ -59,4 +59,18 @@ test('refuses a row carrying a column the schema does not know', () => {
   const directory = mkdtempSync(join(tmpdir(), 'dataset-'));
   const path = join(directory, 'resultados.csv');
   assert.throws(() => appendRow(path, { ...emptyRow(), surpresa: 1 }), /surpresa/);
+});
+
+test('refuses to append under a header that does not match the current schema', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'dataset-'));
+  const path = join(directory, 'resultados.csv');
+  writeFileSync(path, 'session_id,task,an_old_column\n');
+
+  assert.throws(
+    () => appendRow(path, { ...emptyRow(), session_id: 'a' }),
+    /header/,
+  );
+
+  // Nothing was appended: the file still holds only the stale header.
+  assert.equal(readFileSync(path, 'utf8'), 'session_id,task,an_old_column\n');
 });
