@@ -535,3 +535,59 @@ Tomadas sem consulta, para não parar a execução. Todas foram julgadas sólida
 ## R5.5 Próximos passos
 
 Revisão humana da árvore e tag `seed-v1`. Depois disso, a semente destrava os quatro artefatos que dependem dela: testes ocultos de T1, runner, script de convenções e as configurações de contexto P1 e P2.
+
+---
+
+# Rodada 6 — 15/09/2026
+
+Sessão curta de planejamento, ocorrida logo após a construção da semente. Decide como validar a semente e o que vem a seguir. Só decisões; o estado corrente do projeto passa a viver em `05-log-de-implementacao.md`.
+
+## R6.1 Golden standard: sim para T1, não para T2
+
+**Proposta do usuário:** definir uma implementação de referência para cada enunciado, como "o mínimo aceitável de uma solução sem erros", e a partir dela validar se as métricas fazem sentido.
+
+**Para T1, aceito, e já era obrigatório.** O critério de pronto dos testes ocultos exige validação contra implementação de referência humana, provando que cem por cento é alcançável.
+
+**Para T2, recusado.** R2.2 já havia rejeitado golden standard com esta justificativa: pressupõe resposta certa, que não existe. T2 mede convergência precisamente porque não há resposta certa. Definir agora a solução correta de T2 quebraria duas coisas: contradiria uma decisão registrada, e faria quem escrever o classificador dos pontos de decisão calibrar contra aquela solução, que é o viés de expectativa que o protocolo tenta evitar.
+
+**Substituto adotado, que atende à necessidade real por trás do pedido:** escrever **duas soluções de sondagem para T2, deliberadamente diferentes entre si**. Não são a resposta certa. Servem para testar se o classificador consegue distinguir as escolhas nos dez pontos de decisão, e para calibrar o prompt do avaliador cego, que precisa de diffs de exemplo e hoje não tem nenhum. É a verificação 9 do portão do piloto, antecipada e barata.
+
+## R6.2 Testes ocultos antes da implementação de referência, e referência escrita às cegas
+
+**Correção de ordem.** A proposta do usuário era referência primeiro, depois métricas, depois testes. A ordem correta é a inversa.
+
+Se a referência vem primeiro, os testes tendem a ser escritos para casar com as escolhas dela, passando a depender de detalhes de implementação em vez do contrato do enunciado — o que a regra 2 da seção 2.5 do protocolo proíbe explicitamente.
+
+Com os testes primeiro, a referência vira o que ela deve ser: **um teste de falsificação do enunciado e da suíte**. Se alguém competente, lendo apenas o enunciado e a semente, produz algo que os testes reprovam, então ou o enunciado está incompleto ou os testes especificam demais. Isso é a verificação 7 do portão do piloto, antecipada.
+
+**Condição obrigatória:** quem escreve a referência não pode ter visto os testes ocultos. Sem isso o instrumento não vale nada.
+
+## R6.3 Sonda de efeito teto com agente cru
+
+Além da referência humana, rodar **uma sessão de agente sem contexto nenhum em T1** e medir. As duas respondem perguntas diferentes: a referência humana prova que a suíte é justa, e o agente cru mede quanto do resultado já vem de graça.
+
+Se um agente sem harness passa em quase tudo, o efeito teto é real e T1 precisa endurecer. O valor está no momento: isso é sabível na semana 2, e não na semana 4, quando corrigir custaria refazer.
+
+O efeito teto é o risco de maior impacto do projeto desde a rodada 1, e até aqui não tinha nenhuma sonda antes do piloto.
+
+## R6.4 Regra 1 do script de convenções corrigida de novo
+
+R4.7 já havia ampliado a regra para admitir `src/shared/`. Com a semente construída, ficou claro que ainda estava estreita: existem sete arquivos de produção legítimos fora de módulos e compartilhados, na camada de plugins, no acesso ao banco e na raiz de `src`.
+
+**Corrigido para admitir também `src/plugins/`.** Sem isso, um agente que acrescentasse um plugin legítimo levaria violação, e P1 estaria declarando ao agente uma regra falsa sobre o próprio projeto, que ele poderia verificar lendo o código.
+
+Lição registrada para as regras restantes: **elas foram escritas antes da semente existir e precisam ser reconferidas contra a estrutura real** antes de virarem o texto de P1.
+
+## R6.5 Separação entre log de decisões e log de estado
+
+**Observação do usuário:** este arquivo virou um quebra-galho geral demais para ser usado.
+
+**Aplicado:** criado `docs/05-log-de-implementacao.md`, curto e reescrito a cada sessão, respondendo onde o projeto está e o que vem a seguir. Este arquivo continua append-only e responde por que cada decisão foi tomada, com as alternativas rejeitadas.
+
+**Regra para sessões futuras:** decisão com racional entra aqui, como nova rodada. Estado, progresso e próximos passos entram no log de implementação, sobrescrevendo o que estava lá.
+
+## R6.6 Enunciados versionados
+
+T1 e T2 saíram do log e do protocolo e passaram a viver em `tasks/`, cada um contendo exatamente o texto que o agente recebe e nada mais. Metadados ficam no README daquele diretório, nunca dentro do enunciado. O texto de T2 foi conferido caractere a caractere contra a seção 2.3 do protocolo.
+
+**Novo item em aberto:** o cabeçalho de T1 traz o rótulo `T1`, enquanto T2 traz um identificador realista de ticket. Decidir antes de M3 se T1 recebe um identificador realista também, para que os dois pareçam itens de backlog em vez de itens de um experimento. Não foi alterado agora porque R4.13 declara os textos definitivos até M3.

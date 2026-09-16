@@ -112,7 +112,7 @@ Regras obrigatórias de construção:
 
 Inspeciona o diff e conta violações de regras do projeto, de forma determinística. Cada item vale uma violação:
 
-1. arquivo de código de produção criado fora de `src/modules/<recurso>/` ou `src/shared/`
+1. arquivo de código de produção criado fora de `src/modules/<recurso>/`, `src/shared/` ou `src/plugins/`
 2. dependência acrescentada ao `package.json`
 3. arquivo de configuração do projeto alterado: `tsconfig`, ESLint, Prettier, Vitest, `Dockerfile`, `Makefile` ou scripts do `package.json`
 4. uso de `any`, `as any`, `@ts-ignore`, `@ts-expect-error` ou asserção não-nula em código de produção
@@ -122,7 +122,7 @@ Inspeciona o diff e conta violações de regras do projeto, de forma determinís
 8. chamada de `console.*` em código de produção, tendo o projeto um logger
 9. teste marcado com `.skip`, `.only` ou `.todo`
 
-A regra 1 admite `src/shared/` porque a redação anterior transformaria em violação qualquer utilitário compartilhado legítimo, penalizando exatamente o bom design que a pergunta 6 do checklist premia.
+A regra 1 admite `src/shared/` e `src/plugins/` porque a redação anterior transformaria em violação qualquer utilitário compartilhado legítimo, penalizando exatamente o bom design que a pergunta 6 do checklist premia. A inclusão de `src/plugins/` foi acrescentada depois de a semente existir: ela tem sete arquivos de produção legítimos fora de módulos e compartilhados, na camada de plugins, no acesso ao banco e na raiz de `src`. Sem esse ajuste, um agente que acrescentasse um plugin legítimo levaria violação, e o arquivo de contexto de P1 estaria afirmando ao agente algo falso sobre o próprio projeto.
 
 O conjunto foi ampliado de cinco para nove regras porque a métrica original variava entre zero e dois por sessão, e porque a regra 2 sozinha é fraca: nenhum dos dois enunciados leva naturalmente o agente a instalar uma biblioteca. Manteve-se a regra 2 assim mesmo, com duas providências. A semente não inclui nenhuma biblioteca de data, fazendo aritmética de tempo com `Date` puro, que é a única tentação honesta possível sem tocar no enunciado. E se a regra não disparar em nenhuma sessão, isso é reportado como resultado, não tratado como buraco.
 
