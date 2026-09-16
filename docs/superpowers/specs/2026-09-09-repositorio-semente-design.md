@@ -260,7 +260,7 @@ Esta é a fronteira que torna as sessões de implementação seguintes mecânica
 **Três garantias de isolamento**, que protegem as medições de serem sabotadas pelo próprio agente:
 
 1. Os comandos de verificação vêm do Makefile **congelado**, nunca da cópia que o agente pode ter editado.
-2. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão. Separadamente, o runner registra se o agente os alterou, o que é a regra 7 do script de convenções.
+2. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão. Separadamente, o runner registra se o agente os alterou, o que é a regra 6 do script de convenções.
 3. Os testes ocultos são copiados **apenas depois** que a sessão termina, para um diretório que não existe na semente, e rodam com configuração fornecida pelo runner.
 
 **Materialização da cópia de trabalho.** O runner extrai a árvore a partir da tag congelada e inicializa um repositório git novo, com um único commit de mensagem neutra. Isso elimina por construção o vazamento por histórico, que seria fatal e é fácil de esquecer.

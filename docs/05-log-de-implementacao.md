@@ -41,7 +41,7 @@ A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de ret
 4. **Escrever a implementação de referência de T1**, por quem não viu os testes ocultos. Serve para falsificar o enunciado e a suíte, não para definir a resposta certa.
 5. **Rodar uma sessão de agente cru em T1**, sem contexto nenhum, como sonda de efeito teto. Se um agente sem harness já passa em quase tudo, T1 precisa endurecer antes do piloto.
 6. **Escrever duas soluções de sondagem para T2**, deliberadamente diferentes entre si, para testar se os dez pontos de decisão são classificáveis e para calibrar o prompt do classificador.
-7. **Script de convenções**, nove regras, sobre o diff.
+7. **Script de convenções**, oito regras, sobre o diff.
 8. **Prompts do avaliador cego**, checklist e classificador, calibrados com os diffs dos itens 4, 5 e 6.
 9. **Spec do runner**, depois plano, depois construção. É o maior risco de cronograma do projeto.
 10. **Configurações P1 e P2.**

@@ -643,3 +643,17 @@ As regras foram escritas antes de a semente existir. Confrontadas com a estrutur
 **Decisão de implementação registrada:** as regras 4 e 8 são detectadas rodando o ESLint da semente com a **configuração congelada**, e não por expressão regular sobre o diff. Detectar asserção não-nula por busca textual é frágil, e a configuração da semente já reprova exatamente essas duas coisas. O congelamento da configuração é necessário porque alterá-la é, ela mesma, uma violação da regra 3.
 
 **Lição que vale para os instrumentos restantes:** tudo que foi escrito antes de a semente existir precisa ser reconferido contra ela antes de virar texto de P1 ou código de medição. Isso inclui os dez pontos de decisão de T2, que até agora nunca foram confrontados com nenhuma saída real.
+
+## R7.6 Regra de "rota sem schema" removida do script de convenções
+
+**Contexto.** Ao revisar a sobreposição entre os instrumentos, apontei três pares em que o script determinístico e o checklist do avaliador cego mediriam a mesma coisa. Sob exame, só um dos três era duplicação de fato; os outros dois eram sobreposição parcial. Minha afirmação inicial de "três instrumentos medem a mesma coisa" foi mais forte do que a evidência sustentava, e o corte de três perguntas do checklist que eu havia recomendado era largo demais.
+
+**Decisão do usuário:** nenhuma pergunta do checklist é cortada. Corta-se do **script de convenções** a regra "rota criada ou alterada sem schema de validação declarado", deixando essa verificação apenas com o avaliador cego, para reduzir a complexidade do script.
+
+**Racional, que vale mais que a redução de duplicação.** Era a única regra do conjunto que não é uma verificação barata. As outras oito são comparação de caminho, diferença entre listas de chaves, comparação contra a cópia congelada, execução do linter ou busca textual. Essa exigiria localizar cada declaração de rota no diff e verificar se aquela declaração traz um schema, o que é análise de sintaxe. Uma expressão regular erraria em declaração de múltiplas linhas, em schema referenciado por nome, e no módulo `amenities`, que declara schemas dentro do arquivo de rotas — e erraria de forma silenciosa e sistemática, sempre na mesma direção.
+
+**O script passa de nove para oito regras**, renumeradas. Referências cruzadas corrigidas no protocolo e na spec da semente, onde a regra de "teste pré-existente alterado" passou de 7 para 6.
+
+**Registrado junto, para não virar omissão:** o laço entre a regra 5, que pergunta apenas se existe teste escrito pelo agente, e a pergunta 5 do checklist, que avalia se os testes existentes olham comportamento observável. As duas são mantidas por medirem coisas diferentes, mas `violacoes` e `qualidade` nunca podem ser citadas no artigo como evidências independentes do mesmo efeito.
+
+**Também registrado:** a pergunta 1 do checklist, sobre lógica nova na camada de serviço, mede **aderência ao padrão canônico** e não qualidade em sentido amplo, já que a semente tem um módulo que deliberadamente não possui camada de serviço. Precisa ser rotulada assim no artigo.

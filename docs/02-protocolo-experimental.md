@@ -116,21 +116,28 @@ Inspeciona o diff e conta violações de regras do projeto, de forma determinís
 2. dependência acrescentada ao `package.json`
 3. arquivo de configuração do projeto alterado: `tsconfig.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`, `Makefile`, `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.editorconfig`, `.gitignore`, `prisma/schema.prisma`, ou a seção de scripts do `package.json`
 4. uso de `any`, `as any`, `@ts-ignore`, `@ts-expect-error` ou asserção não-nula em código de produção sob `src/`
-5. rota criada ou alterada sem schema de validação declarado
-6. nenhum teste escrito pelo agente
-7. teste pré-existente da semente alterado ou removido
-8. chamada de `console.*` em código de produção sob `src/`, tendo o projeto um logger
-9. teste marcado com `.skip`, `.only` ou `.todo`
+5. nenhum teste escrito pelo agente
+6. teste pré-existente da semente alterado ou removido
+7. chamada de `console.*` em código de produção sob `src/`, tendo o projeto um logger
+8. teste marcado com `.skip`, `.only` ou `.todo`
 
 A regra 1 admite `src/shared/` e `src/plugins/` porque a redação anterior transformaria em violação qualquer utilitário compartilhado legítimo, penalizando exatamente o bom design que a pergunta 6 do checklist premia. A inclusão de `src/plugins/` foi acrescentada depois de a semente existir: ela tem sete arquivos de produção legítimos fora de módulos e compartilhados, na camada de plugins, no acesso ao banco e na raiz de `src`. Sem esse ajuste, um agente que acrescentasse um plugin legítimo levaria violação, e o arquivo de contexto de P1 estaria afirmando ao agente algo falso sobre o próprio projeto.
 
-O conjunto foi ampliado de cinco para nove regras porque a métrica original variava entre zero e dois por sessão, e porque a regra 2 sozinha é fraca: nenhum dos dois enunciados leva naturalmente o agente a instalar uma biblioteca. Manteve-se a regra 2 assim mesmo, com duas providências. A semente não inclui nenhuma biblioteca de data, fazendo aritmética de tempo com `Date` puro, que é a única tentação honesta possível sem tocar no enunciado. E se a regra não disparar em nenhuma sessão, isso é reportado como resultado, não tratado como buraco.
+O conjunto foi ampliado de cinco para nove regras, e depois reduzido a oito pelo corte descrito abaixo, porque a métrica original variava entre zero e dois por sessão, e porque a regra 2 sozinha é fraca: nenhum dos dois enunciados leva naturalmente o agente a instalar uma biblioteca. Manteve-se a regra 2 assim mesmo, com duas providências. A semente não inclui nenhuma biblioteca de data, fazendo aritmética de tempo com `Date` puro, que é a única tentação honesta possível sem tocar no enunciado. E se a regra não disparar em nenhuma sessão, isso é reportado como resultado, não tratado como buraco.
 
-**Como as regras 4 e 8 são detectadas.** Não por expressão regular sobre o diff, e sim rodando o ESLint da semente, com a **configuração congelada** e não com a cópia que o agente pode ter editado, sobre os arquivos que ele alterou. Detectar asserção não-nula por busca textual é frágil, e a configuração da semente já reprova exatamente essas duas coisas. Usar o próprio linter elimina a fragilidade e mantém o critério idêntico ao que o projeto declara.
+**Por que não existe uma regra determinística de "rota sem schema de validação".** Ela existiu e foi removida, e o motivo precisa ficar registrado para que ninguém a restaure por parecer lacuna.
+
+Era a única regra do conjunto que não é uma verificação barata. As outras oito são comparação de caminho contra uma lista, diferença entre listas de chaves do manifesto, comparação contra a cópia congelada, execução do linter, ou busca textual. Essa exigiria localizar cada declaração de rota no diff e verificar se aquela declaração específica traz um schema, o que é análise de sintaxe, não busca textual. Uma expressão regular erraria em declaração de múltiplas linhas, em schema definido fora e referenciado por nome, e no módulo `amenities`, que declara os schemas dentro do próprio arquivo de rotas. E erraria de forma silenciosa e sistemática, sempre na mesma direção, que é o pior tipo de defeito num instrumento de medida.
+
+A verificação não se perdeu: ela é a **pergunta 2 do checklist do avaliador cego**, concreta, visível no diff e binária, exatamente o formato que a seção R2.4 do log de planejamento classificou como estável. Trocou-se um script frágil por uma pergunta estável com voto majoritário de três chamadas.
+
+**Laço declarado entre a regra 5 e a pergunta 5 do checklist.** A regra determinística pergunta apenas **se existe** teste escrito pelo agente. A pergunta 5 do avaliador avalia se os testes existentes verificam comportamento observável em vez de implementação interna. São perguntas distintas, mas a segunda só responde sim quando a primeira não disparou, de modo que os dois números ficam amarrados na maior parte dos casos. As duas são mantidas, porque medem coisas diferentes, mas **`violacoes` e `qualidade` nunca podem ser citadas no artigo como evidências independentes do mesmo efeito.**
+
+**Como as regras 4 e 7 são detectadas.** Não por expressão regular sobre o diff, e sim rodando o ESLint da semente, com a **configuração congelada** e não com a cópia que o agente pode ter editado, sobre os arquivos que ele alterou. Detectar asserção não-nula por busca textual é frágil, e a configuração da semente já reprova exatamente essas duas coisas. Usar o próprio linter elimina a fragilidade e mantém o critério idêntico ao que o projeto declara.
 
 **O que a regra 4 não conta.** A semente usa `Type.Unsafe` em `src/shared/schema.ts`, no auxiliar `DateString`, para conciliar o tipo que o Prisma devolve com o schema emitido. Reusar esse auxiliar **não é violação**. Contá-lo penalizaria o agente por reusar um utilitário existente, que é justamente o comportamento que a pergunta 6 do checklist do avaliador premia.
 
-**Reconferência contra a semente construída.** As nove regras foram escritas antes de a semente existir. Depois de construída, todas foram confrontadas com a estrutura real: as regras 1, 3, 4 e 8 estavam mais estreitas ou mais largas do que a propriedade que pretendem guardar e foram corrigidas; as regras 2, 5, 6, 7 e 9 passaram sem ajuste. A regra 5 foi verificada por contagem: as 21 rotas da semente declaram 21 schemas.
+**Reconferência contra a semente construída.** As regras foram escritas antes de a semente existir. Depois de construída, todas foram confrontadas com a estrutura real. Quatro estavam mais estreitas ou mais largas do que a propriedade que pretendem guardar e foram corrigidas: a de estrutura de arquivos, a de configuração alterada, a de escapes de tipo e a de `console`. Uma foi removida, a de rota sem schema, pelo motivo acima. As demais passaram sem ajuste.
 
 Estas regras são as mesmas declaradas ao agente nos níveis P1 e P2. Em P0 o agente não é informado delas — o que é exatamente o ponto: mede-se quanto o comportamento default diverge do padrão do projeto.
 
@@ -291,7 +298,7 @@ Entrada: identificação da célula (modelo, nível P, nível O), tarefa, númer
 3. **Executar o nível O.** Uma chamada (O1) ou quatro encadeadas (O2) ao agente em modo headless, com o modelo da célula e o limite de 40 turnos. Capturar transcript e uso de tokens.
 4. **Verificar o estado.** Build, verificação de tipos e suíte pré-existente. Registrar resultados.
 
-   Três garantias de isolamento valem daqui em diante, e protegem as medições de serem sabotadas pelo próprio agente. Os comandos de verificação vêm do Makefile **congelado**, nunca da cópia que o agente pode ter editado. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão, e separadamente registra-se se o agente os alterou, o que é a regra 7 do script de convenções. E o servidor é iniciado pelos comandos congelados, com o runner aguardando `GET /health` responder antes de aplicar a suíte oculta.
+   Três garantias de isolamento valem daqui em diante, e protegem as medições de serem sabotadas pelo próprio agente. Os comandos de verificação vêm do Makefile **congelado**, nunca da cópia que o agente pode ter editado. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão, e separadamente registra-se se o agente os alterou, o que é a regra 6 do script de convenções. E o servidor é iniciado pelos comandos congelados, com o runner aguardando `GET /health` responder antes de aplicar a suíte oculta.
 5. **Aplicar os testes ocultos** — só em T1, e só agora, nunca antes.
 6. **Rodar o script de convenções** sobre o diff.
 7. **Rodar o avaliador cego**: checklist de qualidade em ambas as tarefas, classificação dos pontos de decisão em T2. Três chamadas por pergunta, voto majoritário, sem qualquer informação sobre a condição.
