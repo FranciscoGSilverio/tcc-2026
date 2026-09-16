@@ -37,7 +37,7 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de retrabalho.
 
 1. ~~**Spec conjunta dos testes ocultos e da implementação de referência.**~~ Escrita em 15/09.
-2. **Escrever os testes ocultos de T1**, a partir do enunciado apenas.
+2. **Escrever os testes ocultos de T1**, a partir do enunciado apenas. Plano escrito em 15/09, cinco tarefas.
 3. **Escrever a implementação de referência de T1**, por agente, com acesso aos testes. Prova que a suíte é satisfazível e fixa o mínimo aceitável.
 4. **Runner mínimo:** preparar a cópia de trabalho, executar o agente com o enunciado, aplicar os testes ocultos. Só isso.
 5. **Primeira sessão crua de ponta a ponta em T1**, sem contexto nenhum. É o dado mais importante desta fase. Responde se o enunciado sozinho basta, se as métricas fazem sentido extraídas de uma sessão real, e se há efeito teto.
