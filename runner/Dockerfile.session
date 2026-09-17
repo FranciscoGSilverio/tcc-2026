@@ -34,6 +34,17 @@ RUN set -eux; \
   node "$(npm root -g)/@anthropic-ai/claude-code/install.cjs"; \
   claude --version
 
+# The Claude Code CLI refuses --dangerously-skip-permissions when run as
+# root/sudo ("cannot be used with root/sudo privileges for security
+# reasons"), and the container was root the whole way through up to here.
+# The base image already ships a `node` user at uid/gid 1000 — the same
+# uid as the host user running the runner, so the /out bind mount stays
+# writable with no extra chown. /app itself is owned by root (root built
+# it, in the seed's own Dockerfile), so hand it to `node` before dropping
+# privileges, then never go back to root.
+RUN chown -R node:node /app
+USER node
+
 ENV CI=1
 WORKDIR /app
 

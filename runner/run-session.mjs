@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { copyIn, exec, stop } from './lib/container.mjs';
@@ -35,12 +35,20 @@ function deliverStatement(name, statementPath) {
 }
 
 function runAgent({ name, model }) {
-  const script = [
+  // The steps must be chained with && and the redirections kept at the end
+  // of the line. Joining with plain spaces (the earlier bug) produced the
+  // single command `cd /app claude -p "..." ...`: `cd` reads only its
+  // first argument as the target directory, so `claude` and everything
+  // after it were just extra arguments to `cd`, which fails before the
+  // agent ever runs. The redirections still get set up regardless (a
+  // shell wires up redirections before it even resolves the command),
+  // which is why the failure left an empty transcript.jsonl and an empty
+  // agent.log rather than an error message anywhere obvious.
+  const command = [
     'cd /app',
-    `claude -p "$(cat /tmp/statement.txt)" --output-format stream-json --verbose`,
-    `--max-turns 40 --model ${model} --dangerously-skip-permissions > /out/transcript.jsonl 2>/out/agent.log`,
-  ].join(' ');
-  return exec(name, ['sh', '-c', script]);
+    `claude -p "$(cat /tmp/statement.txt)" --output-format stream-json --verbose --max-turns 40 --model ${model} --dangerously-skip-permissions`,
+  ].join(' && ');
+  return exec(name, ['sh', '-c', `${command} > /out/transcript.jsonl 2>/out/agent.log`]);
 }
 
 async function main() {
@@ -84,11 +92,22 @@ async function main() {
       transcriptText = FAKES[fake].run(name, REPO);
       writeFileSync(join(outDir, 'transcript.jsonl'), transcriptText);
     } else {
-      const agent = runAgent({ name, model });
-      if (agent.status !== 0 && !agent.stdout) {
-        throw new InfrastructureError(`the agent cli did not run: ${agent.stderr}`);
+      runAgent({ name, model });
+      const transcriptPath = join(outDir, 'transcript.jsonl');
+      transcriptText = existsSync(transcriptPath) ? readFileSync(transcriptPath, 'utf8') : '';
+      // An empty transcript means the agent never ran (or never finished a
+      // turn): reading it as a transcript later would fail with "no result
+      // event", a message that points at the symptom, not the cause. Fail
+      // here instead, with agent.log's content in the message, so the
+      // actual cause (e.g. a malformed command, or the CLI refusing to
+      // start) is visible without having to go dig through /out by hand.
+      if (!transcriptText.trim()) {
+        const agentLogPath = join(outDir, 'agent.log');
+        const agentLog = existsSync(agentLogPath) ? readFileSync(agentLogPath, 'utf8').trim() : '';
+        throw new InfrastructureError(
+          `the agent produced an empty transcript; agent.log: ${agentLog || '(empty)'}`,
+        );
       }
-      transcriptText = readFileSync(join(outDir, 'transcript.jsonl'), 'utf8');
     }
     const durationS = Math.round((Date.now() - startedAt) / 1000);
 

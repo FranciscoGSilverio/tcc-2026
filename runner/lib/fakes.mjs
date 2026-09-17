@@ -43,8 +43,18 @@ export const FAKES = {
       // so a tree named "seed" is recreated under a scratch directory and
       // the patch applied there with -p2 (strips "a/" and "seed/"), then
       // copied back onto /app.
+      //
+      // .git is stripped from the scratch copy right after it is made.
+      // Copying it along and then copying it back would try to overwrite
+      // /app/.git/objects/*, which git writes read-only (mode 444) even
+      // for the owner, as an integrity safeguard — and the container now
+      // runs as a non-root user (see Dockerfile.session), so that
+      // overwrite fails with EACCES. Running as root used to paper over
+      // this, since root ignores permission bits. The fake never needed
+      // .git in the scratch copy in the first place: only the working
+      // tree feeds the patch.
       const applied = exec(name, ['sh', '-c',
-        'mkdir -p /tmp/apply/seed && cp -a /app/. /tmp/apply/seed/ && cd /tmp/apply && patch -p2 -d seed < /tmp/reference.patch && cp -a /tmp/apply/seed/. /app/']);
+        'mkdir -p /tmp/apply/seed && cp -a /app/. /tmp/apply/seed/ && rm -rf /tmp/apply/seed/.git && cd /tmp/apply && patch -p2 -d seed < /tmp/reference.patch && cp -a /tmp/apply/seed/. /app/']);
       if (applied.status !== 0) {
         throw new Error(`the reference patch did not apply: ${applied.stderr}`);
       }

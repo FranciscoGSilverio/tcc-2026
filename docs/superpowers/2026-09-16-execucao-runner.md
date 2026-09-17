@@ -371,3 +371,140 @@ Todos os itens do portão de "tudo verde antes de gastar" (seção da Task 7, pa
 - `./reference/T1/verify.sh` → `hidden suite: 26/26`, `reference is valid` — rodado nesta sessão para reforçar a prontidão, mesmo não estando nas Tasks 1–6. Sem processo ou porta remanescente depois (`lsof -i :3311` vazio, nenhum `node dist/server.js` na lista de processos).
 
 A Task 7 (a primeira sessão real, com `ANTHROPIC_API_KEY`) não foi iniciada. Aguardando autorização explícita do usuário antes de gastar orçamento de API.
+
+---
+
+## Correções pós-Task 7: a primeira sessão real falhou em nove segundos
+
+O coordenador disparou a primeira sessão real depois da entrega acima. Ela falhou em nove segundos, sem gastar orçamento — o runner se comportou corretamente ao marcar a sessão inválida com o motivo escrito, sem inventar métrica, e removendo o contêiner. O coordenador diagnosticou dois defeitos por conta própria e pediu correção direta, sem investigação da minha parte. Um terceiro apareceu ao corrigir o segundo, causado exatamente por ele — registrado aqui também.
+
+### Defeito 1 — `cd /app claude ...` era um `cd` com dois argumentos
+
+Em `runAgent`, dentro de `run-session.mjs`, as partes do comando eram juntadas com espaço simples:
+
+```js
+const script = [
+  'cd /app',
+  `claude -p "$(cat /tmp/statement.txt)" --output-format stream-json --verbose`,
+  `--max-turns 40 --model ${model} --dangerously-skip-permissions > /out/transcript.jsonl 2>/out/agent.log`,
+].join(' ');
+```
+
+O resultado literal era `cd /app claude -p "..." --output-format ... > /out/transcript.jsonl 2>/out/agent.log`: uma única linha de comando cujo primeiro token é `cd`, e tudo o mais — `claude`, `-p`, o enunciado inteiro, todas as flags — vira argumento extra de `cd`, que só aceita um diretório. `cd` falha antes do agente existir. As redireções continuam sendo montadas pelo shell independentemente de o comando resolver (é assim que um shell processa redireções), por isso `transcript.jsonl` e `agent.log` vinham os dois com zero byte: nem saída nem erro, porque nada rodou.
+
+**Correção:** unir os passos com `&&`, mantendo as redireções só no final da linha inteira:
+
+```js
+const command = [
+  'cd /app',
+  `claude -p "$(cat /tmp/statement.txt)" --output-format stream-json --verbose --max-turns 40 --model ${model} --dangerously-skip-permissions`,
+].join(' && ');
+return exec(name, ['sh', '-c', `${command} > /out/transcript.jsonl 2>/out/agent.log`]);
+```
+
+**Acrescentado também:** uma verificação explícita de transcript vazio, com o conteúdo de `agent.log` na mensagem de erro, para que a próxima causa desse tipo aponte para si mesma em vez de estourar depois, no leitor de transcript, com "no result event" — uma mensagem que fala do sintoma, não da causa:
+
+```js
+if (!transcriptText.trim()) {
+  const agentLog = existsSync(agentLogPath) ? readFileSync(agentLogPath, 'utf8').trim() : '';
+  throw new InfrastructureError(
+    `the agent produced an empty transcript; agent.log: ${agentLog || '(empty)'}`,
+  );
+}
+```
+
+### Defeito 2 — o Claude Code recusa `--dangerously-skip-permissions` como root
+
+`Dockerfile.session` faz `USER root` no início (para instalar `psmisc`, `patch` e o CLI) e nunca volta atrás, então todo comando do runner — inclusive a chamada ao agente — rodava como root dentro do contêiner. O Claude Code recusa `--dangerously-skip-permissions` nessas condições, por segurança.
+
+A imagem da semente já traz o usuário `node`, uid/gid 1000 — o mesmo uid do usuário do host que roda o runner, confirmado com `id` antes de mexer em qualquer coisa:
+
+```
+$ id
+uid=1000(franciscogsilverio) ...
+
+$ docker run --rm meeting-rooms-api:1.0.0 sh -c "id node"
+uid=1000(node) gid=1000(node) groups=1000(node)
+```
+
+Isso significa que a montagem de saída (`/out`) continua gravável pelo processo do host sem nenhum ajuste — os dois lados enxergam o mesmo uid numérico. `/app`, porém, pertencia a `0:0` (construído pelo próprio Dockerfile da semente, inteiramente como root). Correção, ao final de `Dockerfile.session`, depois de todas as instalações que precisam de root:
+
+```dockerfile
+RUN chown -R node:node /app
+USER node
+```
+
+Nada mais no Dockerfile precisou de ajuste: nenhum passo do runner (`make setup`, `make build`, `npx vitest`, `git`, `fuser`) exige root — todos operam dentro de `/app`, que agora pertence a `node`, ou em `/tmp`, que já é gravável por qualquer usuário.
+
+### Defeito 3, encontrado ao corrigir o Defeito 2 — `cp -a` tentando reescrever objeto git somente-leitura
+
+Rodar a suíte inteira do runner depois da correção acima revelou uma quebra nova, isolada no substituto `reference`: `status: invalid`, com a mensagem `cp: cannot create regular file '/app/./.git/objects/...': Permission denied`, repetida dezenas de vezes.
+
+Causa: o substituto `reference` clona `/app` inteiro (`cp -a /app/. /tmp/apply/seed/`, **`.git` incluído**) para um diretório de trabalho, aplica o patch ali, e copia tudo de volta por cima de `/app` (`cp -a /tmp/apply/seed/. /app/`). Os objetos git em `/app/.git/objects/` foram criados pelo próprio `git init && git commit` da fase de preparar, e o git grava esses arquivos com permissão `0444` — somente leitura, **inclusive para o dono** — como salvaguarda de integridade (o hash do arquivo é o nome do arquivo; reescrevê-lo destruiria essa garantia). Rodando como root, esse `cp` de volta ignorava silenciosamente a permissão (root não respeita bits de permissão). Rodando como `node` — depois da correção do Defeito 2 — a mesma operação passou a falhar de verdade, porque agora a permissão é de fato respeitada.
+
+Este é um defeito que já existia; a correção do Defeito 2 só removeu o que o escondia. Corrigido descartando `.git` da cópia de trabalho logo depois de criá-la — o substituto nunca precisou de `.git` ali, só da árvore de arquivos que o patch toca:
+
+```
+mkdir -p /tmp/apply/seed && cp -a /app/. /tmp/apply/seed/ && rm -rf /tmp/apply/seed/.git \
+  && cd /tmp/apply && patch -p2 -d seed < /tmp/reference.patch && cp -a /tmp/apply/seed/. /app/
+```
+
+Sem `.git` na origem, a cópia de volta nunca tenta tocar em `/app/.git`, e o problema desaparece na raiz em vez de precisar de um `cp -f` ou de reescrever permissões depois.
+
+### Verificação, na ordem pedida
+
+**1. Suíte do runner inteira, incluindo os três substitutos — rodada duas vezes seguidas para confirmar estabilidade:**
+
+```
+$ cd runner && node --test
+ℹ tests 32
+ℹ pass 32
+ℹ fail 0
+
+$ node --test        # segunda rodada consecutiva
+ℹ tests 32
+ℹ pass 32
+ℹ fail 0
+```
+
+Os três substitutos, dentro dessa suíte, continuam dando exatamente o que davam antes da mudança de usuário: `noop` → `status: valid`, taxa 0.5 (linha de base 13/26); `reference` → `status: valid`, taxa 1 (26/26); `break` → `status: valid`, taxa 0, `travou_build: true`.
+
+**2. Teste isolado provando que o CLI roda como usuário não privilegiado, com a chave de `.env`, custando centavos:**
+
+```
+$ set -a; . ./.env; set +a
+$ docker run -d --name cli-priv-test -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" meeting-rooms-session:1.0.0 sleep infinity
+$ docker exec cli-priv-test whoami
+node
+$ docker exec cli-priv-test id
+uid=1000(node) gid=1000(node) groups=1000(node)
+$ docker exec cli-priv-test sh -c 'claude -p "diga apenas ok" --output-format stream-json --verbose --max-turns 40 --model claude-sonnet-5 --dangerously-skip-permissions'
+{"type":"system","subtype":"init", ... "permissionMode":"bypassPermissions", ...}
+{"type":"assistant","message":{... "content":[{"type":"text","text":"ok"}] ...}}
+{"type":"result", ..., "total_cost_usd":0.0248902, "result":"ok", "is_error":false, "num_turns":1, "subtype":"success", ...}
+EXIT: 0
+$ docker rm -f cli-priv-test
+```
+
+Sem a recusa "cannot be used with root/sudo privileges", `permissionMode` sai `bypassPermissions` (a flag foi aceita), o agente respondeu exatamente "ok", e o turno terminou com `is_error: false`. Custo: **US$ 0.0248902**, menos de três centavos.
+
+**3. Semente, árvore limpa, sem contêiner para trás:**
+
+```
+$ docker ps -a --format '{{.Names}}' | grep -Ei 'session|runner|cli-priv'
+(vazio)
+
+$ cd seed && make verify
+Test Files  7 passed (7)
+     Tests  64 passed (64)
+```
+
+### Limpeza pedida
+
+Removidos `sessions/T1-P0-O1-mu4soyf0` (o diretório da sessão real que falhou) e a linha correspondente em `resultados.csv` — a falha era de infraestrutura nossa (Defeito 1), não dado do experimento. `resultados.csv` ficou só com o cabeçalho, pronto para a próxima tentativa real; não foi apagado desta vez porque já não é mais um artefato só de sessão falsa — é o arquivo que a tentativa real de Task 7 já passou a usar. Também removidos os diretórios de sessão falsa acumulados em `sessions/` pelas rodadas de teste desta correção (`T1-P0-O1-mu4r9t94` e outros): `sessions/` é saída de execução, gitignorada, sem custo de manter mas sem motivo para deixar crescer.
+
+**Observação, sem correção nesta rodada, para não expandir o escopo do que foi pedido:** os diretórios de sessão em `sessions/<id>/` continuam gerados no caminho fixo `REPO/sessions/<id>`, mesmo quando `--dataset` aponta para um arquivo de descarte (como faz `end-to-end.test.mjs` desde a correção anterior). Isso é por que essa lista de diretórios se acumula a cada rodada da suíte do runner. Não é o que foi pedido nesta mensagem, e `sessions/` é gitignorada, então não ameaça a integridade do dataset versionado — mas registro para o coordenador decidir se vale a pena.
+
+### Não executado
+
+A sessão real em si não foi disparada — é do coordenador, como definido desde a primeira entrega desta tarefa.
