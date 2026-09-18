@@ -76,7 +76,7 @@ async function main() {
 
   try {
     const anchors = await prepare({
-      name, outDir, hostPort,
+      name, outDir, hostPort, pLevel, repoRoot: REPO,
       env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? '' },
     });
     row.image_digest = anchors.imageId;

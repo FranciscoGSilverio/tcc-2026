@@ -106,8 +106,13 @@ async function assertServesBeforeHandover(name, hostPort) {
   throw new InfrastructureError('the application did not answer health before handover');
 }
 
+// `pLevel` deliberately has no default. It used to default to 'P0', and
+// run-session.mjs did not pass it: a session launched with `--p P1` built
+// its directory and its dataset row as P1 while the container received no
+// context file at all, producing a plausible, wrong row rather than an
+// error. A missing level must fail the session, not silently pick one.
 export async function prepare({
-  name, outDir, hostPort, env, skipStart = false, pLevel = 'P0', repoRoot = DEFAULT_REPO_ROOT,
+  name, outDir, hostPort, env, skipStart = false, pLevel, repoRoot = DEFAULT_REPO_ROOT,
 }) {
   if (!skipStart) {
     buildImage();

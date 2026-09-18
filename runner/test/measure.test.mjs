@@ -14,7 +14,7 @@ const outDir = mkdtempSync(join(tmpdir(), 'runner-meas-'));
 after(() => stop(NAME));
 
 test('an untouched working copy scores the documented baseline', async () => {
-  await prepare({ name: NAME, outDir, hostPort: 3530, env: {} });
+  await prepare({ name: NAME, outDir, hostPort: 3530, env: {}, pLevel: 'P0', repoRoot: REPO });
   const result = await measure({ name: NAME, outDir, hostPort: 3530, repoRoot: REPO });
 
   assert.equal(result.hasDiff, false);

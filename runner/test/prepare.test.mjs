@@ -13,7 +13,7 @@ const REPO = resolve(import.meta.dirname, '..', '..');
 after(() => stop(NAME));
 
 test('prepares a working copy and reports the reproducibility anchors', async () => {
-  const info = await prepare({ name: NAME, outDir, hostPort: 3520, env: {} });
+  const info = await prepare({ name: NAME, outDir, hostPort: 3520, env: {}, pLevel: 'P0', repoRoot: REPO });
   assert.match(info.imageId, /^sha256:/);
   assert.match(info.cliVersion, /^\d+\./);
 });
@@ -33,7 +33,7 @@ test('the working copy is clean, so any later diff belongs to the agent', () => 
 test('aborts as infrastructure failure when an artefact is reachable', async () => {
   exec(NAME, ['sh', '-c', 'mkdir -p /app/hidden-tests && touch /app/hidden-tests/run.mjs']);
   await assert.rejects(
-    () => prepare({ name: NAME, outDir, hostPort: 3521, env: {}, skipStart: true }),
+    () => prepare({ name: NAME, outDir, hostPort: 3521, env: {}, skipStart: true, pLevel: 'P0', repoRoot: REPO }),
     InfrastructureError,
   );
 });
@@ -50,6 +50,15 @@ test('applyContext copies the P1 context file into the working copy', () => {
   assert.equal(calls.length, 1);
   assert.match(calls[0][1], /contexts\/P1\/CLAUDE\.md$/);
   assert.equal(calls[0][2], '/app/CLAUDE.md');
+});
+
+test('prepare refuses a session whose context level was not stated', async () => {
+  // Regression: prepare used to default pLevel to 'P0' while run-session
+  // never passed it, so `--p P1` ran bare and was recorded as P1.
+  await assert.rejects(
+    () => prepare({ name: NAME, outDir, hostPort: 3522, env: {}, skipStart: true, repoRoot: REPO }),
+    /unknown context level/,
+  );
 });
 
 test('applyContext rejects an unknown level', () => {
