@@ -23,6 +23,12 @@ test('an untouched working copy scores the documented baseline', async () => {
   assert.equal(result.serverUp, true);
   assert.equal(result.hidden.passed, 13);
   assert.equal(result.hidden.total, 26);
+
+  assert.equal(result.conventions.violacoes, 1);
+  assert.equal(result.conventions.rules[5].violated, true);
+  for (const id of [1, 2, 3, 4, 6, 7, 8]) {
+    assert.equal(result.conventions.rules[id].violated, false, `rule ${id}`);
+  }
 });
 
 test('a broken application reports the server down and no measurement', async () => {

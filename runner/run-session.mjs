@@ -133,6 +133,10 @@ async function main() {
     row.tokens_cache_read = parsed.tokens.cacheRead;
     row.regressoes = measured.regressoes;
     row.taxa_aceitacao = measured.hidden ? measured.hidden.rate : 0;
+    row.violacoes = measured.conventions?.violacoes ?? '';
+    if (measured.conventions) {
+      writeFileSync(join(outDir, 'conventions.json'), JSON.stringify(measured.conventions, null, 2));
+    }
     row.travou_turnos = hitTurnLimit;
     row.travou_sem_diff = !measured.hasDiff;
     row.travou_build = !measured.buildOk || !measured.serverUp;

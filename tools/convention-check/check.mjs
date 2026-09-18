@@ -150,15 +150,16 @@ export function runEslintInContainer({ name, diffText, repoRoot }) {
 
 // Extracts /app/package.json from a running container, the same way the
 // CLI needs to see what the session actually left behind (not what the
-// seed originally shipped).
-function readManifestFromContainer(name) {
+// seed originally shipped). Exported so measure.mjs can reuse it instead
+// of re-implementing the docker cp.
+export function readManifestFromContainer(name) {
   const staging = mkdtempSync(join(tmpdir(), 'session-manifest-'));
   const dest = join(staging, 'package.json');
   execFileSync('docker', ['cp', `${name}:/app/package.json`, dest]);
   return JSON.parse(readFileSync(dest, 'utf8'));
 }
 
-function readFrozenManifest(repoRoot) {
+export function readFrozenManifest(repoRoot) {
   return JSON.parse(execFileSync('git', ['-C', repoRoot, 'show', 'HEAD:seed/package.json']).toString());
 }
 

@@ -3,6 +3,9 @@ import { existsSync, mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { copyIn, exec, execDetached } from './container.mjs';
+import {
+  checkConventions, readFrozenManifest, readManifestFromContainer, runEslintInContainer,
+} from '../../tools/convention-check/check.mjs';
 
 const SEED_TEST_FILES = [
   'tests/health.test.ts',
@@ -69,6 +72,26 @@ function killServer(name, port = 3000) {
   exec(name, ['sh', '-c', `fuser -k -KILL ${port}/tcp 2>/dev/null || true`]);
 }
 
+// Reads the diff that captureDiff already wrote and runs the protocol
+// section 2.6 convention rules over it. This must run before
+// restoreFrozenTests overwrites the seed's own test files back to their
+// frozen content, or the ESLint step (rules 4 and 7) would inspect
+// content the agent never actually left behind. `null` on any failure --
+// never a fabricated zero -- so a broken measurement never reads as a
+// clean session.
+function measureConventions(name, outDir, repoRoot) {
+  try {
+    const diffPath = join(outDir, 'session.diff');
+    const diffText = existsSync(diffPath) ? readFileSync(diffPath, 'utf8') : '';
+    const frozenManifest = readFrozenManifest(repoRoot);
+    const sessionManifest = readManifestFromContainer(name);
+    const eslint = runEslintInContainer({ name, diffText, repoRoot });
+    return checkConventions({ diffText, frozenManifest, sessionManifest, eslint });
+  } catch {
+    return null;
+  }
+}
+
 function runHiddenSuite(repoRoot, hostPort) {
   const result = spawnSync('node', [resolve(repoRoot, 'hidden-tests', 'T1', 'run.mjs')], {
     encoding: 'utf8',
@@ -84,6 +107,7 @@ function runHiddenSuite(repoRoot, hostPort) {
 
 export async function measure({ name, outDir, hostPort, repoRoot }) {
   const hasDiff = captureDiff(name, outDir);
+  const conventions = measureConventions(name, outDir, repoRoot);
 
   restoreFrozenTests(name, repoRoot);
   countRegressions(name);
@@ -105,5 +129,6 @@ export async function measure({ name, outDir, hostPort, repoRoot }) {
     buildOk,
     serverUp,
     hidden,
+    conventions,
   };
 }
