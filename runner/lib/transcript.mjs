@@ -12,6 +12,20 @@ const parseLines = (text) => {
   return events;
 };
 
+// The CLI reports every model the session touched, auxiliary ones
+// included: the pilot session T1-P0-O1-mu4t4rvp ran on sonnet but also
+// shows a haiku entry the CLI used for its own bookkeeping. Taking the
+// first key recorded the auxiliary model in a column that is an
+// experimental factor, so the session's model is identified by the one
+// that produced the work -- output tokens, not key order.
+function sessionModel(result, init) {
+  const entries = Object.entries(result.modelUsage ?? {});
+  if (entries.length === 0) return init?.model ?? 'unknown';
+  const [name] = entries.reduce((best, entry) =>
+    (entry[1]?.outputTokens ?? 0) > (best[1]?.outputTokens ?? 0) ? entry : best);
+  return name;
+}
+
 const countToolCalls = (events) =>
   events
     .filter((event) => event.type === 'assistant')
@@ -31,10 +45,9 @@ export function readTranscript(text) {
   }
 
   const usage = result.usage ?? {};
-  const modelFromUsage = Object.keys(result.modelUsage ?? {})[0];
 
   return {
-    model: modelFromUsage ?? init?.model ?? 'unknown',
+    model: sessionModel(result, init),
     cliVersion: init?.claude_code_version ?? 'unknown',
     sessionId: result.session_id ?? init?.session_id ?? 'unknown',
     numTurns: result.num_turns ?? 0,

@@ -64,3 +64,30 @@ test('renders markdown naming the model and the turn count', () => {
   assert.match(markdown, /claude-/);
   assert.match(markdown, /1/);
 });
+
+test('picks the model that did the work, not the first key reported', () => {
+  const result = {
+    type: 'result',
+    num_turns: 3,
+    total_cost_usd: 0.42,
+    modelUsage: {
+      'claude-haiku-4-5-20251001': { inputTokens: 1260, outputTokens: 17, costUSD: 0.001345 },
+      'claude-sonnet-5': { inputTokens: 34, outputTokens: 14813, costUSD: 0.4196 },
+    },
+  };
+  const text = [
+    JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-sonnet-5' }),
+    JSON.stringify(result),
+  ].join('\n');
+
+  assert.equal(readTranscript(text).model, 'claude-sonnet-5');
+});
+
+test('falls back to the requested model when no usage is reported', () => {
+  const text = [
+    JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-opus-5' }),
+    JSON.stringify({ type: 'result', num_turns: 1 }),
+  ].join('\n');
+
+  assert.equal(readTranscript(text).model, 'claude-opus-5');
+});
