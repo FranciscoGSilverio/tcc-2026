@@ -2,12 +2,13 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { exec, stop } from '../lib/container.mjs';
-import { prepare, InfrastructureError } from '../lib/prepare.mjs';
+import { prepare, applyContext, InfrastructureError } from '../lib/prepare.mjs';
 
 const NAME = 'runner-prepare-test';
 const outDir = mkdtempSync(join(tmpdir(), 'runner-prep-'));
+const REPO = resolve(import.meta.dirname, '..', '..');
 
 after(() => stop(NAME));
 
@@ -35,4 +36,22 @@ test('aborts as infrastructure failure when an artefact is reachable', async () 
     () => prepare({ name: NAME, outDir, hostPort: 3521, env: {}, skipStart: true }),
     InfrastructureError,
   );
+});
+
+test('applyContext does nothing for P0', () => {
+  const calls = [];
+  applyContext({ name: 'x', pLevel: 'P0', repoRoot: REPO, copy: (...a) => calls.push(a) });
+  assert.equal(calls.length, 0);
+});
+
+test('applyContext copies the P1 context file into the working copy', () => {
+  const calls = [];
+  applyContext({ name: 'x', pLevel: 'P1', repoRoot: REPO, copy: (...a) => calls.push(a) });
+  assert.equal(calls.length, 1);
+  assert.match(calls[0][1], /contexts\/P1\/CLAUDE\.md$/);
+  assert.equal(calls[0][2], '/app/CLAUDE.md');
+});
+
+test('applyContext rejects an unknown level', () => {
+  assert.throws(() => applyContext({ name: 'x', pLevel: 'P9', repoRoot: REPO, copy: () => {} }));
 });
