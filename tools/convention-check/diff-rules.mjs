@@ -28,7 +28,13 @@ function parseDiffByFile(diffText) {
   let current = null;
 
   for (const line of diffText.split('\n')) {
-    if (line.startsWith('diff --git ')) {
+    // A file boundary is a "diff " header line, whatever tool produced the
+    // diff: git emits "diff --git a/X b/Y", and the reference patch
+    // (generated with `diff -ruN`, to stay independent of git) emits
+    // "diff -ruN <flags...> a/X b/Y". Anchoring on "diff --git" only would
+    // silently see zero files in the second format, which is exactly the
+    // input reference/T1/reference.patch's validation run uses.
+    if (line.startsWith('diff ')) {
       current = { path: null, isNew: false, added: [], removed: [] };
       files.push(current);
       continue;
@@ -39,17 +45,22 @@ function parseDiffByFile(diffText) {
       current.isNew = true;
       continue;
     }
+    // `diff -ruN` appends a tab-separated timestamp after the path
+    // ("+++ b/X/Y.ts\t2026-09-15 23:33:21.000000000 -0300"); git diff never
+    // does. Cutting at the first tab keeps both formats working.
     if (line.startsWith('+++ ')) {
-      const target = line.slice('+++ '.length);
+      const target = line.slice('+++ '.length).split('\t')[0];
       const path = target.startsWith('b/') ? target.slice(2) : target;
       if (path !== '/dev/null') current.path = path;
       continue;
     }
     if (line.startsWith('--- ')) {
-      if (!current.path) {
-        const source = line.slice('--- '.length);
-        const path = source.startsWith('a/') ? source.slice(2) : source;
-        if (path !== '/dev/null') current.path = path;
+      const source = line.slice('--- '.length).split('\t')[0];
+      const path = source.startsWith('a/') ? source.slice(2) : source;
+      if (path === '/dev/null') {
+        current.isNew = true;
+      } else if (!current.path) {
+        current.path = path;
       }
       continue;
     }
