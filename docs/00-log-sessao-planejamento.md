@@ -702,3 +702,57 @@ Registrado aqui para entrar na spec:
 ## R8.5 A primeira sessão roda só com T1
 
 **Decisão do usuário, na mesma conversa.** T2 não tem testes por construção, conforme R2.2, e o que falta para ela é o classificador dos pontos de decisão mais duas soluções de sondagem. Como o instrumento de T1 está inteiro e o de T2 não, a primeira sessão de ponta a ponta exercita o runner com o instrumento mais simples, descobrindo os defeitos do runner antes de exercitar o mais delicado.
+
+---
+
+# Rodada 9 — 17/09/2026
+
+Reavaliação de T1 depois da primeira sessão real de ponta a ponta. Registrado aqui, e em detalhe técnico em `docs/superpowers/specs/2026-09-17-reavaliacao-de-t1-design.md`, que é a fonte primária deste resumo.
+
+## R9.1 O que a sessão piloto mediu
+
+Sessão `T1-P0-O1-mu4t4rvp`, executada em 16/09/2026, primeira execução real do runner de ponta a ponta, condição T1/P0/O1/Sonnet 5.
+
+`taxa_aceitacao` saturou em **1.0** — 26 de 26 asserções da suíte oculta —, com `regressoes` zero, nenhuma das três causas de trava disparada, 30 de 40 turnos usados, 29 chamadas de ferramenta, custo de US$ 0,4209743, duração de 164 segundos e diff de 247 linhas.
+
+**Defeito de instrumentação encontrado na mesma sessão.** A coluna `model_version` registrou `claude-haiku-4-5-20251001` numa sessão que rodou em Sonnet 5. O leitor de transcript tomava a primeira chave do mapa de uso por modelo, e o CLI reporta também um modelo auxiliar que usa para trabalho interno próprio. A conferência pelos tokens de saída não deixa dúvida: Sonnet produziu 14.813 tokens de saída e 0,4196 do custo; o auxiliar produziu 17 tokens e 0,0013. Corrigido na Tarefa 1 do plano de implementação: o modelo passa a ser identificado por quem produziu mais tokens de saída, não pela ordem das chaves.
+
+## R9.2 Diagnóstico: por que a variável saturou
+
+Quatro causas foram levantadas e verificadas contra a evidência.
+
+**Causa principal: o enunciado era informacionalmente autossuficiente.** As regras numeradas do enunciado de T1 mapeavam uma a uma nos prefixos das asserções da suíte oculta — a regra 1 correspondia às checagens 1.x, a regra 4 às 4.x, e assim por diante. O enunciado entregava as duas únicas decisões reais: a semântica de borda (exatamente o que as checagens 1.5 e 1.6 medem) e os códigos de status 400/404/409, que já estavam dados. Consequência estrutural: tudo que um `CLAUDE.md` ou um plugin poderiam acrescentar já estava dentro do prompt, então P0, P1 e P2 recebiam a mesma informação por construção — o fator de contexto não tinha por onde se expressar.
+
+**Causa co-principal: a variável medida era cega ao fator.** O canal previsto para o efeito de contexto sempre foi a aderência, e P1 é definido como arquitetura em camadas, convenções de nomenclatura, comandos e as regras da seção 2.6 — engenharia, sem regra de negócio. Das três variáveis-resposta declaradas para T1 (`taxa_aceitacao`, `violacoes`, `qualidade`), só a primeira estava construída, e é a única cega ao fator P.
+
+**A faixa útil era menor do que a escala sugeria.** Das 26 asserções, 13 já passavam na semente intocada. Das 13 restantes, a regra 2 já era verdadeira por construção e a regra 7 saía de graça, sobrando cinco mudanças independentes de código. O instrumento reportava com duas casas decimais uma grandeza de cinco bits.
+
+**A operação é canônica, e isto não é corrigível.** Detecção de sobreposição de intervalos é um dos problemas mais representados em dado de treino. Trocar o domínio compraria dificuldade ao custo da validade ecológica. Fica registrado como limitação, não como defeito a consertar.
+
+**Hipótese levantada e descartada: volume da semente.** A semente tem 942 linhas de código de produção e o agente leu treze arquivos sem esforço, mas a implementação de referência toca só três arquivos, todos em `src/modules/bookings/`, sem acoplamento novo entre módulos. Acrescentar módulos não mudaria isso: a tarefa continuaria confinada. Volume só vira dificuldade quando a tarefa obriga o agente a encontrar algo distante; acrescentar volume sem acrescentar descoberta obrigatória faz o agente ler mais e pontuar igual. Descartada com essa evidência, não por suposição.
+
+**Consequência sobre o fator M.** A sessão executou trinta turnos numa mudança de quatro arquivos, sem retrocesso e sem hipótese descartada pelo agente. Uma tarefa em que um modelo mais forte não teria como pontuar melhor não deixa folga para o fator modelo se expressar — o enunciado antigo comprometia dois dos três fatores do desenho, não só o contexto.
+
+## R9.3 Decisões D1 a D8
+
+**D1.** A política de domínio sai do enunciado e passa a viver em P1 e P2. O enunciado guarda a necessidade de negócio; os detalhes que ninguém adivinha — semântica de borda, limites de duração, efeito do cancelamento, proibição de passado, exigência de existência, alcance sobre operações de alteração — passam a ser conteúdo de contexto, dando ao fator P um canal na taxa de aceitação.
+
+**D2.** A política de domínio entra em P1 e P2 igualmente, não só no nível mais alto. Se P1 recebesse só estrutura e P2 recebesse estrutura mais negócio, os dois níveis diferiam em duas dimensões ao mesmo tempo e nenhum resultado seria atribuível a uma delas. Mantida nos dois, P0 vs. P1 mede o harness como um todo, e P1 vs. P2 isola o que os procedimentos passo a passo acrescentam.
+
+**D3.** O agente em P0 é medido contra regras que não lhe foram informadas. Decisão explícita do orientando, tomada em 17/09/2026, com ciência de que é o ponto mais atacável do desenho. Justificativa: isto **é** o tratamento — mede-se o desenvolvedor que cai num projeto sem documentação, situação que o harness existe para remediar. A alternativa, informar todos os níveis igualmente, reproduz o enunciado autossuficiente e devolve o efeito teto.
+
+**D4.** O script de convenções da seção 2.6 é construído e passa a rodar também em T1. Não é instrumento novo: `violacoes` já era coluna declarada para as duas tarefas; é dívida de implementação, não ampliação de escopo.
+
+**D5.** A tarefa continua incremental; reconstruir o módulo do zero fica recusado por ora. É a direção metodologicamente certa para o fator M, mas colide com o limite de quarenta turnos da seção 3.4 e levaria o custo por sessão de US$ 0,42 a cerca de US$ 1,50, estourando os 55 sessões planejadas para além dos US$ 20 comprados, além do risco de sessões invalidadas por estouro de turno.
+
+**D6.** O tamanho de T1 e a folga do fator M ficam como questão aberta com data de revisão: quando as vinte sessões de células de modelo da seção 4.4 forem coletadas, depois da pré-defesa.
+
+**D7.** A semente não é alterada. É compartilhada pelas duas tarefas, já foi auditada, tem linha de base medida e tem o defeito parcial de que T2 depende. Nenhuma das decisões acima exige tocá-la.
+
+**D8.** Nada que seja disciplina de engenharia entra no enunciado. Instruções como "não quebre o que já funciona", "escreva testes" ou "siga o padrão do projeto" são precisamente o conteúdo que distingue os níveis de P; postas no enunciado, são entregues igualmente a todos e suprimem a variação que os instrumentos existem para capturar.
+
+## R9.4 Consequência sobre os dados já coletados
+
+A sessão piloto mediu o enunciado antigo e não é comparável com o que vier depois. Não é descartada — nenhuma sessão é, por princípio já declarado nesta rodada 5 do log —, mas sai do dataset de coleta e passa a `resultados-piloto.csv`, com este registro do motivo. O dataset de coleta (`resultados.csv`) recomeça vazio, com o mesmo cabeçalho de 41 colunas, que não muda. Nenhuma coluna foi acrescentada ou removida: `violacoes` e `qualidade` já existiam e estavam vazias.
+
+A suíte oculta e a implementação de referência não foram tocadas: as 26 asserções continuam idênticas, a linha de base contra a semente intocada continua 13/26 e a referência continua 26/26. Só o enunciado mudou, depois de a suíte e a referência já estarem prontas e validadas — o que precisa ser declarado no artigo como reescrita à luz de um resultado, não como ajuste anterior aos dados.
