@@ -39,7 +39,15 @@ export async function callModel({ apiKey, prompt, fetchImpl = fetch, maxTokens =
   }
 
   return {
-    text: body.content?.[0]?.text ?? '',
+    // The text block by type, never by position. Sonnet 5 runs adaptive
+    // thinking by default and decides per request whether to think, so a
+    // response is sometimes [text] and sometimes [thinking, text]. Taking
+    // content[0] returned the thinking block -- which has no `text` field
+    // -- and the empty string then died in JSON.parse as "Unexpected end
+    // of JSON input". It failed on one of the first two real sessions and
+    // not the other, which is the shape this defect always takes: fine
+    // until the model happens to think.
+    text: body.content?.find((block) => block.type === 'text')?.text ?? '',
     costUsd: estimateCostUsd(body.usage),
     usage: body.usage,
   };
