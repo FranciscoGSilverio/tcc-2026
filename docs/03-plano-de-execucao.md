@@ -55,7 +55,7 @@ O piloto está aprovado quando **todas** forem verdadeiras. Qualquer uma falsa b
 7. Os testes ocultos não falharam por motivo irrelevante (nome interno diferente, detalhe de implementação). Falhas devem corresponder a comportamento realmente ausente.
 8. Os dez pontos de decisão de T2 são classificáveis nas saídas produzidas — nenhum ficou `ausente` nas três execuções.
 9. As três execuções de T2 não foram nem idênticas nem incomparáveis. Se foram idênticas, o ticket é específico demais; se não há o que comparar, é ambíguo demais.
-10. O avaliador cego tem taxa de desacordo aceitável entre suas três chamadas. Perguntas com desacordo alto são reescritas antes do congelamento.
+10. O avaliador cego tem concordância aceitável com a amostra classificada por humano, avaliada junto da verificação 8. Perguntas com desacordo alto são reescritas antes do congelamento.
 11. A sessão de fumaça em P0 e as sessões em P2 **não produzem a mesma contagem de violações de convenção**. Se produzirem, o padrão da semente ficou auto-evidente demais e o fator de contexto está sendo medido atenuado. Ainda há tempo de corrigir antes do congelamento; depois, não.
 
 **Viabilidade**
@@ -80,13 +80,13 @@ O marco mais pesado do projeto em horas de trabalho.
 
 *Entregas:* repositório-semente completo (`rooms`, `users`, `bookings` com validação parcial, e `amenities` fora do padrão), testado e congelado na tag `seed-v1` · suíte de testes ocultos de T1 · runner v1 · uma sessão executada do início ao fim gravando uma linha no CSV.
 
-*Portão:* a semente roda com um comando e todos os testes passam · a suíte oculta foi validada contra implementação de referência humana, provando que 100% é alcançável · o runner completou uma sessão sem intervenção.
+*Portão:* a semente roda com um comando e todos os testes passam · a suíte oculta foi validada contra a implementação de referência, provando que 100% é alcançável · uma sessão de agente cru em T1 foi executada e medida · o runner completou uma sessão sem intervenção.
 
 Não precisa estar bonito nem completo em métricas. Precisa fechar o ciclo.
 
 ### M3 — Piloto aprovado · **20/09** — *portão crítico*
 
-*Entregas:* script de convenções · prompts do avaliador cego (checklist e classificador) com voto majoritário · runner completo com todas as métricas · `CLAUDE.md` de P1 · configuração P2 funcional · seis sessões de piloto · **protocolo congelado**.
+*Entregas:* script de convenções · prompts do avaliador cego (checklist e classificador), congelados · runner completo com todas as métricas · `CLAUDE.md` de P1 · configuração P2 funcional · seis sessões de piloto · **protocolo congelado**.
 
 *Portão:* as doze verificações da seção 2.
 
@@ -142,13 +142,13 @@ Depois de M5 sobram seis semanas para 25 sessões desassistidas, uma análise e 
 
 **Enunciado de tarefa:** T1 descreve apenas contrato HTTP e regras verificáveis · T2 descreve sintoma sem indicar causa nem solução · ambos terminam com a frase de encerramento padrão · texto congelado em arquivo versionado.
 
-**Testes ocultos (T1):** uma asserção por regra do enunciado e por caso de borda · exercitam a aplicação por HTTP real contra o servidor iniciado pelo runner · nenhuma importa módulo interno · cada asserção rastreia para uma frase do enunciado · validados contra implementação de referência humana · armazenados fora do repositório-semente.
+**Testes ocultos (T1):** uma asserção por regra do enunciado e por caso de borda · exercitam a aplicação por HTTP real contra o servidor iniciado pelo runner · nenhuma importa módulo interno · nenhuma afirma string de código de erro que a semente ainda não produz · cada asserção rastreia para uma frase do enunciado · validados contra a implementação de referência · armazenados fora do repositório-semente.
 
 **Pontos de decisão (T2):** dez pontos com categorias fechadas mais `ausente` · nenhum respondido pelo enunciado · lista congelada antes de qualquer sessão do dataset.
 
-**Avaliador cego:** recebe apenas diff e enunciado · modelo fixo, independente do modelo sob teste · três chamadas por pergunta com voto majoritário · taxa de desacordo registrada · prompts congelados.
+**Avaliador cego:** cego à condição — nunca recebe P, O, modelo nem identificação da sessão · recebe o diff, o enunciado e, no checklist, o material de referência constante de `src/shared/` e `src/plugins/` · modelo fixo, independente do modelo sob teste · uma passagem por instrumento, sem voto majoritário · confiabilidade medida por concordância com amostra classificada por humano · roda sobre diffs arquivados, depois da sessão · prompts congelados.
 
-**Runner:** executa uma sessão sem intervenção, com o agente dentro do contêiner · usa os comandos de verificação vindos do Makefile congelado, nunca da cópia que o agente pode ter editado · restaura os testes da semente antes de medir regressão · aplica os testes ocultos apenas após o término · invoca o avaliador cego · grava linha completa no CSV · arquiva diff, transcript bruto em JSON e transcrição legível em markdown · limpa o contêiner · marca falhas de infraestrutura como inválidas e permite re-execução.
+**Runner:** executa uma sessão sem intervenção, com o agente dentro do contêiner · usa os comandos de verificação vindos do Makefile congelado, nunca da cópia que o agente pode ter editado · restaura os testes da semente antes de medir regressão · aplica os testes ocultos apenas após o término · grava linha completa no CSV · arquiva diff, transcript bruto em JSON e transcrição legível em markdown · limpa o contêiner · marca falhas de infraestrutura como inválidas e permite re-execução.
 
 **Artigo:** modelo INATEL · figuras sem cor · resumo e abstract com no máximo 150 palavras · ameaças à validade presentes · artefatos referenciados e acessíveis.
 

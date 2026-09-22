@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Room {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  capacity  Int
+  floor     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  bookings  Booking[]
+  amenities RoomAmenity[]
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  title     String
+  startsAt  DateTime
+  endsAt    DateTime
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, startsAt])
+}
+
+model Amenity {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  rooms       RoomAmenity[]
+}
+
+model RoomAmenity {
+  roomId    String
+  amenityId String
+  room      Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  amenity   Amenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, amenityId])
+}

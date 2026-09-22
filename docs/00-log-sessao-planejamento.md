@@ -484,3 +484,275 @@ O mesmo diretório abriga os demais roteiros de aceite: ausência de vazamento, 
 Registradas por serem irreversíveis depois do congelamento: validação de schema por TypeBox, evitando dependência de biblioteca de formatos; módulo desviante chamado `amenities`, escolhido por ser distante de tempo e intervalos; auxiliar alternativo chamado `http-reply.ts`, sem qualquer marcação de obsoleto no nome ou em comentário; e as duas imperfeições do serviço de usuários construídas de forma **redundante com o schema**, de modo que nenhuma delas jamais recusa um pedido sozinha, preservando a regra do falso negativo.
 
 **Documentos produzidos nesta rodada:** `superpowers/specs/2026-09-09-repositorio-semente-design.md` e `superpowers/plans/2026-09-09-repositorio-semente.md`.
+
+---
+
+# Rodada 5 — 10/09/2026
+
+Sessão de construção do **repositório-semente**, executada a partir do plano de implementação por doze subagentes, um por tarefa, cada um seguido de revisão independente. Registro do que foi construído, dos defeitos que o plano tinha e das decisões tomadas durante a execução sem consulta ao usuário.
+
+## R5.1 Resultado
+
+A semente vive em `seed/`, na branch `seed-repo`. Dezesseis commits, cinquenta e nove testes passando, verificação completa a frio em 7,8 segundos, imagem de contêiner construindo e passando a verificação inteira por dentro.
+
+Quatro módulos. `rooms`, `users` e `bookings` no padrão canônico de quatro camadas; `amenities` deliberadamente fora dele, em dois arquivos, devolvendo array puro em vez do envelope de paginação, respondendo erro por um auxiliar diferente e registrado sem prefixo de rota. Nada no código declara qual dos dois padrões é o vigente.
+
+Os roteiros de aceite vivem em `tools/seed-audit/`, fora da árvore da semente, conforme R4.16. São quatro: verificação dos falsos negativos por HTTP, checagem de vazamento, checagem de estrutura e prova de inércia do lastro. Todos os três roteiros de shell foram provados falhando quando deveriam falhar, duas vezes cada, com violações diferentes escolhidas pelo implementador e pelo revisor.
+
+**Pendente e deliberadamente não executado por agente:** a revisão humana da árvore inteira e a criação da tag `seed-v1`. A primeira existe porque a base foi escrita com assistência de agente, e um agente executá-la anularia seu propósito. A segunda depende da primeira. O checklist está em `tools/seed-audit/CHECKLIST.md` com os campos automáticos preenchidos.
+
+## R5.2 Defeitos do plano descobertos na execução
+
+Cinco, todos encontrados pelos implementadores e confirmados de forma independente pelos revisores. Registrados porque revelam armadilhas do ambiente que valem para o runner também.
+
+1. **`prisma db push` sem a variável de conexão.** O plano encadeava comandos com ponto e vírgula terminando num `echo`, então a falha era mascarada e o carimbo de cache era gravado mesmo sem banco criado.
+2. **Caminho relativo do SQLite.** O Prisma resolve o caminho do banco a partir do diretório do `schema.prisma`, não do diretório de trabalho. O plano colocaria o banco em `prisma/data/`, quebrando o alvo de limpeza e fazendo um banco de desenvolvimento entrar na imagem Docker, já que o arquivo de exclusão do contexto é resolvido a partir da raiz.
+3. **Encapsulamento do Fastify.** Registrar os plugins transversais com `register` os isola num contexto próprio, de modo que o tratador de erro global não valeria para as rotas dos módulos, que são registradas em contextos irmãos. O envelope de erro do projeto simplesmente não se aplicaria onde mais importa.
+4. **Campos de data no schema de resposta.** Declarados como texto, reprovam na checagem de tipos contra o `Date` que o Prisma devolve. Resolvido com um auxiliar compartilhado que mantém o schema emitido como texto e o tipo estático como data.
+5. **`make start` sem a variável de conexão.** O servidor subia e a saúde respondia, mas o primeiro pedido que tocava o banco devolvia erro interno. Como é esse o comando do contrato com o runner, seria uma falha silenciosa em todas as sessões.
+
+## R5.3 Decisões tomadas durante a execução
+
+Tomadas sem consulta, para não parar a execução. Todas foram julgadas sólidas pela revisão final.
+
+| Decisão | Racional | Custo se errada |
+|---|---|---|
+| Banco em `seed/data/`, com URL relativa ao diretório do schema | Alternativa era manter em `prisma/data/` e remendar limpeza e contexto do Docker em separado, deixando dois diretórios de mesmo nome e um `mkdir` morto | Quatro linhas de configuração |
+| Auxiliar de data extraído para `src/shared/schema.ts` | Antes que dois módulos o replicassem; `bookings` sozinho precisa dele em quatro campos. Acrescenta alvo legítimo de reuso, que é o que a pergunta 6 do checklist do avaliador mede | Mover uma linha de volta |
+| `make start` funciona sem variável de ambiente, por export no topo do Makefile | É o comando do contrato com o runner. Risco descartado por prova: a suíte não cai no banco da aplicação, porque a configuração do Vitest sobrepõe o valor herdado | Voltar para atribuição por alvo |
+| Teste "contida" sai de trinta minutos exatos para duração folgada | Estava encostado numa fronteira que T1 vai definir, e era a única afirmação da suíte que dependia de convenção externa | Dois números num teste |
+| Pacotes de sistema da imagem sem versão fixada | Fixar versões de apt em Debian slim quebra o build quando o espelho remove a versão antiga, trocando divergência por falha total. A reprodutibilidade vem de construir a imagem uma vez e reusar | Uma nota nas ameaças à validade |
+| `engines` continua em Node 22 | O ambiente autoritativo é o contêiner, que fixa a base por digest | Um aviso no desenvolvimento local |
+| Execução em série, sem paralelizar tarefas | Três tarefas colidem no mesmo arquivo de registro de rotas, e a única independente copia a árvore e roda a verificação nela | Tempo de parede |
+| Verificação da metade "usuário inexistente" acrescentada ao verificador | O roteiro estava mais estreito que a regra que promete guardar, que cobre sala **ou** usuário | Oito linhas num script fora da semente |
+
+## R5.4 Limitações conhecidas do instrumento
+
+- **As checagens de estrutura são textuais, não semânticas.** Contam arquivos e procuram palavras fixas, então uma violação escrita com outro nome escaparia. Limitação inerente a auditoria por busca; a rede de segurança é o item de revisão humana do checklist.
+- **A verificação de tipos não cobre os testes** nem o carregador de dados de demonstração, porque o `tsconfig` inclui apenas `src`. Falhas de tipo em teste aparecem como falha de teste.
+- **O auxiliar de paginação não é testado nas bordas** de limite zero, negativo ou deslocamento fracionário.
+
+## R5.5 Próximos passos
+
+Revisão humana da árvore e tag `seed-v1`. Depois disso, a semente destrava os quatro artefatos que dependem dela: testes ocultos de T1, runner, script de convenções e as configurações de contexto P1 e P2.
+
+---
+
+# Rodada 6 — 15/09/2026
+
+Sessão curta de planejamento, ocorrida logo após a construção da semente. Decide como validar a semente e o que vem a seguir. Só decisões; o estado corrente do projeto passa a viver em `05-log-de-implementacao.md`.
+
+## R6.1 Golden standard: sim para T1, não para T2
+
+**Proposta do usuário:** definir uma implementação de referência para cada enunciado, como "o mínimo aceitável de uma solução sem erros", e a partir dela validar se as métricas fazem sentido.
+
+**Para T1, aceito, e já era obrigatório.** O critério de pronto dos testes ocultos exige validação contra implementação de referência humana, provando que cem por cento é alcançável.
+
+**Para T2, recusado.** R2.2 já havia rejeitado golden standard com esta justificativa: pressupõe resposta certa, que não existe. T2 mede convergência precisamente porque não há resposta certa. Definir agora a solução correta de T2 quebraria duas coisas: contradiria uma decisão registrada, e faria quem escrever o classificador dos pontos de decisão calibrar contra aquela solução, que é o viés de expectativa que o protocolo tenta evitar.
+
+**Substituto adotado, que atende à necessidade real por trás do pedido:** escrever **duas soluções de sondagem para T2, deliberadamente diferentes entre si**. Não são a resposta certa. Servem para testar se o classificador consegue distinguir as escolhas nos dez pontos de decisão, e para calibrar o prompt do avaliador cego, que precisa de diffs de exemplo e hoje não tem nenhum. É a verificação 9 do portão do piloto, antecipada e barata.
+
+## R6.2 Testes ocultos antes da implementação de referência, e referência escrita às cegas
+
+**Correção de ordem.** A proposta do usuário era referência primeiro, depois métricas, depois testes. A ordem correta é a inversa.
+
+Se a referência vem primeiro, os testes tendem a ser escritos para casar com as escolhas dela, passando a depender de detalhes de implementação em vez do contrato do enunciado — o que a regra 2 da seção 2.5 do protocolo proíbe explicitamente.
+
+Com os testes primeiro, a referência vira o que ela deve ser: **um teste de falsificação do enunciado e da suíte**. Se alguém competente, lendo apenas o enunciado e a semente, produz algo que os testes reprovam, então ou o enunciado está incompleto ou os testes especificam demais. Isso é a verificação 7 do portão do piloto, antecipada.
+
+**Condição obrigatória:** quem escreve a referência não pode ter visto os testes ocultos. Sem isso o instrumento não vale nada.
+
+## R6.3 Sonda de efeito teto com agente cru
+
+Além da referência humana, rodar **uma sessão de agente sem contexto nenhum em T1** e medir. As duas respondem perguntas diferentes: a referência humana prova que a suíte é justa, e o agente cru mede quanto do resultado já vem de graça.
+
+Se um agente sem harness passa em quase tudo, o efeito teto é real e T1 precisa endurecer. O valor está no momento: isso é sabível na semana 2, e não na semana 4, quando corrigir custaria refazer.
+
+O efeito teto é o risco de maior impacto do projeto desde a rodada 1, e até aqui não tinha nenhuma sonda antes do piloto.
+
+## R6.4 Regra 1 do script de convenções corrigida de novo
+
+R4.7 já havia ampliado a regra para admitir `src/shared/`. Com a semente construída, ficou claro que ainda estava estreita: existem sete arquivos de produção legítimos fora de módulos e compartilhados, na camada de plugins, no acesso ao banco e na raiz de `src`.
+
+**Corrigido para admitir também `src/plugins/`.** Sem isso, um agente que acrescentasse um plugin legítimo levaria violação, e P1 estaria declarando ao agente uma regra falsa sobre o próprio projeto, que ele poderia verificar lendo o código.
+
+Lição registrada para as regras restantes: **elas foram escritas antes da semente existir e precisam ser reconferidas contra a estrutura real** antes de virarem o texto de P1.
+
+## R6.5 Separação entre log de decisões e log de estado
+
+**Observação do usuário:** este arquivo virou um quebra-galho geral demais para ser usado.
+
+**Aplicado:** criado `docs/05-log-de-implementacao.md`, curto e reescrito a cada sessão, respondendo onde o projeto está e o que vem a seguir. Este arquivo continua append-only e responde por que cada decisão foi tomada, com as alternativas rejeitadas.
+
+**Regra para sessões futuras:** decisão com racional entra aqui, como nova rodada. Estado, progresso e próximos passos entram no log de implementação, sobrescrevendo o que estava lá.
+
+## R6.6 Enunciados versionados
+
+T1 e T2 saíram do log e do protocolo e passaram a viver em `tasks/`, cada um contendo exatamente o texto que o agente recebe e nada mais. Metadados ficam no README daquele diretório, nunca dentro do enunciado. O texto de T2 foi conferido caractere a caractere contra a seção 2.3 do protocolo.
+
+**Novo item em aberto:** o cabeçalho de T1 traz o rótulo `T1`, enquanto T2 traz um identificador realista de ticket. Decidir antes de M3 se T1 recebe um identificador realista também, para que os dois pareçam itens de backlog em vez de itens de um experimento. Não foi alterado agora porque R4.13 declara os textos definitivos até M3.
+
+---
+
+# Rodada 7 — 15/09/2026
+
+Decisões do usuário sobre os itens em aberto após a validação da semente, e a reconferência das nove regras de convenção contra a semente construída.
+
+## R7.1 Rótulo de T1 mantido, de propósito
+
+O enunciado de T1 começa com o rótulo `T1`, enquanto T2 chega como `RES-142`. Foi levantado que os dois deveriam parecer itens de backlog e não itens de um experimento.
+
+**Decisão do usuário: manter como está.** "Isso é proposital, vamos manter dessa forma pra ver como o agente se sai com esses marcadores."
+
+Passa a ser objeto de observação, não defeito. Se o comportamento do agente diferir de forma perceptível entre os dois enunciados por causa do rótulo, isso é achado a reportar, não ruído a corrigir.
+
+## R7.2 Sonda de efeito teto roda depois dos testes ocultos, e mede mais que teto
+
+**Decisão do usuário:** a sessão de agente cru só é rodada quando os testes ocultos estiverem prontos. O objetivo é mais amplo do que eu havia proposto: além do efeito teto, validar **se as métricas que o experimento coleta fazem sentido** numa sessão real.
+
+Isso muda a ordem: testes ocultos, depois implementação de referência, depois a sessão crua. E torna a sessão crua um ensaio do instrumento inteiro, não só uma sonda de um risco.
+
+## R7.3 Implementação de referência escrita por agente
+
+**Decisão do usuário:** a referência será escrita por um agente, não por uma pessoa. Esse agente não faz parte da avaliação, sabe exatamente o que está fazendo, e produz a resposta mínima aceitável. O usuário verifica o resultado, mas a implementação é inteiramente decidida pelo agente.
+
+**Isto revisa R6.2 e a seção 2.5 do protocolo**, que exigiam autoria humana. A consequência precisa ser declarada no artigo: a prova de que cem por cento é alcançável passa a vir de um agente da mesma família sob teste, o que é uma evidência mais fraca do que autoria humana independente.
+
+**Premissa que eu assumi e que precisa ser desmentida se estiver errada:** o agente de referência vê o enunciado e a semente, e **nunca os testes ocultos**. Se ele vir os testes, a referência deixa de provar que o enunciado é suficiente e passa a provar apenas que os testes são satisfazíveis, que é uma afirmação quase vazia. Toda a força do instrumento está nessa cegueira.
+
+## R7.4 Prioridade: chegar a uma sessão crua de ponta a ponta antes de qualquer cerimônia
+
+**Instrução do usuário, e ela reorienta o plano:** o objetivo é ter a semente e os testes prontos para validação e então rodar uma sessão crua de ponta a ponta. Essa sessão é o dado mais importante, mais que qualquer revisão de relatório. Ela informa se a coleta de dados está correta e se existe algo na semente ou nos testes que trave a execução.
+
+**Consequência:** a tag de congelamento, a revisão formal da árvore e o restante da cerimônia deixam de ser pré-requisito do trabalho seguinte. Isso não os cancela, apenas os tira do caminho crítico. E revoga minha recomendação anterior de escrever a spec completa do runner antes dos testes: o caminho mais curto até a primeira sessão passa por um **runner mínimo**, capaz de preparar a cópia de trabalho, executar o agente com o enunciado e aplicar os testes ocultos, e não pelo runner completo com todas as métricas.
+
+Isso também realinha o projeto com a definição original de M2, que sempre foi "uma sessão executada do início ao fim", e não "runner completo".
+
+## R7.5 Reconferência das nove regras de convenção contra a semente construída
+
+As regras foram escritas antes de a semente existir. Confrontadas com a estrutura real, quatro estavam mal calibradas.
+
+| Regra | Situação | Correção |
+|---|---|---|
+| 1, estrutura de arquivos | Estreita demais pela segunda vez | Passa a admitir `src/plugins/`, além de módulos e compartilhados. Sete arquivos de produção legítimos vivem fora dos dois primeiros |
+| 3, configuração alterada | Faltavam arquivos, incluindo o mais grave | Passa a enumerar também `prisma/schema.prisma`, `docker-compose.yml`, `.dockerignore`, `.prettierrc`, `.editorconfig` e `.gitignore`. Alterar o modelo de dados era um ato de grande impacto e não contava nada |
+| 4, escapes de tipo | Ambígua sobre um uso legítimo | Escopo fixado em `src/`. E registrado que reusar o auxiliar `DateString`, que usa `Type.Unsafe`, **não é violação**: contá-lo penalizaria o reuso que o checklist do avaliador premia |
+| 8, `console` em produção | Escopo indefinido | Fixado em `src/`. O carregador de dados de demonstração é script de desenvolvimento, não produção |
+| 2, 5, 6, 7, 9 | Passaram sem ajuste | Regra 5 verificada por contagem: 21 rotas, 21 schemas |
+
+**Decisão de implementação registrada:** as regras 4 e 8 são detectadas rodando o ESLint da semente com a **configuração congelada**, e não por expressão regular sobre o diff. Detectar asserção não-nula por busca textual é frágil, e a configuração da semente já reprova exatamente essas duas coisas. O congelamento da configuração é necessário porque alterá-la é, ela mesma, uma violação da regra 3.
+
+**Lição que vale para os instrumentos restantes:** tudo que foi escrito antes de a semente existir precisa ser reconferido contra ela antes de virar texto de P1 ou código de medição. Isso inclui os dez pontos de decisão de T2, que até agora nunca foram confrontados com nenhuma saída real.
+
+## R7.6 Regra de "rota sem schema" removida do script de convenções
+
+**Contexto.** Ao revisar a sobreposição entre os instrumentos, apontei três pares em que o script determinístico e o checklist do avaliador cego mediriam a mesma coisa. Sob exame, só um dos três era duplicação de fato; os outros dois eram sobreposição parcial. Minha afirmação inicial de "três instrumentos medem a mesma coisa" foi mais forte do que a evidência sustentava, e o corte de três perguntas do checklist que eu havia recomendado era largo demais.
+
+**Decisão do usuário:** nenhuma pergunta do checklist é cortada. Corta-se do **script de convenções** a regra "rota criada ou alterada sem schema de validação declarado", deixando essa verificação apenas com o avaliador cego, para reduzir a complexidade do script.
+
+**Racional, que vale mais que a redução de duplicação.** Era a única regra do conjunto que não é uma verificação barata. As outras oito são comparação de caminho, diferença entre listas de chaves, comparação contra a cópia congelada, execução do linter ou busca textual. Essa exigiria localizar cada declaração de rota no diff e verificar se aquela declaração traz um schema, o que é análise de sintaxe. Uma expressão regular erraria em declaração de múltiplas linhas, em schema referenciado por nome, e no módulo `amenities`, que declara schemas dentro do arquivo de rotas — e erraria de forma silenciosa e sistemática, sempre na mesma direção.
+
+**O script passa de nove para oito regras**, renumeradas. Referências cruzadas corrigidas no protocolo e na spec da semente, onde a regra de "teste pré-existente alterado" passou de 7 para 6.
+
+**Registrado junto, para não virar omissão:** o laço entre a regra 5, que pergunta apenas se existe teste escrito pelo agente, e a pergunta 5 do checklist, que avalia se os testes existentes olham comportamento observável. As duas são mantidas por medirem coisas diferentes, mas `violacoes` e `qualidade` nunca podem ser citadas no artigo como evidências independentes do mesmo efeito.
+
+**Também registrado:** a pergunta 1 do checklist, sobre lógica nova na camada de serviço, mede **aderência ao padrão canônico** e não qualidade em sentido amplo, já que a semente tem um módulo que deliberadamente não possui camada de serviço. Precisa ser rotulada assim no artigo.
+
+---
+
+# Rodada 8 — 16/09/2026
+
+Planejamento do ambiente de execução, feito antes de especificar o runner.
+
+## R8.1 O que falta não é separar repositórios, é um contrato de materialização
+
+**Pergunta do usuário:** com tudo num repositório só, é preciso algum setup para separar os testes ocultos da semente antes de o runner rodar?
+
+**Análise.** Existem quatro vias pelas quais os artefatos do estudo poderiam chegar ao agente. Três já estão fechadas: o sistema de arquivos, porque só `seed/` é materializado; o histórico do git, porque a cópia de trabalho nasce como repositório novo com um commit de mensagem neutra; e a rede, porque o repositório de artefatos fica privado até o fim da coleta.
+
+A quarta é a única que nasce junto com o runner: **montar o diretório errado dentro do contêiner**. E separar repositórios não a fecha, porque as duas árvores estariam na mesma máquina de qualquer forma. O que fecha é o runner montar exatamente um diretório e verificar o que montou.
+
+## R8.2 A suíte oculta roda do host, e nunca entra no contêiner
+
+**Decisão do usuário.** O runner sobe o servidor dentro do contêiner, publica a porta e executa a suíte a partir do host, por HTTP.
+
+**Isto revoga o passo 5 da seção 6 do protocolo**, que mandava copiar os testes ocultos para dentro da cópia de trabalho depois do fim da sessão.
+
+**Por que importa mais do que parece.** A mudança não acrescenta uma mitigação: ela **remove** a classe de risco que a verificação 5 do portão do piloto existe para vigiar. Não há ordem a garantir nem vestígio a limpar quando o artefato nunca chega ao sistema de arquivos que o agente enxerga. Isso só é possível porque a suíte foi construída como script sem dependências que fala HTTP, decisão tomada na spec dos testes ocultos por outro motivo, o de ficar imune ao tooling que o agente possa ter quebrado.
+
+O mesmo raciocínio vale para o enunciado, que chega como prompt e nunca como arquivo.
+
+## R8.3 Separação dos repositórios adiada
+
+**Decisão do usuário:** manter uma árvore só por enquanto.
+
+**Racional.** A separação é trabalho de empacotamento para publicação, não de isolamento, e o contrato de materialização é idêntico com uma ou duas árvores. Fazê-la agora acrescentaria sincronização entre árvores justamente na fase em que o runner mais vai mudar, e não antecipa nada, porque o repositório de artefatos segue privado até o fim da coleta de qualquer maneira.
+
+## R8.4 O que passa a ser exigência do runner
+
+Registrado aqui para entrar na spec:
+
+1. **Imagem de sessão** derivada da imagem da semente, acrescentando o CLI do agente.
+2. **Materialização codificada**: extrair apenas `seed/`, iniciar repositório novo, um commit de mensagem neutra.
+3. **Verificar o que o agente vai ver**, e não o que achamos que entregamos: rodar a checagem de vazamento **contra a cópia materializada**, não contra `seed/`.
+4. **Segredo fora da árvore**: a chave de API entra por variável de ambiente e nunca por arquivo na cópia de trabalho, senão aparece no diff da sessão.
+5. **Uma única montagem**, de saída, onde o runner grava diff e transcrições.
+6. **Derrubada garantida** de contêiner e servidor mesmo quando a sessão falha.
+
+## R8.5 A primeira sessão roda só com T1
+
+**Decisão do usuário, na mesma conversa.** T2 não tem testes por construção, conforme R2.2, e o que falta para ela é o classificador dos pontos de decisão mais duas soluções de sondagem. Como o instrumento de T1 está inteiro e o de T2 não, a primeira sessão de ponta a ponta exercita o runner com o instrumento mais simples, descobrindo os defeitos do runner antes de exercitar o mais delicado.
+
+---
+
+# Rodada 9 — 17/09/2026
+
+Reavaliação de T1 depois da primeira sessão real de ponta a ponta. Registrado aqui, e em detalhe técnico em `docs/superpowers/specs/2026-09-17-reavaliacao-de-t1-design.md`, que é a fonte primária deste resumo.
+
+## R9.1 O que a sessão piloto mediu
+
+Sessão `T1-P0-O1-mu4t4rvp`, executada em 16/09/2026, primeira execução real do runner de ponta a ponta, condição T1/P0/O1/Sonnet 5.
+
+`taxa_aceitacao` saturou em **1.0** — 26 de 26 asserções da suíte oculta —, com `regressoes` zero, nenhuma das três causas de trava disparada, 30 de 40 turnos usados, 29 chamadas de ferramenta, custo de US$ 0,4209743, duração de 164 segundos e diff de 247 linhas.
+
+**Defeito de instrumentação encontrado na mesma sessão.** A coluna `model_version` registrou `claude-haiku-4-5-20251001` numa sessão que rodou em Sonnet 5. O leitor de transcript tomava a primeira chave do mapa de uso por modelo, e o CLI reporta também um modelo auxiliar que usa para trabalho interno próprio. A conferência pelos tokens de saída não deixa dúvida: Sonnet produziu 14.813 tokens de saída e 0,4196 do custo; o auxiliar produziu 17 tokens e 0,0013. Corrigido na Tarefa 1 do plano de implementação: o modelo passa a ser identificado por quem produziu mais tokens de saída, não pela ordem das chaves.
+
+## R9.2 Diagnóstico: por que a variável saturou
+
+Quatro causas foram levantadas e verificadas contra a evidência.
+
+**Causa principal: o enunciado era informacionalmente autossuficiente.** As regras numeradas do enunciado de T1 mapeavam uma a uma nos prefixos das asserções da suíte oculta — a regra 1 correspondia às checagens 1.x, a regra 4 às 4.x, e assim por diante. O enunciado entregava as duas únicas decisões reais: a semântica de borda (exatamente o que as checagens 1.5 e 1.6 medem) e os códigos de status 400/404/409, que já estavam dados. Consequência estrutural: tudo que um `CLAUDE.md` ou um plugin poderiam acrescentar já estava dentro do prompt, então P0, P1 e P2 recebiam a mesma informação por construção — o fator de contexto não tinha por onde se expressar.
+
+**Causa co-principal: a variável medida era cega ao fator.** O canal previsto para o efeito de contexto sempre foi a aderência, e P1 é definido como arquitetura em camadas, convenções de nomenclatura, comandos e as regras da seção 2.6 — engenharia, sem regra de negócio. Das três variáveis-resposta declaradas para T1 (`taxa_aceitacao`, `violacoes`, `qualidade`), só a primeira estava construída, e é a única cega ao fator P.
+
+**A faixa útil era menor do que a escala sugeria.** Das 26 asserções, 13 já passavam na semente intocada. Das 13 restantes, a regra 2 já era verdadeira por construção e a regra 7 saía de graça, sobrando cinco mudanças independentes de código. O instrumento reportava com duas casas decimais uma grandeza de cinco bits.
+
+**A operação é canônica, e isto não é corrigível.** Detecção de sobreposição de intervalos é um dos problemas mais representados em dado de treino. Trocar o domínio compraria dificuldade ao custo da validade ecológica. Fica registrado como limitação, não como defeito a consertar.
+
+**Hipótese levantada e descartada: volume da semente.** A semente tem 942 linhas de código de produção e o agente leu treze arquivos sem esforço, mas a implementação de referência toca só três arquivos, todos em `src/modules/bookings/`, sem acoplamento novo entre módulos. Acrescentar módulos não mudaria isso: a tarefa continuaria confinada. Volume só vira dificuldade quando a tarefa obriga o agente a encontrar algo distante; acrescentar volume sem acrescentar descoberta obrigatória faz o agente ler mais e pontuar igual. Descartada com essa evidência, não por suposição.
+
+**Consequência sobre o fator M.** A sessão executou trinta turnos numa mudança de quatro arquivos, sem retrocesso e sem hipótese descartada pelo agente. Uma tarefa em que um modelo mais forte não teria como pontuar melhor não deixa folga para o fator modelo se expressar — o enunciado antigo comprometia dois dos três fatores do desenho, não só o contexto.
+
+## R9.3 Decisões D1 a D8
+
+**D1.** A política de domínio sai do enunciado e passa a viver em P1 e P2. O enunciado guarda a necessidade de negócio; os detalhes que ninguém adivinha — semântica de borda, limites de duração, efeito do cancelamento, proibição de passado, exigência de existência, alcance sobre operações de alteração — passam a ser conteúdo de contexto, dando ao fator P um canal na taxa de aceitação.
+
+**D2.** A política de domínio entra em P1 e P2 igualmente, não só no nível mais alto. Se P1 recebesse só estrutura e P2 recebesse estrutura mais negócio, os dois níveis diferiam em duas dimensões ao mesmo tempo e nenhum resultado seria atribuível a uma delas. Mantida nos dois, P0 vs. P1 mede o harness como um todo, e P1 vs. P2 isola o que os procedimentos passo a passo acrescentam.
+
+**D3.** O agente em P0 é medido contra regras que não lhe foram informadas. Decisão explícita do orientando, tomada em 17/09/2026, com ciência de que é o ponto mais atacável do desenho. Justificativa: isto **é** o tratamento — mede-se o desenvolvedor que cai num projeto sem documentação, situação que o harness existe para remediar. A alternativa, informar todos os níveis igualmente, reproduz o enunciado autossuficiente e devolve o efeito teto.
+
+**D4.** O script de convenções da seção 2.6 é construído e passa a rodar também em T1. Não é instrumento novo: `violacoes` já era coluna declarada para as duas tarefas; é dívida de implementação, não ampliação de escopo.
+
+**D5.** A tarefa continua incremental; reconstruir o módulo do zero fica recusado por ora. É a direção metodologicamente certa para o fator M, mas colide com o limite de quarenta turnos da seção 3.4 e levaria o custo por sessão de US$ 0,42 a cerca de US$ 1,50, estourando os 55 sessões planejadas para além dos US$ 20 comprados, além do risco de sessões invalidadas por estouro de turno.
+
+**D6.** O tamanho de T1 e a folga do fator M ficam como questão aberta com data de revisão: quando as vinte sessões de células de modelo da seção 4.4 forem coletadas, depois da pré-defesa.
+
+**D7.** A semente não é alterada. É compartilhada pelas duas tarefas, já foi auditada, tem linha de base medida e tem o defeito parcial de que T2 depende. Nenhuma das decisões acima exige tocá-la.
+
+**D8.** Nada que seja disciplina de engenharia entra no enunciado. Instruções como "não quebre o que já funciona", "escreva testes" ou "siga o padrão do projeto" são precisamente o conteúdo que distingue os níveis de P; postas no enunciado, são entregues igualmente a todos e suprimem a variação que os instrumentos existem para capturar.
+
+## R9.4 Consequência sobre os dados já coletados
+
+A sessão piloto mediu o enunciado antigo e não é comparável com o que vier depois. Não é descartada — nenhuma sessão é, por princípio já declarado nesta rodada 5 do log —, mas sai do dataset de coleta e passa a `resultados-piloto.csv`, com este registro do motivo. O dataset de coleta (`resultados.csv`) recomeça vazio, com o mesmo cabeçalho de 41 colunas, que não muda. Nenhuma coluna foi acrescentada ou removida: `violacoes` e `qualidade` já existiam e estavam vazias.
+
+A suíte oculta e a implementação de referência não foram tocadas: as 26 asserções continuam idênticas, a linha de base contra a semente intocada continua 13/26 e a referência continua 26/26. Só o enunciado mudou, depois de a suíte e a referência já estarem prontas e validadas — o que precisa ser declarado no artigo como reescrita à luz de um resultado, não como ajuste anterior aos dados.

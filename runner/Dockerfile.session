@@ -1,0 +1,51 @@
+FROM meeting-rooms-api:1.0.0
+
+USER root
+
+# The seed's own image has neither pkill nor fuser. Killing the server
+# between phases needs one of them: reference/T1/verify.sh already found
+# job-control kill unreliable against `make start` (it can print
+# "Terminated" while node keeps the port bound) and settled on
+# `fuser -k` against the port instead. psmisc provides fuser.
+# `patch` is not installed either, and the reference fake needs it to
+# apply reference/T1/reference.patch.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends psmisc patch \
+  && rm -rf /var/lib/apt/lists/*
+
+# npm install -g @anthropic-ai/claude-code races its own postinstall
+# (install.cjs) against the network fetch of the platform-native optional
+# dependency (@anthropic-ai/claude-code-linux-x64): observed directly on
+# this host, the fetch itself is flaky and sometimes the optional
+# dependency is silently skipped altogether, leaving a non-functional
+# claude.exe stub in bin/. --ignore-scripts defers the postinstall so it
+# never races the fetch; the retry loop covers the fetch itself dropping
+# the optional dependency; install.cjs then runs once the platform binary
+# is confirmed on disk, and the build fails loudly if it never lands.
+RUN set -eux; \
+  for attempt in 1 2 3 4 5; do \
+    npm install -g @anthropic-ai/claude-code@2.1.272 --ignore-scripts; \
+    if [ -d "$(npm root -g)/@anthropic-ai/claude-code/node_modules/@anthropic-ai/claude-code-linux-x64" ]; then \
+      break; \
+    fi; \
+    echo "attempt $attempt: platform-native optional dependency missing, retrying" >&2; \
+  done; \
+  test -d "$(npm root -g)/@anthropic-ai/claude-code/node_modules/@anthropic-ai/claude-code-linux-x64"; \
+  node "$(npm root -g)/@anthropic-ai/claude-code/install.cjs"; \
+  claude --version
+
+# The Claude Code CLI refuses --dangerously-skip-permissions when run as
+# root/sudo ("cannot be used with root/sudo privileges for security
+# reasons"), and the container was root the whole way through up to here.
+# The base image already ships a `node` user at uid/gid 1000 — the same
+# uid as the host user running the runner, so the /out bind mount stays
+# writable with no extra chown. /app itself is owned by root (root built
+# it, in the seed's own Dockerfile), so hand it to `node` before dropping
+# privileges, then never go back to root.
+RUN chown -R node:node /app
+USER node
+
+ENV CI=1
+WORKDIR /app
+
+CMD ["sleep", "infinity"]

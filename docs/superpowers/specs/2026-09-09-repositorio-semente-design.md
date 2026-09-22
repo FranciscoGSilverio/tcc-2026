@@ -133,6 +133,8 @@ A borda já é estrita e reservas canceladas já são ignoradas **precisamente p
 - Não há validação de que o fim seja posterior ao início. O schema valida apenas que ambos são instantes ISO válidos.
 - Sala ou usuário inexistente estoura na chave estrangeira e sai como 500, não como 404.
 
+**Nota de manutenção (16/09/2026).** O manipulador de erros (`seed/src/plugins/error-handler.ts`) tinha um defeito acidental, fora desta lista: seu catch-all ignorava o `statusCode` que o próprio Fastify já atribuía a erros de framework (por exemplo, corpo vazio com `content-type: application/json`), respondendo 500 para esses casos em vez do 400 que o framework já havia decidido. Isso não é um dos cinco defeitos deliberados acima — não afirma nenhuma regra de negócio de T1, apenas descarta uma informação que o próprio framework fornece. Foi corrigido acrescentando um ramo, entre a checagem de validação de schema e o catch-all, que honra um `statusCode` de erro de cliente (4xx) já definido pelo Fastify, mantendo o mesmo envelope de resposta e usando o código `VALIDATION_ERROR` já existente. A correção foi verificada para não alterar nenhum dos cinco defeitos desta seção nem a linha de base da suíte oculta: erros do Prisma não carregam `statusCode`, então o caso de sala ou usuário inexistente continua caindo no catch-all e saindo como 500.
+
 ### 5.3 Cancelamento idempotente
 
 Cancelar uma reserva já cancelada responde 200 com a reserva inalterada, e não 409. Um 409 aqui seria uma recusa, e recusa é proibida pela invariante.
@@ -260,7 +262,7 @@ Esta é a fronteira que torna as sessões de implementação seguintes mecânica
 **Três garantias de isolamento**, que protegem as medições de serem sabotadas pelo próprio agente:
 
 1. Os comandos de verificação vêm do Makefile **congelado**, nunca da cópia que o agente pode ter editado.
-2. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão. Separadamente, o runner registra se o agente os alterou, o que é a regra 7 do script de convenções.
+2. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão. Separadamente, o runner registra se o agente os alterou, o que é a regra 6 do script de convenções.
 3. Os testes ocultos são copiados **apenas depois** que a sessão termina, para um diretório que não existe na semente, e rodam com configuração fornecida pelo runner.
 
 **Materialização da cópia de trabalho.** O runner extrai a árvore a partir da tag congelada e inicializa um repositório git novo, com um único commit de mensagem neutra. Isso elimina por construção o vazamento por histórico, que seria fatal e é fácil de esquecer.
