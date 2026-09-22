@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { COLUMNS, emptyRow, appendRow } from '../lib/dataset.mjs';
+import {
+  COLUMNS, emptyRow, appendRow, readRows, updateRow,
+} from '../lib/dataset.mjs';
 
 test('the schema carries every group the spec lists', () => {
   for (const column of [
@@ -73,4 +75,52 @@ test('refuses to append under a header that does not match the current schema', 
 
   // Nothing was appended: the file still holds only the stale header.
   assert.equal(readFileSync(path, 'utf8'), 'session_id,task,an_old_column\n');
+});
+
+function tempCsv() {
+  return join(mkdtempSync(join(tmpdir(), 'dataset-')), 'r.csv');
+}
+
+test('readRows round-trips a value containing a comma and a quote', () => {
+  const path = tempCsv();
+  const row = { ...emptyRow(), session_id: 'abc', invalid_reason: 'failed, said "why"' };
+  appendRow(path, row);
+
+  const [read] = readRows(path);
+  assert.equal(read.session_id, 'abc');
+  assert.equal(read.invalid_reason, 'failed, said "why"');
+});
+
+test('readRows returns an empty array for a missing file', () => {
+  assert.deepEqual(readRows(join(tmpdir(), 'does-not-exist-xyz.csv')), []);
+});
+
+test('updateRow merges fields into the matching row and leaves others untouched', () => {
+  const path = tempCsv();
+  appendRow(path, { ...emptyRow(), session_id: 'a', qualidade: '' });
+  appendRow(path, { ...emptyRow(), session_id: 'b', qualidade: '' });
+
+  updateRow(path, 'a', { qualidade: 5 });
+
+  const rows = readRows(path);
+  assert.equal(rows.find((r) => r.session_id === 'a').qualidade, '5');
+  assert.equal(rows.find((r) => r.session_id === 'b').qualidade, '');
+});
+
+test('updateRow rejects a session_id that does not exist', () => {
+  const path = tempCsv();
+  appendRow(path, { ...emptyRow(), session_id: 'a' });
+  assert.throws(() => updateRow(path, 'nonexistent', { qualidade: 1 }), /no row/);
+});
+
+test('updateRow rejects a field that is not a declared column', () => {
+  const path = tempCsv();
+  appendRow(path, { ...emptyRow(), session_id: 'a' });
+  assert.throws(() => updateRow(path, 'a', { not_a_column: 1 }), /unknown column/);
+});
+
+test('updateRow rejects a file whose header does not match the current schema', () => {
+  const path = tempCsv();
+  writeFileSync(path, 'session_id,old_column\na,1\n');
+  assert.throws(() => updateRow(path, 'a', { qualidade: 1 }), /does not match/);
 });
