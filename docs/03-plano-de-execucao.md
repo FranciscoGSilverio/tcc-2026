@@ -86,7 +86,7 @@ Não precisa estar bonito nem completo em métricas. Precisa fechar o ciclo.
 
 ### M3 — Piloto aprovado · **20/09** — *portão crítico*
 
-*Entregas:* script de convenções · prompts do avaliador cego (checklist e classificador) com voto majoritário · runner completo com todas as métricas · `CLAUDE.md` de P1 · configuração P2 funcional · seis sessões de piloto · **protocolo congelado**.
+*Entregas:* script de convenções · prompts do avaliador cego (checklist e classificador), congelados · runner completo com todas as métricas · `CLAUDE.md` de P1 · configuração P2 funcional · seis sessões de piloto · **protocolo congelado**.
 
 *Portão:* as doze verificações da seção 2.
 
@@ -146,9 +146,9 @@ Depois de M5 sobram seis semanas para 25 sessões desassistidas, uma análise e 
 
 **Pontos de decisão (T2):** dez pontos com categorias fechadas mais `ausente` · nenhum respondido pelo enunciado · lista congelada antes de qualquer sessão do dataset.
 
-**Avaliador cego:** recebe apenas diff e enunciado · modelo fixo, independente do modelo sob teste · três chamadas por pergunta com voto majoritário · taxa de desacordo registrada · prompts congelados.
+**Avaliador cego:** cego à condição — nunca recebe P, O, modelo nem identificação da sessão · recebe o diff, o enunciado e, no checklist, o material de referência constante de `src/shared/` e `src/plugins/` · modelo fixo, independente do modelo sob teste · uma passagem por instrumento, sem voto majoritário · confiabilidade medida por concordância com amostra classificada por humano · roda sobre diffs arquivados, depois da sessão · prompts congelados.
 
-**Runner:** executa uma sessão sem intervenção, com o agente dentro do contêiner · usa os comandos de verificação vindos do Makefile congelado, nunca da cópia que o agente pode ter editado · restaura os testes da semente antes de medir regressão · aplica os testes ocultos apenas após o término · invoca o avaliador cego · grava linha completa no CSV · arquiva diff, transcript bruto em JSON e transcrição legível em markdown · limpa o contêiner · marca falhas de infraestrutura como inválidas e permite re-execução.
+**Runner:** executa uma sessão sem intervenção, com o agente dentro do contêiner · usa os comandos de verificação vindos do Makefile congelado, nunca da cópia que o agente pode ter editado · restaura os testes da semente antes de medir regressão · aplica os testes ocultos apenas após o término · grava linha completa no CSV · arquiva diff, transcript bruto em JSON e transcrição legível em markdown · limpa o contêiner · marca falhas de infraestrutura como inválidas e permite re-execução.
 
 **Artigo:** modelo INATEL · figuras sem cor · resumo e abstract com no máximo 150 palavras · ameaças à validade presentes · artefatos referenciados e acessíveis.
 

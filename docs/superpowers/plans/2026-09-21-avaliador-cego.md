@@ -1328,7 +1328,7 @@ git commit -m "feat: add the blind evaluator CLI"
 
 - [ ] **Passo 2: emendar o protocolo**
 
-Em `docs/02-protocolo-experimental.md`, aplique as quatro emendas da seção 8 da spec: seção 2.7 (votação por maioria substituída por passagem única, cegueira redefinida como cegueira à condição, checklist com seis perguntas, pergunta 6 com material de referência), seção 5.1 (`qualidade` de "0–7" para "0–6"), seção 6 (avaliador roda depois da sessão, sobre diffs arquivados, não como passo do runner), seção 6.4 (item 6 da análise vira concordância com amostra humana).
+Em `docs/02-protocolo-experimental.md`, aplique as quatro emendas da seção 8 da spec: seção 2.7 (votação por maioria substituída por passagem única, cegueira redefinida como cegueira à condição, checklist com seis perguntas, pergunta 6 com material de referência), seção 5.1 (`qualidade` de "0–7" para "0–6"), seção 6 (avaliador roda depois da sessão, sobre diffs arquivados, não como passo do runner), seção 7 item 6 do plano de análise (vira concordância com amostra humana — a spec citava "seção 6.4", numeração que não existe no protocolo).
 
 - [ ] **Passo 3: emendar o plano de execução**
 

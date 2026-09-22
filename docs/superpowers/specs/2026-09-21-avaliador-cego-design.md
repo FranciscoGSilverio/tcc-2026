@@ -1,7 +1,7 @@
 # Avaliador cego — design
 
 **Data:** 2026-09-21
-**Protocolo afetado:** `docs/02-protocolo-experimental.md`, seções 2.7 e 6.4; `docs/03-plano-de-execucao.md`, verificação 10 do portão de M3.
+**Protocolo afetado:** `docs/02-protocolo-experimental.md`, seções 2.6, 2.7, 5.1, 6 e 7; `docs/03-plano-de-execucao.md`, verificação 10 do portão de M3.
 
 ---
 
@@ -11,7 +11,7 @@ O terceiro instrumento de medida do experimento. As seções 2.4 e 2.7 do protoc
 
 Ele **não dá nota em escala**. Responde perguntas fechadas sobre o que o diff contém. A distinção é o que torna o instrumento defensável: "nota de 1 a 5 para extensibilidade" produz número sem âncora; "a lógica nova está na camada de serviço, sim ou não" produz resposta estável.
 
-**"Cego" tem dois sentidos possíveis, e só um deles é requisito de validade.** Cego à **condição** — nunca saber P, O, modelo ou identificação da célula — protege o experimento contra viés de expectativa, é o que a seção 6.4 do protocolo lista como mitigação, e é inegociável: é o próprio efeito que o trabalho mede. Cego ao **resto do código**, isto é, receber só o diff e nada do que não mudou, nunca foi requisito de validade — era um jeito simples de escrever o prompt que ninguém tinha testado contra as perguntas que precisava responder. A seção 3 revisita essa segunda parte.
+**"Cego" tem dois sentidos possíveis, e só um deles é requisito de validade.** Cego à **condição** — nunca saber P, O, modelo ou identificação da célula — protege o experimento contra viés de expectativa, é o que a tabela de ameaças da seção 8 do protocolo lista como mitigação, e é inegociável: é o próprio efeito que o trabalho mede. Cego ao **resto do código**, isto é, receber só o diff e nada do que não mudou, nunca foi requisito de validade — era um jeito simples de escrever o prompt que ninguém tinha testado contra as perguntas que precisava responder. A seção 3 revisita essa segunda parte.
 
 Duas funções, e elas alimentam colunas diferentes:
 
@@ -188,7 +188,9 @@ Uma sessão com `status` inválido não é avaliada: não há diff que valha cla
 
 **Seção 6.** O passo 7, que hoje descreve o avaliador como etapa do runner, passa a descrevê-lo como passagem posterior sobre os diffs arquivados, com a justificativa de D4.
 
-**Seção 6.4.** O item 6 da análise deixa de ser "taxa de desacordo do avaliador entre suas três chamadas" e passa a ser "concordância entre o avaliador e a amostra classificada por humano".
+**Seção 7, item 6 do plano de análise** — não "seção 6.4", que não existe no protocolo; versões anteriores desta spec citavam essa numeração fantasma. O item deixa de ser "taxa de desacordo do avaliador entre suas três chamadas" e passa a ser "concordância entre o avaliador e a amostra classificada por humano".
+
+**Seção 2.6.** A frase que descrevia a pergunta 2 do checklist como resolvida "com voto majoritário de três chamadas" passa a dizer passagem única, para não contradizer a emenda da seção 2.7 dentro do mesmo documento.
 
 **Plano de execução, verificação 10 do portão de M3.** Deixa de exigir taxa de desacordo aceitável entre três chamadas e passa a exigir concordância aceitável com a amostra humana, avaliada junto da verificação 8, que já conferia se os dez pontos são classificáveis.
 
