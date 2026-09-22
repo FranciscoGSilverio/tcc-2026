@@ -1,6 +1,6 @@
 # Log de Implementação
 
-**Atualizado em:** 17/09/2026 (terceira revisão)
+**Atualizado em:** 22/09/2026 (quarta revisão)
 
 ## Para que serve este documento
 
@@ -25,13 +25,13 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 | Testes ocultos de T1 | **Prontos, sem alteração.** 26 asserções, linha de base 13/26 | `hidden-tests/T1/run.mjs` | Nada |
 | Implementação de referência de T1 | **Pronta, sem alteração.** 26/26, zero regressões | `reference/T1/` | Nada |
 | **Script de convenções** | **Construído.** Oito regras da seção 2.6; zero violações contra a referência, dispara nas cinco regras esperadas contra uma cópia deliberadamente violadora | `tools/convention-check/` | Nada |
-| Prompts do avaliador cego | Não existem | — | Tudo |
+| **Avaliador cego** | **Construído.** Checklist de qualidade (6 perguntas) e pontos de decisão de T2 (10 pontos), uma passagem por instrumento, cego à condição | `tools/blind-evaluator/` | Conjunto rotulado à mão para medir concordância com humano (D3) — depende de diffs reais de T2, ainda não coletados |
 | Runner mínimo | **Construído, provado por sessões falsas e por uma sessão real (P0).** Agora também aplica contexto (`applyContext`) e grava `violacoes` | `runner/` | Rodar a primeira sessão P1 real (Tarefa 8, fora do escopo desta rodada) |
 | Runner completo | Não existe, sem spec | — | Fica para depois das sessões P0/P1 de T1 |
 | **Configuração P1** | **Construída.** Política de domínio de reservas + as oito regras de convenção em linguagem natural + arquitetura, nomenclatura e comandos | `contexts/P1/CLAUDE.md` | Nada para esta rodada |
 | Configuração P2 | Não existe | — | Obrigatória antes da coleta que compara P0/P1/P2 |
 
-**Resumo em uma linha:** semente, instrumento de T1, script de convenções, contexto de P1 e runner completo até a coluna `violacoes` prontos e provados; enunciado de T1 reescrito para dar ao fator de contexto um canal mensurável; falta rodar as sessões P0 e P1 de T1 sob o enunciado novo (Tarefa 8, deliberadamente fora do escopo desta rodada de implementação por gastar orçamento real).
+**Resumo em uma linha:** semente, instrumento de T1, script de convenções, contexto de P1, runner mínimo até a coluna `violacoes`, e agora o avaliador cego (checklist e pontos de decisão) prontos e provados; as duas primeiras sessões reais de T1 sob o enunciado novo (P0 e P1) já coletadas, com `--dry-run` conferido contra as duas antes de rodar a avaliação de verdade; falta o plugin de P2, a sequência O2, e o conjunto rotulado à mão para medir a confiabilidade do avaliador cego contra classificação humana.
 
 ## Por que o enunciado de T1 mudou
 
@@ -53,6 +53,10 @@ A sessão piloto, por ter medido o enunciado antigo, não é comparável com as 
 
 A única medição real disponível é a sessão piloto: US$ 0,4209743 para uma sessão T1/P0. Extrapolado para as 55 sessões da grade principal (seção 4.2 do protocolo) ao mesmo custo por sessão, o total fica em torno de **US$ 23,15** contra **US$ 20** comprados — já insuficiente sem contar as vinte sessões adicionais de células de modelo da seção 4.4, nem T2, cujo custo por sessão ainda não foi medido (mais turnos esperados por não ter testes automáticos como critério de parada). Este ponto já estava em aberto antes desta rodada e continua em aberto: precisa de decisão sobre reforço de orçamento, redução de réplicas ou algum outro corte, antes de a coleta da grade principal começar.
 
+## Descoberta: `temperature` é rejeitada por Sonnet 5
+
+Registrada em 21/09/2026, ao planejar o avaliador cego. Uma chamada real à API `POST /v1/messages` com `claude-sonnet-5` devolve **erro 400** para `temperature`, `top_p` e `top_k` — mensagem de erro no formato "`<parâmetro>` is deprecated for this model", reconfirmada empiricamente em 22/09/2026 antes de escrever `tools/blind-evaluator/lib/client.mjs`. A spec do avaliador cego previa originalmente `temperature: 0` como a peça que tornaria a reexecução do instrumento estável (decisão D2); isso foi descartado, e a justificativa de não usar votação por maioria (D1) passou a repousar inteiramente em D3 — confiabilidade medida contra classificação humana, não contra si mesmo. Não existe hoje alavanca de determinismo de amostragem disponível via API para este modelo.
+
 ## Próximos passos, em ordem
 
 A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de retrabalho.
@@ -65,20 +69,21 @@ A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de ret
 6. ~~**Corrigir o que a sessão crua revelou.**~~ Feito em 17/09: `model_version` corrigido (Tarefa 1), enunciado de T1 reduzido à necessidade de negócio (Tarefa 2).
 7. ~~**Script de convenções**, oito regras, sobre o diff.~~ Feito em 17/09.
 8. ~~**Configuração P1.**~~ Feita em 17/09, com a política de domínio e as oito regras em linguagem natural.
-9. **Rodar uma sessão P0 e uma sessão P1 de T1 sob o enunciado novo**, para confirmar que o gradiente declarado na spec de reavaliação aparece de fato. Gasta orçamento real; deliberadamente adiado desta rodada de implementação para revisão humana antes de rodar.
+9. ~~**Rodar uma sessão P0 e uma sessão P1 de T1 sob o enunciado novo**~~, para confirmar que o gradiente declarado na spec de reavaliação aparece de fato. Rodado em 18/09 (`T1-P0-O1-mu69pgsx`, `T1-P1-O1-mu69tn5j`), registrado em `resultados.csv`.
 10. **Duas soluções de sondagem para T2**, deliberadamente diferentes, para testar se os dez pontos de decisão são classificáveis e calibrar o prompt do classificador.
-11. **Prompts do avaliador cego**, checklist e classificador.
+11. ~~**Prompts do avaliador cego**, checklist e classificador.~~ Feito em 22/09: `tools/blind-evaluator/`, checklist de seis perguntas e os dez pontos de decisão, chamada direta à API sem parâmetro de amostragem.
 12. **Configuração P2** (plugin), com o mesmo conteúdo de domínio de P1.
-13. **Runner completo**, com a métrica `qualidade` do avaliador cego.
-14. **Decisão sobre o orçamento**, à luz do custo por sessão medido.
-15. **Revisão humana da árvore e tag `seed-v1`.** Fora do caminho crítico, mas continua obrigatória antes da coleta.
-16. **Piloto (M3).**
+13. **Sequência O2** (pipeline segmentado de quatro chamadas).
+14. **Conjunto rotulado à mão** sobre diffs reais de T2, para medir a concordância entre o avaliador cego e uma classificação humana (spec do avaliador cego, decisão D3). Depende do item 10 — precisa de diffs reais de T2 para existir.
+15. **Decisão sobre o orçamento**, à luz do custo por sessão medido.
+16. **Revisão humana da árvore e tag `seed-v1`.** Fora do caminho crítico, mas continua obrigatória antes da coleta.
+17. **Piloto (M3).**
 
 ## Itens em aberto
 
 **De metodologia:**
 - Os dez pontos de decisão de T2 nunca foram testados contra nenhuma saída. O item 10 acima é o que resolve.
-- As sete perguntas do checklist do avaliador cego foram escritas antes de a semente existir, e nunca foram reconferidas contra ela. As regras de convenção já passaram por essa reconferência duas vezes — contra a estrutura da semente e, nesta rodada, contra o formato real do diff de sessão e da referência. As perguntas do avaliador precisam do mesmo tratamento antes de virarem prompt.
+- ~~As sete perguntas do checklist do avaliador cego foram escritas antes de a semente existir, e nunca foram reconferidas contra ela.~~ Resolvido em 21-22/09: a pergunta 7 foi retirada por ser redundante com `regressoes` (decisão D8), o checklist passou a ter seis perguntas, e a pergunta 6 passou a receber o conteúdo congelado de `src/shared/` e `src/plugins/` como material de referência (decisão D9), lido diretamente do commit da semente. O que continua em aberto é a validação empírica do prompt contra diffs reais de T2 — o conjunto rotulado do item 14 acima.
 - **A suíte oculta e a implementação de referência foram escritas pelo mesmo agente.** A referência prova consistência interna, não que um leitor independente consegue satisfazer a suíte. A sessão de agente cru sob o enunciado antigo era a compensação prevista para isso e saturou — a compensação real passa a ser a comparação P0/P1 sob o enunciado novo, que ainda não foi coletada.
 - A pergunta 1 do checklist do avaliador cego mede aderência ao padrão canônico, não qualidade em sentido amplo, porque a semente tem um módulo (`amenities`) que deliberadamente não possui camada de serviço. Precisa ser rotulada assim no artigo.
 - **O agente em P0 é avaliado contra regras de domínio não informadas a ele**, por decisão D3 da spec de reavaliação — é o tratamento, não um descuido, mas é o ponto mais atacável do desenho e precisa ser declarado como tal no artigo.
@@ -96,7 +101,7 @@ A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de ret
 |---|---|---|
 | M1 — protocolo aplicável | 06/09 | Concluído com atraso |
 | M2 — primeira sessão de ponta a ponta | 13/09 | Concluído com atraso em 16/09, e revelou efeito teto — a reavaliação desta rodada é a correção |
-| M3 — piloto aprovado | 20/09 | **Em risco.** Depende ainda das sessões P0/P1 de T1 (item 9), do plugin de P2, do avaliador cego e da decisão de orçamento |
+| M3 — piloto aprovado | 20/09 | **Em risco, data já passada.** Sessões P0/P1 de T1 e avaliador cego prontos; depende ainda do plugin de P2, da sequência O2 e da decisão de orçamento |
 | M5 — pré-defesa | 03/10 | Data fixa, não negociável |
 
 O gargalo continua sendo tempo de sessão e orçamento de API, não horas da equipe. A semente inteira e o script de convenções foram construídos em sessões dirigidas por agente.
@@ -117,3 +122,5 @@ Lista curta, só para dar noção de ritmo.
 - **16/09** — Runner mínimo construído e provado por três sessões falsas, sem gastar orçamento: uma que não faz nada pontua a linha de base, uma que aplica a referência pontua o máximo, e uma que quebra a aplicação é **registrada como dado com nota zero** em vez de descartada, que era a propriedade mais cara de errar.
 - **16/09** — Primeira sessão real de ponta a ponta rodada (`T1-P0-O1-mu4t4rvp`, T1/P0). `taxa_aceitacao` saturou em 1.0, revelando efeito teto e um defeito de instrumentação em `model_version`.
 - **17/09** — Reavaliação de T1: `model_version` corrigido para identificar o modelo por volume de tokens de saída; enunciado de T1 reduzido à necessidade de negócio; script de convenções das oito regras da seção 2.6 construído e ligado ao runner (coluna `violacoes`); `contexts/P1/CLAUDE.md` escrito com a política de domínio e as oito regras em linguagem natural, aplicado à cópia de trabalho antes do commit inicial da sessão; sessão piloto arquivada em `resultados-piloto.csv`, `resultados.csv` reiniciado vazio com o mesmo cabeçalho de 41 colunas.
+- **18/09** — Primeiras sessões reais de T1 sob o enunciado novo coletadas: `T1-P0-O1-mu69pgsx` e `T1-P1-O1-mu69tn5j`, registradas em `resultados.csv`.
+- **21-22/09** — Avaliador cego construído: `capabilities.mjs` ganhou `decisionPoints` por tarefa; `dataset.mjs` ganhou `readRows`/`updateRow` para gravar em linhas já existentes; os dez pontos de decisão e o material de referência de `src/shared/`/`src/plugins/` viraram dado testável; os prompts do checklist (seis perguntas, a sétima retirada por decisão D8) e dos pontos de decisão foram congelados; a resposta do modelo é validada sem aproximação, categoria fora da lista fechada aborta a avaliação (D7); o cliente HTTP confirma empiricamente que `temperature`/`top_p`/`top_k` são rejeitados com erro 400 por `claude-sonnet-5` e nunca os envia; o CLI `evaluate.mjs` orquestra tudo, com `--dry-run` para inspecionar o prompt sem gastar.

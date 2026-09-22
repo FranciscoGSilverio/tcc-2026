@@ -55,7 +55,7 @@ O piloto está aprovado quando **todas** forem verdadeiras. Qualquer uma falsa b
 7. Os testes ocultos não falharam por motivo irrelevante (nome interno diferente, detalhe de implementação). Falhas devem corresponder a comportamento realmente ausente.
 8. Os dez pontos de decisão de T2 são classificáveis nas saídas produzidas — nenhum ficou `ausente` nas três execuções.
 9. As três execuções de T2 não foram nem idênticas nem incomparáveis. Se foram idênticas, o ticket é específico demais; se não há o que comparar, é ambíguo demais.
-10. O avaliador cego tem taxa de desacordo aceitável entre suas três chamadas. Perguntas com desacordo alto são reescritas antes do congelamento.
+10. O avaliador cego tem concordância aceitável com a amostra classificada por humano, avaliada junto da verificação 8. Perguntas com desacordo alto são reescritas antes do congelamento.
 11. A sessão de fumaça em P0 e as sessões em P2 **não produzem a mesma contagem de violações de convenção**. Se produzirem, o padrão da semente ficou auto-evidente demais e o fator de contexto está sendo medido atenuado. Ainda há tempo de corrigir antes do congelamento; depois, não.
 
 **Viabilidade**

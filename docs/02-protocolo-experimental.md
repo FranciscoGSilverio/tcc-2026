@@ -139,7 +139,7 @@ O conjunto foi ampliado de cinco para nove regras, e depois reduzido a oito pelo
 
 Era a única regra do conjunto que não é uma verificação barata. As outras oito são comparação de caminho contra uma lista, diferença entre listas de chaves do manifesto, comparação contra a cópia congelada, execução do linter, ou busca textual. Essa exigiria localizar cada declaração de rota no diff e verificar se aquela declaração específica traz um schema, o que é análise de sintaxe, não busca textual. Uma expressão regular erraria em declaração de múltiplas linhas, em schema definido fora e referenciado por nome, e no módulo `amenities`, que declara os schemas dentro do próprio arquivo de rotas. E erraria de forma silenciosa e sistemática, sempre na mesma direção, que é o pior tipo de defeito num instrumento de medida.
 
-A verificação não se perdeu: ela é a **pergunta 2 do checklist do avaliador cego**, concreta, visível no diff e binária, exatamente o formato que a seção R2.4 do log de planejamento classificou como estável. Trocou-se um script frágil por uma pergunta estável com voto majoritário de três chamadas.
+A verificação não se perdeu: ela é a **pergunta 2 do checklist do avaliador cego**, concreta, visível no diff e binária, exatamente o formato que a seção R2.4 do log de planejamento classificou como estável. Trocou-se um script frágil por uma pergunta estável, respondida numa única passagem (seção 2.7).
 
 **Laço declarado entre a regra 5 e a pergunta 5 do checklist.** A regra determinística pergunta apenas **se existe** teste escrito pelo agente. A pergunta 5 do avaliador avalia se os testes existentes verificam comportamento observável em vez de implementação interna. São perguntas distintas, mas a segunda só responde sim quando a primeira não disparou, de modo que os dois números ficam amarrados na maior parte dos casos. As duas são mantidas, porque medem coisas diferentes, mas **`violacoes` e `qualidade` nunca podem ser citadas no artigo como evidências independentes do mesmo efeito.**
 
@@ -160,19 +160,21 @@ Essa distinção é o que torna o instrumento defensável. Pedir "nota de 1 a 5 
 Regras obrigatórias:
 
 - **Modelo fixo:** Sonnet 5, sempre, independentemente do modelo sob teste na sessão.
-- **Cego:** recebe apenas o diff e o enunciado da tarefa. Nunca recebe o nível de P, o nível de O, o modelo usado, nem qualquer identificação da célula.
-- **Votação por maioria:** cada pergunta é feita três vezes em chamadas independentes; vale a resposta majoritária. A taxa de desacordo entre as três chamadas é registrada e reportada no artigo como medida de confiabilidade do instrumento.
-- **Prompts congelados** junto com o protocolo.
+- **Cego à condição:** recebe apenas o diff, o enunciado da tarefa e, no checklist, material de referência constante (ver pergunta 6 abaixo). Nunca recebe o nível de P, o nível de O, o modelo usado, nem qualquer identificação da célula. Cego ao restante do código do projeto o instrumento **não é** — isso nunca foi requisito de validade, só um jeito de escrever o prompt (spec do avaliador cego, seção 1 e seção 3).
+- **Uma passagem por instrumento, sem votação por maioria.** Revogada a redação anterior, que previa três chamadas independentes e resposta majoritária. O que sempre importou não é se o avaliador concorda consigo mesmo, e sim se concorda com um humano; rodar três vezes e votar reduziria variância em torno de uma resposta que pode estar sistematicamente enviesada, sem corrigir o viés (spec, decisão D1). Isto não depende de controle de temperatura — a API rejeita `temperature`, `top_p` e `top_k` para Sonnet 5 com erro 400, verificado empiricamente em 21/09/2026 (spec, decisão D2); não existe hoje alavanca de determinismo via API para este modelo.
+- **Confiabilidade medida contra classificação humana.** Em vez da taxa de desacordo entre chamadas, a confiabilidade do instrumento passa a ser a concordância entre o avaliador e uma amostra classificada por humano sobre diffs reais de T2 (spec, decisão D3). Este conjunto rotulado depende de sessões de T2 ainda não coletadas e fica para depois da primeira coleta.
+- **Prompts congelados** junto com o protocolo, em `tools/blind-evaluator/prompts/`.
 
-**Checklist de qualidade** — sete perguntas binárias sobre o diff:
+**Checklist de qualidade** — seis perguntas binárias sobre o diff:
 
 1. A lógica de negócio nova está na camada de serviço, e não nas rotas?
 2. As entradas novas são validadas por schema?
 3. Os caminhos de erro têm resposta explícita com código de status apropriado?
 4. Valores fixos (durações, limites, janelas) estão nomeados, em vez de literais espalhados?
 5. Há testes escritos pelo agente que verificam comportamento observável, e não implementação interna?
-6. Utilitários já existentes no projeto foram reusados, em vez de reimplementados?
-7. Os contratos HTTP pré-existentes seguem compatíveis, sem quebra não solicitada?
+6. O código novo reusa utilitários já existentes no projeto, em vez de reimplementar? Respondida com o conteúdo congelado de `src/shared/` e `src/plugins/` como material de referência — idêntico em toda sessão, de todo P, todo O, todo modelo, porque vem do commit congelado da semente, nunca do contêiner da sessão. Isto não fere a cegueira à condição: o material não varia com P, O ou modelo, só dá ao avaliador o mesmo inventário de utilitários que toda sessão teve disponível (spec, decisão D9).
+
+**Pergunta 7 retirada em 21/09/2026 (spec, decisão D8).** A antiga sétima pergunta — "os contratos HTTP pré-existentes seguem compatíveis, sem quebra não solicitada?" — foi cortada por ser redundante com `regressoes`, que **executa** a suíte pré-existente e vê se algo quebrou, em vez de pedir a um avaliador que só tem o diff para adivinhar o que não mudou. O texto retirado e a justificativa completa ficam preservados em `docs/superpowers/specs/2026-09-21-avaliador-cego-design.md`, seção 4.1, para que ninguém a restaure por parecer lacuna.
 
 ## 3. Fatores e níveis
 
@@ -274,7 +276,7 @@ Randomizar a ordem em que as sessões rodam, em vez de executar célula por cél
 | `taxa_aceitacao` | 0–1 | só T1 | Testes ocultos aprovados ÷ total. **Variável-resposta principal de T1** |
 | `regressoes` | inteiro | ambas | Testes pré-existentes que passavam na semente e falham após a sessão |
 | `violacoes` | inteiro | ambas | Script de convenções (seção 2.6), determinístico |
-| `qualidade` | 0–7 | ambas | Itens atendidos no checklist do avaliador cego (seção 2.7) |
+| `qualidade` | 0–6 | ambas | Itens atendidos no checklist do avaliador cego (seção 2.7) |
 | `custo_usd` | decimal | ambas | Custo das chamadas, a partir dos tokens retornados pela API |
 | `duracao_s` | inteiro | ambas | Tempo de parede da sessão |
 | `n_tool_calls` | inteiro | ambas | Contagem de invocações de ferramenta no transcript |
@@ -327,9 +329,10 @@ A correção é estrutural, não caso a caso. Uma tabela única declara, para ca
 
    Efeito colateral: a medição fica imune ao que o agente fez com o tooling do projeto. Se ele remover o Vitest ou quebrar a configuração de teste, a suíte oculta continua rodando.
 6. **Rodar o script de convenções** sobre o diff.
-7. **Rodar o avaliador cego**: checklist de qualidade em ambas as tarefas, classificação dos pontos de decisão em T2. Três chamadas por pergunta, voto majoritário, sem qualquer informação sobre a condição.
-8. **Registrar.** Escrever a linha em `resultados.csv` e arquivar em `sessoes/<id>/` o diff, o transcript bruto em JSON para reprocessamento programático, e uma transcrição legível em markdown com a sequência de prompts, respostas e chamadas de ferramenta. A segunda existe para permitir análise qualitativa do comportamento do agente depois que os dados quantitativos estiverem fechados, e custa quase nada, já que o transcript bruto vem da API de qualquer forma.
-9. **Limpar.** Destruir o diretório de trabalho.
+7. **Registrar.** Escrever a linha em `resultados.csv` e arquivar em `sessoes/<id>/` o diff, o transcript bruto em JSON para reprocessamento programático, e uma transcrição legível em markdown com a sequência de prompts, respostas e chamadas de ferramenta. A segunda existe para permitir análise qualitativa do comportamento do agente depois que os dados quantitativos estiverem fechados, e custa quase nada, já que o transcript bruto vem da API de qualquer forma.
+8. **Limpar.** Destruir o diretório de trabalho.
+
+**O avaliador cego não é um passo do runner.** Ele roda depois, em `tools/blind-evaluator/`, sobre o diff já arquivado — uma passagem por instrumento, sem votação por maioria (seção 2.7), sem qualquer informação sobre a condição. Rodar fora da sessão permite reexecutar quando um prompt mudar sem recoletar nada, avaliar retroativamente sessões já coletadas, e não acrescenta modo de falha a uma sessão que já custou dinheiro para produzir (spec do avaliador cego, decisão D4). A redação anterior desta seção o listava como passo 7 do runner; isso está corrigido.
 
 O runner deve ser idempotente e re-executável. Sessão que falha por erro de infraestrutura (rede, quota, timeout) é marcada inválida e re-executada, nunca aproveitada parcialmente.
 
@@ -344,7 +347,7 @@ Análise **descritiva e exploratória**. Com o número de observações por cél
 3. Tabela com o efeito do modelo nas duas configurações extremas.
 4. Tamanho de efeito (Cliff's delta) em dois contrastes: **P0-O1 versus P2-O2** dentro do Sonnet (efeito total do harness) e **Haiku-P2O2 versus Opus-P0O1** (harness bom em modelo fraco contra harness ruim em modelo forte). O segundo responde PP3 e é provavelmente a frase mais citável do trabalho.
 5. Dispersão entre execuções da mesma célula em T1, como piso de ruído. Nenhuma diferença menor que ela deve ser lida como efeito.
-6. Taxa de desacordo do avaliador cego entre suas três chamadas, como medida de confiabilidade do instrumento.
+6. Concordância entre o avaliador cego e a amostra classificada por humano, como medida de confiabilidade do instrumento.
 
 **A comparação mais interessante do artigo** é entre o comportamento de T1 e o de T2. Se o harness pouco altera o acerto em T1 mas altera bastante a convergência em T2, a conclusão é que a engenharia de harness importa sobretudo onde o requisito é ambíguo — que é a maior parte do trabalho real.
 
