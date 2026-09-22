@@ -31,6 +31,19 @@ test('an untouched working copy scores the documented baseline', async () => {
   }
 });
 
+test('a task with no hidden suite skips it but still checks the server', async () => {
+  // T2 is measured by convergence, not by assertions, so the suite is
+  // not run for it -- but the application must still answer health, or
+  // travou would mean something different in T2 than it does in T1.
+  const result = await measure({
+    name: NAME, outDir, hostPort: 3530, repoRoot: REPO, hiddenSuite: false,
+  });
+
+  assert.equal(result.hidden, null);
+  assert.equal(result.serverUp, true);
+  assert.equal(result.buildOk, true);
+});
+
 test('a broken application reports the server down and no measurement', async () => {
   exec(NAME, ['sh', '-c', 'rm -f /app/src/modules/bookings/service.ts']);
   const result = await measure({ name: NAME, outDir, hostPort: 3530, repoRoot: REPO });

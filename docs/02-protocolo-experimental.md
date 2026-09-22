@@ -305,6 +305,12 @@ O script que executa uma sessão de ponta a ponta, sem supervisão. **É o item 
 
 Entrada: identificação da célula (modelo, nível P, nível O), tarefa, número da execução.
 
+**O runner nunca substitui em silêncio: ou executa exatamente o que o rótulo diz, ou recusa executar.** O princípio foi acrescentado em 21/09/2026 depois de a mesma falha aparecer em três lugares. As opções de linha de comando eram usadas para duas coisas — rotular a sessão, indo para o nome do diretório e para colunas do dataset, e mudar o comportamento dentro do contêiner — e nos três casos a primeira parte funcionava e a segunda não. `--task T2` gravava `task: T2` e entregava o enunciado de T1; `--o O2` gravava `o_level: O2` e executava uma chamada única; `--p P1` gravava `p_level: P1` e rodava sem contexto. A causa era comum: rótulo e comportamento saíam de fontes diferentes, então podiam divergir sem sintoma.
+
+O que torna esse defeito grave não é a frequência, é o formato. Nada falha: a sessão roda, o agente produz código, os instrumentos medem e a linha entra completa no dataset. O sintoma só apareceria na análise, como ausência de efeito, que se lê como resultado e não como defeito de instrumento.
+
+A correção é estrutural, não caso a caso. Uma tabela única declara, para cada tarefa, qual arquivo de enunciado é entregue e se ela tem suíte oculta, e quais níveis de contexto e de ordem existem de fato; o comportamento passa a ser lido dessa mesma tabela, de modo que não exista um segundo lugar de onde ele possa vir. Combinação não declarada **aborta antes de criar diretório de sessão e antes de gastar qualquer chamada paga**, nomeando o que falta. Enquanto o plugin de P2 e a sequência O2 não existirem, pedi-los é recusado — que é o comportamento correto, já que ambos hoje não funcionam, apenas em silêncio.
+
 1. **Preparar.** Subir um contêiner a partir da imagem de sessão, materializar a árvore da semente na tag `seed-v1`, inicializar um repositório git novo com um único commit de mensagem neutra, rodar a suíte existente e confirmar que tudo passa. Se não passar, abortar — o ambiente está corrompido.
 
    O agente executa **dentro do contêiner**, o que dá ambiente idêntico nas 55 sessões independentemente da máquina, torna `duracao_s` comparável, e contém o raio de dano, o que é o que permite conceder permissão total de ferramentas em sessões sem supervisão. O commit único de mensagem neutra elimina por construção o vazamento por histórico do git, que seria fatal e é fácil de esquecer.

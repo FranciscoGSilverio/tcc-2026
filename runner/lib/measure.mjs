@@ -105,7 +105,7 @@ function runHiddenSuite(repoRoot, hostPort) {
   }
 }
 
-export async function measure({ name, outDir, hostPort, repoRoot }) {
+export async function measure({ name, outDir, hostPort, repoRoot, hiddenSuite = true }) {
   const hasDiff = captureDiff(name, outDir);
   const conventions = measureConventions(name, outDir, repoRoot);
 
@@ -120,7 +120,11 @@ export async function measure({ name, outDir, hostPort, repoRoot }) {
   execDetached(name, ['sh', '-c', 'cd /app && PORT=3000 make start > /out/server.log 2>&1']);
   const serverUp = await serverAnswers(hostPort);
 
-  const hidden = serverUp ? runHiddenSuite(repoRoot, hostPort) : null;
+  // Only the suite is conditional: the server still starts for every
+  // task, because answering health is a genuine check that the
+  // application survived the session, it feeds travou_build, and keeping
+  // it makes travou mean the same thing in T1 and T2.
+  const hidden = hiddenSuite && serverUp ? runHiddenSuite(repoRoot, hostPort) : null;
   killServer(name);
 
   return {

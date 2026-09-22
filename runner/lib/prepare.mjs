@@ -1,6 +1,11 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SESSION_IMAGE, buildImage, copyIn, exec, execDetached, imageId, start } from './container.mjs';
+// The context levels live in capabilities.mjs, not here. A second list
+// of levels in a second file is how the dataset label and the actual
+// behaviour drifted apart in the first place, so this module reads the
+// same table the labels come from.
+import { CONTEXTS } from './capabilities.mjs';
 
 const DEFAULT_REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -11,15 +16,6 @@ export class InfrastructureError extends Error {
   }
 }
 
-// P0 gets nothing: the bare statement is the whole point of that cell.
-// P1 gets the context file described in the design spec section 5. P2
-// (a plugin, not a single file) does not exist yet -- the levels this
-// function must recognise are exactly the ones that already have sessions.
-const CONTEXT_FILES = {
-  P0: null,
-  P1: 'contexts/P1/CLAUDE.md',
-};
-
 // Copies the P1 context file into the working copy before the agent ever
 // sees it. `copy` defaults to copyIn (docker cp) but is injectable so this
 // is testable without a container. Two ordering requirements come from
@@ -28,10 +24,10 @@ const CONTEXT_FILES = {
 // agent had authored it, and before assertNoArtefacts, so that check also
 // sweeps the context file for the forbidden study terms.
 export function applyContext({ name, pLevel, repoRoot, copy = copyIn }) {
-  if (!(pLevel in CONTEXT_FILES)) {
+  if (!(pLevel in CONTEXTS)) {
     throw new InfrastructureError(`unknown context level: ${pLevel}`);
   }
-  const relativePath = CONTEXT_FILES[pLevel];
+  const relativePath = CONTEXTS[pLevel];
   if (!relativePath) return;
 
   const hostPath = resolve(repoRoot, relativePath);

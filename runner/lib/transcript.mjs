@@ -48,6 +48,7 @@ export function readTranscript(text) {
 
   return {
     model: sessionModel(result, init),
+    modelUsage: result.modelUsage ?? {},
     cliVersion: init?.claude_code_version ?? 'unknown',
     sessionId: result.session_id ?? init?.session_id ?? 'unknown',
     numTurns: result.num_turns ?? 0,

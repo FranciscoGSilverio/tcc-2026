@@ -8,6 +8,7 @@ import { measure } from './lib/measure.mjs';
 import { readTranscript, toMarkdown } from './lib/transcript.mjs';
 import { appendRow, emptyRow } from './lib/dataset.mjs';
 import { FAKES } from './lib/fakes.mjs';
+import { UnsupportedSessionError, resolveSession } from './lib/capabilities.mjs';
 
 const REPO = resolve(import.meta.dirname, '..');
 const TIMEOUT_MS = 30 * 60 * 1000;
@@ -51,6 +52,23 @@ function runAgent({ name, model }) {
   return exec(name, ['sh', '-c', `${command} > /out/transcript.jsonl 2>/out/agent.log`]);
 }
 
+// The fourth face of the same defect: --model states the M factor, and
+// nothing checked the session actually ran on it. The CLI reports either
+// an exact id or an alias, so a requested name matches when it equals the
+// reported key, equals that key's canonicalModel, or prefixes either.
+function assertModelMatches(requested, parsed) {
+  const reported = parsed.model;
+  const canonical = parsed.modelUsage?.[reported]?.canonicalModel ?? reported;
+  const matches = [reported, canonical].some(
+    (name) => name === requested || name.startsWith(requested),
+  );
+  if (!matches) {
+    throw new InfrastructureError(
+      `the session was asked for ${requested} but ran on ${reported}`,
+    );
+  }
+}
+
 async function main() {
   const task = argument('--task', 'T1');
   const pLevel = argument('--p', 'P0');
@@ -64,6 +82,10 @@ async function main() {
   const datasetPath = resolve(
     argument('--dataset', process.env.RUNNER_DATASET_PATH ?? join(REPO, 'resultados.csv')),
   );
+
+  // Before anything is created or spent: refuse a session that cannot be
+  // run exactly as it will be labelled.
+  const plan = resolveSession({ task, pLevel, oLevel });
 
   const sessionId = `${task}-${pLevel}-${oLevel}-${Date.now().toString(36)}`;
   const outDir = join(REPO, 'sessions', sessionId);
@@ -82,8 +104,7 @@ async function main() {
     row.image_digest = anchors.imageId;
     row.cli_version = anchors.cliVersion;
 
-    const statement = resolve(REPO, 'tasks', 'T1-validacao-de-reservas.md');
-    deliverStatement(name, statement);
+    deliverStatement(name, resolve(REPO, plan.statement));
 
     const startedAt = Date.now();
     let transcriptText;
@@ -115,9 +136,13 @@ async function main() {
     if (parsed.rateLimited) {
       throw new InfrastructureError('the api reported a rate limit during the session');
     }
+    // Fakes report a synthetic model on purpose, so they are exempt.
+    if (!fake) assertModelMatches(model, parsed);
     writeFileSync(join(outDir, 'transcript.md'), toMarkdown(parsed));
 
-    const measured = await measure({ name, outDir, hostPort, repoRoot: REPO });
+    const measured = await measure({
+      name, outDir, hostPort, repoRoot: REPO, hiddenSuite: plan.hiddenSuite,
+    });
 
     const hitTurnLimit = parsed.stopReason !== 'end_turn' && parsed.numTurns >= 40;
     row.ended_at = new Date().toISOString();
@@ -132,7 +157,12 @@ async function main() {
     row.tokens_cache_create = parsed.tokens.cacheCreate;
     row.tokens_cache_read = parsed.tokens.cacheRead;
     row.regressoes = measured.regressoes;
-    row.taxa_aceitacao = measured.hidden ? measured.hidden.rate : 0;
+    // Empty, not zero, for a task with no hidden suite: section 5.1
+    // declares taxa_aceitacao as T1 only, and a zero would read as "the
+    // agent got nothing right" instead of "not measured this way". For
+    // T1 the zero stays and is deliberate -- a session whose application
+    // does not serve is scored zero rather than discarded.
+    row.taxa_aceitacao = plan.hiddenSuite ? (measured.hidden ? measured.hidden.rate : 0) : '';
     row.violacoes = measured.conventions?.violacoes ?? '';
     if (measured.conventions) {
       writeFileSync(join(outDir, 'conventions.json'), JSON.stringify(measured.conventions, null, 2));
@@ -163,4 +193,14 @@ const timer = setTimeout(() => {
 }, TIMEOUT_MS);
 timer.unref();
 
-await main();
+try {
+  await main();
+} catch (error) {
+  // A refusal is expected behaviour, not a crash: it prints one line and
+  // exits 2 (3 is already the wall-clock ceiling), without a stack trace.
+  if (error instanceof UnsupportedSessionError) {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(2);
+  }
+  throw error;
+}
