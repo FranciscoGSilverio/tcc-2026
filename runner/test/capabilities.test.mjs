@@ -78,3 +78,8 @@ test('every declared path exists on disk', () => {
 test('O1 is a single call', () => {
   assert.equal(ORDERS.O1.calls, 1);
 });
+
+test('decision points apply to T2 and not to T1', () => {
+  assert.equal(resolveSession({ task: 'T1', pLevel: 'P0', oLevel: 'O1' }).decisionPoints, false);
+  assert.equal(resolveSession({ task: 'T2', pLevel: 'P0', oLevel: 'O1' }).decisionPoints, true);
+});

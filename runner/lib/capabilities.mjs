@@ -26,8 +26,8 @@ export class UnsupportedSessionError extends Error {
 // suite for T2 would turn it into a second well-specified task and cost
 // the work half its research question.
 export const TASKS = {
-  T1: { statement: 'tasks/T1-validacao-de-reservas.md', hiddenSuite: true },
-  T2: { statement: 'tasks/T2-res-142.md', hiddenSuite: false },
+  T1: { statement: 'tasks/T1-validacao-de-reservas.md', hiddenSuite: true, decisionPoints: false },
+  T2: { statement: 'tasks/T2-res-142.md', hiddenSuite: false, decisionPoints: true },
 };
 
 // P2 is the plugin, which does not exist yet: it is absent here on
@@ -63,6 +63,7 @@ export function resolveSession({ task, pLevel, oLevel }) {
   return {
     statement: TASKS[task].statement,
     hiddenSuite: TASKS[task].hiddenSuite,
+    decisionPoints: TASKS[task].decisionPoints,
     contextFile: CONTEXTS[pLevel],
     calls: ORDERS[oLevel].calls,
   };
