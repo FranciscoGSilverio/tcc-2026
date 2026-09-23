@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-mudcr5pg",
+  "evaluatedAt": "2026-09-23T00:31:30.145Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "routes.ts apenas delega para `service.getAvailability(request.query)`; toda a lógica de overlap/slot está em service.ts."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "Nova query é validada via `AvailabilityQuery = Type.Object({ roomId: Type.String(...), from: Type.String(...), to: Type.String(...) })` usado no schema da rota."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros novos usam `throw validationFailed(...)` (400) e `throw bookingConflict(conflict.id)` (409), reaproveitando os helpers de shared/errors.ts que mapeiam para status codes explícitos."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "O código reusa a constante nomeada existente `BOOKING_ACTIVE` (`existing.status === BOOKING_ACTIVE`) em vez de introduzir literais soltos para status ou janelas."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos usam `app.inject` e checam `response.statusCode` e `response.json()` (ex.: `expect(response.statusCode).toBe(409)`), sem inspecionar detalhes internos de implementação."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service importa e reusa `parseInstant`, `isBefore` e `validationFailed` de shared/time.ts e shared/errors.ts em vez de reimplementar parsing/validação de datas."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.031852
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/availability, com seu próprio schema, service (getAvailability) e repository (findActiveInRange), sem alterar a listagem existente nem o formato do erro 409."
+      },
+      "2": {
+        "categoria": "ambos",
+        "justificativa": "O AvailabilitySlot tem um campo status que pode ser 'FREE' ou 'BOOKED', e o algoritmo em getAvailability gera slots tanto livres quanto ocupados cobrindo toda a janela."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots não têm tamanho fixo nem são parametrizáveis; eles são calculados dinamicamente a partir das bordas das reservas existentes (startsAt/endsAt de cada booking) dentro do intervalo pedido."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige `from` e `to` como strings obrigatórias (sem Type.Optional), e o service lança validationFailed se `from` não for antes de `to`, não havendo nenhum default de dia/semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição de horário comercial, limite fixo de 24h nem opção configurável nos schemas ou no service; o intervalo é inteiramente definido por from/to arbitrários."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige um único `roomId: Type.String()` obrigatório, e repository.findActiveInRange busca reservas apenas para essa sala, sem suporte a lista de salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff usa parseInstant e DateString como já existiam no projeto, sem introduzir nenhuma indicação explícita de fuso horário (UTC ou local) no contrato da nova rota."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole range as free when there are no bookings' confirma que, sem reservas, o único slot retornado cobre todo o intervalo com status FREE, e o código faz isso ao não encontrar bookings e cair no push final do cursor até `to`."
+      },
+      "9": {
+        "categoria": "incluído",
+        "justificativa": "Não há nenhuma filtragem baseada na data atual (Date.now) no getAvailability; o cálculo dos slots usa apenas os parâmetros from/to fornecidos, permitindo consultar e obter slots mesmo em intervalos passados."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro de conflito continua sendo lançado via bookingConflict(conflict.id) exatamente como antes, apenas a detecção de sobreposição foi corrigida (findOverlapping), sem adicionar sugestões de horários alternativos no payload do 409."
+      }
+    },
+    "costUsd": 0.029066
+  },
+  "totalCostUsd": 0.060918
+}

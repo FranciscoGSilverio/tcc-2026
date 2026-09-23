@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P1-O1-mu69tn5j",
+  "evaluatedAt": "2026-09-22T23:27:23.641Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A nova lógica (assertValidWindow, checagens de duração/janela/passado) foi adicionada em `service.ts`, não em rotas, que não aparecem no diff."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "As novas regras (duração mínima/máxima, ordem start/end, não-passado) são checadas manualmente em `assertValidWindow` com `validationFailed`, não via schema (nenhuma alteração em `schema.ts` aparece no diff)."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Cada caminho inválido lança um `AppError` específico como `throw validationFailed(...)`, `throw bookingConflict(conflict.id)` e `notFound` via `roomsService.getRoom`/`usersService.getUser`, cada um com status HTTP definido."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Os limites de duração usam constantes nomeadas `MIN_DURATION_MINUTES = 30;` e `MAX_DURATION_MINUTES = 8 * 60;` em vez de literais soltos no código."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e verificam `response.statusCode`/`response.json().error.code`, comportamento observável via HTTP, sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff importa e reutiliza `durationMinutes, isBefore, parseInstant` de `../../shared/time.js` em vez de reimplementar essas checagens de tempo."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.026022
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.026022
+}

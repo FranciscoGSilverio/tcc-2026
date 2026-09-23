@@ -155,7 +155,14 @@ async function main() {
   const plan = resolveSession({ task, pLevel, oLevel });
 
   const sessionId = `${task}-${pLevel}-${oLevel}-${Date.now().toString(36)}`;
-  const outDir = join(REPO, 'sessions', sessionId);
+  // A fake session is not data: it never reaches the real dataset, so its
+  // artefacts must not land in sessions/ either. They used to, and by the
+  // time sessions/ was versioned on 23/09 there were 76 leftover fake
+  // directories against 8 real ones -- enough to bury the archive and to
+  // dirty `git status`, which this project uses as a gate everywhere.
+  const outDir = fake
+    ? mkdtempSync(join(tmpdir(), `fake-session-${sessionId}-`))
+    : join(REPO, 'sessions', sessionId);
   mkdirSync(outDir, { recursive: true });
 
   const name = `session-${sessionId}`;

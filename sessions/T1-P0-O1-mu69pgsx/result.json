@@ -1,0 +1,145 @@
+{
+  "row": {
+    "session_id": "T1-P0-O1-mu69pgsx",
+    "task": "T1",
+    "model": "claude-sonnet-5",
+    "model_version": "claude-sonnet-5",
+    "p_level": "P0",
+    "o_level": "O1",
+    "run_number": "1",
+    "started_at": "2026-09-18T01:16:21.970Z",
+    "ended_at": "2026-09-18T01:19:17.962Z",
+    "image_digest": "sha256:56feb42a990abacc16ffcc18e7bb28943e194499a2c62479af641f09e7654f80",
+    "cli_version": "2.1.272",
+    "status": "valid",
+    "invalid_reason": "",
+    "taxa_aceitacao": 0.6923,
+    "regressoes": 0,
+    "violacoes": 0,
+    "qualidade": "",
+    "custo_usd": 0.42133859999999995,
+    "duracao_s": 155,
+    "n_tool_calls": 30,
+    "travou": false,
+    "decisao_1": "",
+    "decisao_2": "",
+    "decisao_3": "",
+    "decisao_4": "",
+    "decisao_5": "",
+    "decisao_6": "",
+    "decisao_7": "",
+    "decisao_8": "",
+    "decisao_9": "",
+    "decisao_10": "",
+    "n_turns": 31,
+    "travou_turnos": false,
+    "travou_sem_diff": false,
+    "travou_build": false,
+    "tokens_input": 44,
+    "tokens_output": 12503,
+    "tokens_cache_create": 37944,
+    "tokens_cache_read": 1001328,
+    "diff_path": "sessions/T1-P0-O1-mu69pgsx/session.diff",
+    "transcript_path": "sessions/T1-P0-O1-mu69pgsx/transcript.jsonl"
+  },
+  "hidden": {
+    "task": "T1",
+    "total": 26,
+    "passed": 18,
+    "rate": 0.6923,
+    "byRule": {
+      "1": {
+        "passed": 10,
+        "total": 10
+      },
+      "2": {
+        "passed": 2,
+        "total": 2
+      },
+      "3": {
+        "passed": 1,
+        "total": 3
+      },
+      "4": {
+        "passed": 2,
+        "total": 4
+      },
+      "5": {
+        "passed": 2,
+        "total": 2
+      },
+      "6": {
+        "passed": 0,
+        "total": 3
+      },
+      "7": {
+        "passed": 1,
+        "total": 2
+      }
+    },
+    "failures": [
+      {
+        "id": "3.1",
+        "rule": 3,
+        "name": "create a booking that starts in the past",
+        "expected": 400,
+        "actual": 201
+      },
+      {
+        "id": "3.2",
+        "rule": 3,
+        "name": "update a booking to start in the past",
+        "expected": 400,
+        "actual": 200
+      },
+      {
+        "id": "4.2",
+        "rule": 4,
+        "name": "twenty-nine minutes is rejected",
+        "expected": 400,
+        "actual": 201
+      },
+      {
+        "id": "4.4",
+        "rule": 4,
+        "name": "eight hours and one minute is rejected",
+        "expected": 400,
+        "actual": 201
+      },
+      {
+        "id": "6.1",
+        "rule": 6,
+        "name": "create referencing a room that does not exist",
+        "expected": 404,
+        "actual": 500
+      },
+      {
+        "id": "6.2",
+        "rule": 6,
+        "name": "create referencing a user that does not exist",
+        "expected": 404,
+        "actual": 500
+      },
+      {
+        "id": "6.3",
+        "rule": 6,
+        "name": "update referencing a room that does not exist",
+        "expected": 404,
+        "actual": 500
+      },
+      {
+        "id": "7.2",
+        "rule": 7,
+        "name": "a rule 3 or 4 rejection keeps the existing envelope",
+        "expected": {
+          "status": 400,
+          "envelope": true
+        },
+        "actual": {
+          "status": 201,
+          "envelope": false
+        }
+      }
+    ]
+  }
+}

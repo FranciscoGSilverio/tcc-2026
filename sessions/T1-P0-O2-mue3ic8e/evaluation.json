@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P0-O2-mue3ic8e",
+  "evaluatedAt": "2026-09-23T12:50:29.974Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (assertValidRange, checagem de existência de room/user, conflito) foi adicionada em service.ts, não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "A validação de startsAt/endsAt é feita via `assertValidRange` no service em runtime, não há alteração em schema.ts no diff para validar essas entradas por schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros usam `throw notFound('Room')`, `throw bookingConflict(conflict.id)` e `throw validationFailed(...)`, que carregam códigos de status apropriados (404/409/400)."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz literais de duração/limite/janela novos que precisem ser nomeados; nenhuma constante desse tipo aparece no diff."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes chamam `app.inject`/`book` e verificam `response.statusCode` e `response.json().error.code`, comportamento observável via HTTP."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service reusa `isBefore` e `parseInstant` de shared/time.ts e `validationFailed`/`notFound`/`bookingConflict` de shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.025722
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.025722
+}

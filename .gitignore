@@ -1,3 +1,9 @@
-/sessions/
+# sessions/ is versioned on purpose, from 23/09/2026. The protocol calls
+# the diffs and transcripts archived evidence and the project plan lists
+# them among the published artefacts, but they were ignored here and so
+# existed only on one machine. Everything a session produces is kept --
+# logs and per-step transcripts included -- because deciding later that
+# something was irrelevant is cheap to get wrong and the whole collection
+# is well under a hundred megabytes.
 .env
 .env.bak-*

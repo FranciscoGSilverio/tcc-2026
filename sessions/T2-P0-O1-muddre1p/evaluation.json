@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-muddre1p",
+  "evaluatedAt": "2026-09-23T00:52:01.023Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A rota apenas delega para `service.getAvailability(request.query)` em routes.ts, enquanto toda a lógica de cálculo de slots livres fica em service.ts."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A nova query é validada pelo schema `AvailabilityQuery = Type.Object({ roomId, from, to, durationMinutes })` usado em `{ schema: { querystring: AvailabilityQuery, ... } }`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os novos caminhos de erro lançam `notFound('Room')` (404), `validationFailed(...)` (400) e `bookingConflict(conflict.id)` (409), cada um com código de status já definido nesses construtores."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "O limite de slots é nomeado em `const MAX_AVAILABILITY_SLOTS = 100;` em vez de usar o literal 100 espalhado pelo código."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos usam `app.inject` e checam `response.statusCode` e `response.json().data`/`error.code`, validando comportamento observável via HTTP, não implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reusa `parseInstant`, `isBefore` e `MINUTE_IN_MS` de `../../shared/time.js` e `bookingConflict`/`notFound`/`validationFailed` de `../../shared/errors.js` em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.028988
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "Foi adicionado um novo endpoint GET /bookings/availability em routes.ts, com novo schema (AvailabilityQuery/AvailabilityResponse) e novo método service.getAvailability, sem alterar o endpoint de listagem existente nem enriquecer o payload do erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "getAvailability calcula e retorna slots disponíveis (AvailableSlot) preenchendo os intervalos não ocupados entre 'from' e 'to', não retorna as reservas ocupadas."
+      },
+      "3": {
+        "categoria": "parametrizável",
+        "justificativa": "AvailabilityQuery exige durationMinutes como parâmetro obrigatório, usado para gerar slots de tamanho definido pelo cliente."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery define 'from' e 'to' como Type.String obrigatórios, sem valores default no schema ou no service."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem configuração de limite de horas; o cálculo cobre todo o intervalo from-to fornecido, sem limitar por horário do dia."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige um único roomId (Type.String), e repository.listActiveInRange/findRoomById operam sobre uma sala específica."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff usa parseInstant e Date puros, sem qualquer menção a fuso horário explícito no contrato (schema) ou tratamento de UTC/local nas funções envolvidas."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns the whole window as a slot when nothing is booked' confirma que, sem reservas, addSlotsInWindow gera slots cobrindo toda a janela, i.e., tudo livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma lógica no service ou teste que filtre ou trate especificamente horários já passados; o cálculo usa apenas from/to fornecidos sem comparação com o momento atual."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "createBooking continua lançando bookingConflict(conflict.id) da mesma forma (via bookingConflict), sem adicionar sugestões de horários alternativos no corpo do erro 409."
+      }
+    },
+    "costUsd": 0.021642
+  },
+  "totalCostUsd": 0.05063
+}

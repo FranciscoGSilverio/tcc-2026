@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-mudcyv6z",
+  "evaluatedAt": "2026-09-23T00:31:56.850Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (computeGaps, suggestSlots, assertNoConflict, getAvailability) foi adicionada em `src/modules/bookings/service.ts`, enquanto `routes.ts` apenas chama `service.getAvailability(request.query)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "O novo endpoint usa `AvailabilityQuery = Type.Object({ roomId: Type.String(...), from: Type.String(...), to: Type.String(...), duration: Type.Optional(...) })` aplicado em `schema.querystring` da rota `/availability`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os novos caminhos de erro lançam `AppError`s com status apropriado, como `throw bookingConflict(conflict.id, suggestions)` (409) e `throw validationFailed('`from` must be before `to`')` (400), além do 404 via `roomsService.getRoom`."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Valores antes literais foram nomeados: `const SUGGESTION_HORIZON_MS = 7 * 24 * 60 * 60 * 1000;`, `const MAX_SUGGESTIONS = 3;` e `const DEFAULT_AVAILABILITY_DURATION_MINUTES = 30;`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos verificam apenas comportamento HTTP observável, como `expect(response.statusCode).toBe(409)` e `expect(slots).toHaveLength(2)` sobre a resposta JSON da rota."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reusa utilitários existentes do shared, como `import { isBefore, MINUTE_IN_MS, parseInstant } from '../../shared/time.js'` e `validationFailed`/`notFound` de `shared/errors.ts`, em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.033078
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "combinação",
+        "justificativa": "O diff cria um endpoint novo (GET /bookings/availability) e também enriquece o erro 409 do POST/PATCH com um campo suggestedSlots, ou seja, combina as duas abordagens."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "getAvailability retorna 'gaps' (intervalos livres) calculados por computeGaps, não os horários ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "computeGaps monta os intervalos a partir dos limites reais das reservas existentes (startsAt/endsAt de cada booking), não em blocos fixos nem parametrizáveis pelo cliente."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige `from` e `to` como strings obrigatórias (minLength:1), sem default de dia/semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem configuração de limite; a janela é totalmente definida por from/to fornecidos."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery.roomId é uma única string obrigatória, e o serviço opera sobre um único roomId por vez."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não introduz tratamento explícito de fuso horário; usa DateString/parseInstant já existentes sem alterações relacionadas a timezone."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns the whole window when the room is empty' confirma que, sem reservas, o slot retornado cobre toda a janela from-to."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhum filtro ou lógica que trate especificamente horários passados na consulta de disponibilidade ou nas sugestões."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "bookingConflict agora recebe suggestedSlots e assertNoConflict chama suggestSlots ao detectar conflito, alterando o payload do erro 409 do POST/PATCH de reservas."
+      }
+    },
+    "costUsd": 0.028172
+  },
+  "totalCostUsd": 0.06125
+}

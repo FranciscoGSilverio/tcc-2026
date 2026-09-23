@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P2-O1-mue3d690",
+  "evaluatedAt": "2026-09-23T12:50:15.187Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (assertRoomExists, assertUserExists, assertValidWindow, assertNoConflict) foi adicionada em service.ts, sem tocar em routes.ts."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "As novas regras (duração, janela, existência) são checadas via funções de negócio no service (assertValidWindow, assertRoomExists), não há alteração em schema.ts para validar isso por schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros novos usam 'throw validationFailed(...)', 'throw notFound(...)' e 'throw bookingConflict(...)', cada um com status code definido (400/404/409) pelo AppError."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Os limites de duração foram nomeados em 'const MIN_DURATION_MINUTES = 30;' e 'const MAX_DURATION_MINUTES = 8 * 60;' em vez de literais espalhados."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes fazem requisições HTTP via app.inject e verificam apenas 'response.statusCode' e 'response.json().error.code', sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff importa e usa 'durationMinutes, isBefore, parseInstant' de '../../shared/time.js' e 'bookingConflict, notFound, validationFailed' de '../../shared/errors.js' em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.026578
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.026578
+}
