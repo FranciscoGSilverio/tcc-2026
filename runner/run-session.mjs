@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { copyIn, exec, stop } from './lib/container.mjs';
@@ -35,21 +36,71 @@ function deliverStatement(name, statementPath) {
   copyIn(name, staged, '/tmp/statement.txt');
 }
 
-function runAgent({ name, model }) {
-  // The steps must be chained with && and the redirections kept at the end
-  // of the line. Joining with plain spaces (the earlier bug) produced the
-  // single command `cd /app claude -p "..." ...`: `cd` reads only its
-  // first argument as the target directory, so `claude` and everything
-  // after it were just extra arguments to `cd`, which fails before the
-  // agent ever runs. The redirections still get set up regardless (a
-  // shell wires up redirections before it even resolves the command),
-  // which is why the failure left an empty transcript.jsonl and an empty
-  // agent.log rather than an error message anywhere obvious.
-  const command = [
-    'cd /app',
-    `claude -p "$(cat /tmp/statement.txt)" --output-format stream-json --verbose --max-turns 40 --model ${model} --dangerously-skip-permissions`,
-  ].join(' && ');
-  return exec(name, ['sh', '-c', `${command} > /out/transcript.jsonl 2>/out/agent.log`]);
+function deliverPrompt(name, text, containerPath) {
+  const staging = mkdtempSync(join(tmpdir(), 'prompt-'));
+  const staged = join(staging, 'prompt.txt');
+  writeFileSync(staged, text);
+  copyIn(name, staged, containerPath);
+}
+
+// One call for O1, four chained for O2. Chaining goes through an explicit
+// session id rather than --continue: --continue resumes "the most recent
+// conversation", which is implicit state of exactly the kind that has
+// already produced three defects here (modelUsage[0], content[0], and a
+// flag recorded but not honoured).
+//
+// Each call is chained with && and the redirections kept at the end of
+// the line. Joining with plain spaces (an earlier bug) produced the
+// single command `cd /app claude -p "..." ...`: `cd` reads only its
+// first argument as the target directory, so `claude` and everything
+// after it were just extra arguments to `cd`, which fails before the
+// agent ever runs. The redirections still get set up regardless (a
+// shell wires up redirections before it even resolves the command),
+// which is why the failure left an empty transcript.jsonl and an empty
+// agent.log rather than an error message anywhere obvious.
+function runAgent({ name, model, plan, repoRoot, outDir }) {
+  const call = (promptPath, sessionFlag, outFile) => {
+    const command = [
+      'cd /app',
+      `claude -p "$(cat ${promptPath})" --output-format stream-json --verbose ` +
+      `--max-turns 40 --model ${model} ${sessionFlag} --dangerously-skip-permissions`,
+    ].join(' && ');
+    return exec(name, ['sh', '-c', `${command} > /out/${outFile} 2>>/out/agent.log`]);
+  };
+
+  if (!plan.steps) {
+    call('/tmp/statement.txt', '', 'transcript.jsonl');
+    return;
+  }
+
+  const statement = readFileSync(resolve(repoRoot, plan.statement), 'utf8');
+  const uuid = randomUUID();
+
+  plan.steps.forEach((step, index) => {
+    const template = readFileSync(resolve(repoRoot, step), 'utf8');
+    const prompt = template.replace('{{ENUNCIADO}}', statement);
+    const promptPath = `/tmp/step-${index + 1}.txt`;
+    deliverPrompt(name, prompt, promptPath);
+    const sessionFlag = index === 0 ? `--session-id ${uuid}` : `--resume ${uuid}`;
+    call(promptPath, sessionFlag, `transcript-${index + 1}.jsonl`);
+
+    // A step that produced nothing means the chain broke. Carrying on to
+    // the next step would produce a session missing a quarter of its work
+    // and looking complete, so it fails here instead.
+    const produced = join(outDir, `transcript-${index + 1}.jsonl`);
+    if (!existsSync(produced) || !readFileSync(produced, 'utf8').trim()) {
+      const log = existsSync(join(outDir, 'agent.log'))
+        ? readFileSync(join(outDir, 'agent.log'), 'utf8').trim() : '';
+      throw new InfrastructureError(
+        `O2 step ${index + 1} produced no transcript; agent.log: ${log || '(empty)'}`,
+      );
+    }
+  });
+
+  const joined = plan.steps
+    .map((_, index) => readFileSync(join(outDir, `transcript-${index + 1}.jsonl`), 'utf8').trim())
+    .join('\n');
+  writeFileSync(join(outDir, 'transcript.jsonl'), `${joined}\n`);
 }
 
 // The fourth face of the same defect: --model states the M factor, and
@@ -113,7 +164,7 @@ async function main() {
       transcriptText = FAKES[fake].run(name, REPO);
       writeFileSync(join(outDir, 'transcript.jsonl'), transcriptText);
     } else {
-      runAgent({ name, model });
+      runAgent({ name, model, plan, repoRoot: REPO, outDir });
       const transcriptPath = join(outDir, 'transcript.jsonl');
       transcriptText = existsSync(transcriptPath) ? readFileSync(transcriptPath, 'utf8') : '';
       // An empty transcript means the agent never ran (or never finished a

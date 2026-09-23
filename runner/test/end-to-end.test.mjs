@@ -48,3 +48,13 @@ test('a broken application is recorded as data, not discarded', () => {
   assert.equal(row.travou, true);
   assert.notEqual(row.invalid_reason, 'runner error');
 });
+
+test('an O2 session is accepted and recorded, no longer refused', () => {
+  const result = spawnSync('node', [
+    resolve(REPO, 'runner', 'run-session.mjs'),
+    '--fake', 'noop', '--o', 'O2', '--dataset', DATASET_PATH,
+  ], { encoding: 'utf8', cwd: REPO });
+  const row = JSON.parse(result.stdout);
+  assert.equal(row.o_level, 'O2');
+  assert.equal(row.status, 'valid');
+});
