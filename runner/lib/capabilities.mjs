@@ -30,11 +30,17 @@ export const TASKS = {
   T2: { statement: 'tasks/T2-res-142.md', hiddenSuite: false, decisionPoints: true },
 };
 
-// P2 is the plugin, which does not exist yet: it is absent here on
-// purpose, so asking for it fails instead of quietly running P0.
+// P0 gets nothing. P1 gets the context file. P2 gets the same file plus
+// a plugin directory, loaded with --plugin-dir. The plugin is copied
+// outside /app on purpose -- inside, it would appear in the session diff.
 export const CONTEXTS = {
   P0: null,
-  P1: 'contexts/P1/CLAUDE.md',
+  P1: { file: 'contexts/P1/CLAUDE.md' },
+  P2: {
+    file: 'contexts/P2/CLAUDE.md',
+    pluginDir: 'contexts/P2/plugin',
+    pluginName: 'meeting-rooms-conventions',
+  },
 };
 
 // O1 is one call with the statement. O2 is the four chained calls of
@@ -75,7 +81,7 @@ export function resolveSession({ task, pLevel, oLevel }) {
     statement: TASKS[task].statement,
     hiddenSuite: TASKS[task].hiddenSuite,
     decisionPoints: TASKS[task].decisionPoints,
-    contextFile: CONTEXTS[pLevel],
+    context: CONTEXTS[pLevel],
     calls: ORDERS[oLevel].calls,
     steps: ORDERS[oLevel].steps,
   };

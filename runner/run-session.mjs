@@ -59,11 +59,12 @@ function deliverPrompt(name, text, containerPath) {
 // which is why the failure left an empty transcript.jsonl and an empty
 // agent.log rather than an error message anywhere obvious.
 function runAgent({ name, model, plan, repoRoot, outDir }) {
+  const pluginFlag = plan.context?.pluginDir ? '--plugin-dir /opt/plugin' : '';
   const call = (promptPath, sessionFlag, outFile) => {
     const command = [
       'cd /app',
       `claude -p "$(cat ${promptPath})" --output-format stream-json --verbose ` +
-      `--max-turns 40 --model ${model} ${sessionFlag} --dangerously-skip-permissions`,
+      `--max-turns 40 --model ${model} ${pluginFlag} ${sessionFlag} --dangerously-skip-permissions`,
     ].join(' && ');
     return exec(name, ['sh', '-c', `${command} > /out/${outFile} 2>>/out/agent.log`]);
   };
@@ -116,6 +117,21 @@ function assertModelMatches(requested, parsed) {
   if (!matches) {
     throw new InfrastructureError(
       `the session was asked for ${requested} but ran on ${reported}`,
+    );
+  }
+}
+
+// A P2 session whose init reports no plugin ran as P1 with extra steps:
+// the label would say P2 and the condition would not be P2. The init
+// event lists what actually loaded, so this is checkable rather than
+// hopeful -- every session collected so far reported `plugins: []`.
+function assertPluginLoaded(parsed, pluginName) {
+  const init = parsed.events.find((e) => e.type === 'system' && e.subtype === 'init');
+  const loaded = init?.plugins ?? [];
+  const names = loaded.map((p) => (typeof p === 'string' ? p : p?.name)).filter(Boolean);
+  if (!names.some((name) => name === pluginName || String(name).includes(pluginName))) {
+    throw new InfrastructureError(
+      `the session was labelled with a plugin context but init reported plugins: ${JSON.stringify(loaded)}`,
     );
   }
 }
@@ -189,6 +205,7 @@ async function main() {
     }
     // Fakes report a synthetic model on purpose, so they are exempt.
     if (!fake) assertModelMatches(model, parsed);
+    if (!fake && plan.context?.pluginName) assertPluginLoaded(parsed, plan.context.pluginName);
     writeFileSync(join(outDir, 'transcript.md'), toMarkdown(parsed));
 
     const measured = await measure({

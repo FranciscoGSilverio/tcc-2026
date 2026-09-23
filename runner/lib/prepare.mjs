@@ -16,22 +16,28 @@ export class InfrastructureError extends Error {
   }
 }
 
-// Copies the P1 context file into the working copy before the agent ever
-// sees it. `copy` defaults to copyIn (docker cp) but is injectable so this
-// is testable without a container. Two ordering requirements come from
-// prepare(), not from this function: it must run before initHistory, or
-// the context file would show up in the session's own diff as if the
-// agent had authored it, and before assertNoArtefacts, so that check also
-// sweeps the context file for the forbidden study terms.
+// Copies the context file into the working copy before the agent ever
+// sees it, and for P2 also copies the plugin directory to /opt/plugin,
+// outside the working copy. `copy` defaults to copyIn (docker cp) but is
+// injectable so this is testable without a container. Two ordering
+// requirements come from prepare(), not from this function: it must run
+// before initHistory, or the context file would show up in the session's
+// own diff as if the agent had authored it, and before assertNoArtefacts,
+// so that check also sweeps the context file for the forbidden study
+// terms. assertNoArtefacts only scans /app, so it never sees the plugin
+// at /opt/plugin -- the plugin's own content is checked separately, by
+// runner/test/contexts.test.mjs.
 export function applyContext({ name, pLevel, repoRoot, copy = copyIn }) {
   if (!(pLevel in CONTEXTS)) {
     throw new InfrastructureError(`unknown context level: ${pLevel}`);
   }
-  const relativePath = CONTEXTS[pLevel];
-  if (!relativePath) return;
+  const context = CONTEXTS[pLevel];
+  if (!context) return;
 
-  const hostPath = resolve(repoRoot, relativePath);
-  copy(name, hostPath, '/app/CLAUDE.md');
+  copy(name, resolve(repoRoot, context.file), '/app/CLAUDE.md');
+  if (context.pluginDir) {
+    copy(name, resolve(repoRoot, context.pluginDir), '/opt/plugin');
+  }
 }
 
 const FORBIDDEN_PATHS = ['hidden-tests', 'reference', 'tasks', 'docs', 'tools'];

@@ -24,18 +24,25 @@ test('the hidden suite applies to T1 and not to T2', () => {
   assert.equal(resolveSession({ task: 'T2', pLevel: 'P0', oLevel: 'O1' }).hiddenSuite, false);
 });
 
-test('P0 carries no context file and P1 carries one', () => {
-  assert.equal(resolveSession({ task: 'T1', pLevel: 'P0', oLevel: 'O1' }).contextFile, null);
-  assert.match(
-    resolveSession({ task: 'T1', pLevel: 'P1', oLevel: 'O1' }).contextFile,
-    /contexts\/P1\/CLAUDE\.md$/,
-  );
+test('P0 carries nothing, P1 carries a file, P2 carries a file and a plugin', () => {
+  assert.equal(resolveSession({ task: 'T1', pLevel: 'P0', oLevel: 'O1' }).context, null);
+
+  const p1 = resolveSession({ task: 'T1', pLevel: 'P1', oLevel: 'O1' }).context;
+  assert.match(p1.file, /contexts\/P1\/CLAUDE\.md$/);
+  assert.equal(p1.pluginDir, undefined);
+
+  const p2 = resolveSession({ task: 'T1', pLevel: 'P2', oLevel: 'O1' }).context;
+  assert.match(p2.file, /contexts\/P2\/CLAUDE\.md$/);
+  assert.match(p2.pluginDir, /contexts\/P2\/plugin$/);
+  assert.equal(typeof p2.pluginName, 'string');
 });
 
 test('an unbuilt context level is refused, not silently downgraded', () => {
+  // P2 is built (see the test above), so this now probes a level that
+  // genuinely does not exist instead of one that used to be unbuilt.
   assert.throws(
-    () => resolveSession({ task: 'T1', pLevel: 'P2', oLevel: 'O1' }),
-    (error) => error instanceof UnsupportedSessionError && /context level P2/.test(error.message),
+    () => resolveSession({ task: 'T1', pLevel: 'P9', oLevel: 'O1' }),
+    (error) => error instanceof UnsupportedSessionError && /context level P9/.test(error.message),
   );
 });
 
@@ -57,10 +64,10 @@ test('an unknown task is refused', () => {
 
 test('the refusal names every missing level at once', () => {
   try {
-    resolveSession({ task: 'T9', pLevel: 'P2', oLevel: 'O9' });
+    resolveSession({ task: 'T9', pLevel: 'P9', oLevel: 'O9' });
     assert.fail('should have refused');
   } catch (error) {
-    for (const fragment of ['task T9', 'context level P2', 'order level O9']) {
+    for (const fragment of ['task T9', 'context level P9', 'order level O9']) {
       assert.match(error.message, new RegExp(fragment));
     }
   }
@@ -72,8 +79,12 @@ test('every declared path exists on disk', () => {
   for (const [task, { statement }] of Object.entries(TASKS)) {
     assert.equal(existsSync(resolve(REPO, statement)), true, `${task}: ${statement}`);
   }
-  for (const [level, file] of Object.entries(CONTEXTS)) {
-    if (file) assert.equal(existsSync(resolve(REPO, file)), true, `${level}: ${file}`);
+  for (const [level, context] of Object.entries(CONTEXTS)) {
+    if (!context) continue;
+    assert.equal(existsSync(resolve(REPO, context.file)), true, `${level}: ${context.file}`);
+    if (context.pluginDir) {
+      assert.equal(existsSync(resolve(REPO, context.pluginDir)), true, `${level}: ${context.pluginDir}`);
+    }
   }
 });
 

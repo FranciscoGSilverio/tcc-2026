@@ -52,6 +52,22 @@ test('applyContext copies the P1 context file into the working copy', () => {
   assert.equal(calls[0][2], '/app/CLAUDE.md');
 });
 
+test('applyContext copies the file for P1 and file plus plugin for P2', () => {
+  const p1Calls = [];
+  applyContext({ name: 'x', pLevel: 'P1', repoRoot: REPO, copy: (...a) => p1Calls.push(a) });
+  assert.equal(p1Calls.length, 1);
+  assert.equal(p1Calls[0][2], '/app/CLAUDE.md');
+
+  const p2Calls = [];
+  applyContext({ name: 'x', pLevel: 'P2', repoRoot: REPO, copy: (...a) => p2Calls.push(a) });
+  assert.equal(p2Calls.length, 2);
+  assert.equal(p2Calls[0][2], '/app/CLAUDE.md');
+  // The plugin must land outside the working copy, or it shows up in the
+  // session diff and contaminates the convention script and the evaluator.
+  assert.equal(p2Calls[1][2], '/opt/plugin');
+  assert.doesNotMatch(p2Calls[1][2], /^\/app/);
+});
+
 test('prepare refuses a session whose context level was not stated', async () => {
   // Regression: prepare used to default pLevel to 'P0' while run-session
   // never passed it, so `--p P1` ran bare and was recorded as P1.
