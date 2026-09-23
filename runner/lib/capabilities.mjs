@@ -37,10 +37,21 @@ export const CONTEXTS = {
   P1: 'contexts/P1/CLAUDE.md',
 };
 
-// O2 chains four calls, each receiving the previous one's history, and
-// is not built: same reasoning as P2.
+// O1 is one call with the statement. O2 is the four chained calls of
+// protocol section 3.3, frozen in files so the sequence that runs and the
+// sequence that gets published come from the same place. Only step 1
+// carries the statement.
 export const ORDERS = {
-  O1: { calls: 1 },
+  O1: { calls: 1, steps: null },
+  O2: {
+    calls: 4,
+    steps: [
+      'orders/O2/1-explorar.md',
+      'orders/O2/2-planejar.md',
+      'orders/O2/3-implementar.md',
+      'orders/O2/4-verificar.md',
+    ],
+  },
 };
 
 export function resolveSession({ task, pLevel, oLevel }) {
@@ -66,5 +77,6 @@ export function resolveSession({ task, pLevel, oLevel }) {
     decisionPoints: TASKS[task].decisionPoints,
     contextFile: CONTEXTS[pLevel],
     calls: ORDERS[oLevel].calls,
+    steps: ORDERS[oLevel].steps,
   };
 }
