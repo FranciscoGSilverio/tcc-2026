@@ -1,6 +1,6 @@
 # Log de Implementação
 
-**Atualizado em:** 22/09/2026 (quarta revisão)
+**Atualizado em:** 23/09/2026 (quinta revisão)
 
 ## Para que serve este documento
 
@@ -26,13 +26,13 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 | Implementação de referência de T1 | **Pronta, sem alteração.** 26/26, zero regressões | `reference/T1/` | Nada |
 | **Script de convenções** | **Construído.** Oito regras da seção 2.6; zero violações contra a referência, dispara nas cinco regras esperadas contra uma cópia deliberadamente violadora | `tools/convention-check/` | Nada |
 | **Avaliador cego** | **Construído e rodado contra as cinco sessões coletadas.** Checklist (6 perguntas) e pontos de decisão (10), uma passagem por instrumento, cego à condição | `tools/blind-evaluator/` | Conjunto rotulado à mão para medir concordância com humano (D3) — os diffs de T2 agora existem, então deixou de estar bloqueado |
-| Runner mínimo | **Construído e provado em cinco sessões reais** (duas de T1, três de T2). Aplica contexto, grava `violacoes`, e recusa combinação de tarefa/contexto/ordem que não implemente | `runner/` | Sequência O2 |
+| Runner | **Construído e provado em sete sessões reais**, cobrindo quatro das seis células. Aplica contexto e plugin, encadeia O2, grava `violacoes`, recusa combinação não implementada, e invalida sessão P2 cujo plugin não tenha carregado | `runner/` | Nada bloqueante |
 | Runner completo | Não existe, sem spec | — | Fica para depois das sessões P0/P1 de T1 |
 | **Configuração P1** | **Construída.** Política de domínio de reservas + as oito regras de convenção em linguagem natural + arquitetura, nomenclatura e comandos | `contexts/P1/CLAUDE.md` | Nada para esta rodada |
-| Configuração P2 | Não existe | — | **Próximo item.** Obrigatória antes da coleta que compara P0/P1/P2 |
-| Sequência O2 | Não existe; o runner recusa `--o O2` em vez de simular | `runner/lib/capabilities.mjs` | **Próximo item.** Quatro chamadas encadeadas, prompts já escritos na seção 3.3 |
+| **Configuração P2** | **Construída e verificada em sessão real.** Mesmo `CLAUDE.md` de P1 (byte a byte) mais plugin `meeting-rooms-conventions` com três skills | `contexts/P2/` | Nada |
+| **Sequência O2** | **Construída e verificada em sessão real.** Quatro chamadas encadeadas por `--session-id`/`--resume` | `orders/O2/`, `runner/run-session.mjs` | Nada |
 
-**Resumo em uma linha:** semente, instrumentos de T1 e T2, script de convenções, contexto de P1, runner e avaliador cego prontos e provados em cinco sessões reais — duas de T1 (P0 e P1) e uma célula completa de T2 com três execuções; falta o plugin de P2 e a sequência O2, que juntos destravam as seis células da grade.
+**Resumo em uma linha:** toda a infraestrutura de coleta está construída e provada em sessão real — semente, instrumentos das duas tarefas, script de convenções, avaliador cego, runner, e os três níveis de contexto e dois de ordem; as seis células da grade existem e quatro já produziram dado. Falta coletar as 23 sessões restantes da grade principal, decidir o relato dos dois pontos de decisão inertes, e fechar o portão de M3.
 
 ## Por que o enunciado de T1 mudou
 
@@ -50,20 +50,24 @@ A sessão piloto, por ter medido o enunciado antigo, não é comparável com as 
 
 **Sobre a coluna `model_version`:** ela guarda exatamente o que o CLI do agente reporta no evento `system/init`, sem transformação. Para modelos identificados por um apelido como `claude-sonnet-5`, o CLI não expõe a versão datada correspondente (do tipo `claude-sonnet-5-20260115`) em nenhum campo do transcript — isso é limitação da fonte de dados, não campo mal preenchido pelo runner. A coluna separada `model` guarda o apelido pedido na chamada, que é sempre conhecido.
 
-## Custo por sessão, medido para as duas tarefas
+## Custo por sessão, medido para as duas tarefas e as duas ordens
 
-Cinco sessões reais coletadas dão, pela primeira vez, custo por tarefa em vez de um número único:
+Sete sessões reais coletadas:
 
-| | Sessões | Custo médio | Turnos |
-|---|---|---|---|
-| T1 | 2 (P0, P1) | **US$ 0,44** | 30, 31 |
-| T2 | 3 (P0, mesma célula) | **US$ 0,67** | 34, 43, 37 |
+| Recorte | Sessões | Custo médio |
+|---|---|---|
+| T1 | 4 | **US$ 0,46** |
+| T2 | 3 | **US$ 0,67** |
+| O1 | 6 | US$ 0,56 |
+| O2 | 1 | **US$ 0,47** |
 
-T2 custa cerca de **52% mais** que T1, confirmando a previsão de que uma tarefa sem suíte de testes como critério de parada consome mais turnos. Qualquer extrapolação de orçamento precisa usar os dois números separadamente, não a média dos cinco.
+**O2 não é mais cara que O1**, contrariando a expectativa de que quatro chamadas encadeadas custariam mais. O motivo aparece no detalhe da sessão `T1-P0-O2-mue3ic8e`: os turnos por passo foram 19, 1, 13 e 3, e o passo de planejamento custou cinco centavos por não usar ferramenta alguma — o protocolo proíbe gravar o plano em arquivo, então ele sai direto na resposta. A segmentação redistribui o esforço em vez de multiplicá-lo.
 
-Acumulado até 22/09: **US$ 2,88** em sessões, **US$ 0,22** em avaliação cega, **US$ 0,06** na sonda de turnos.
+**Projeção para as 23 sessões que faltam:** 8 de T1 a US$ 0,46 e 15 de T2 a US$ 0,67 dão cerca de **US$ 14**, com a ressalva de que T2 sob O2 nunca foi medida. Tempo de parede estimado em algo entre uma hora e meia e duas horas, serial.
 
-O orçamento deixou de ser teto rígido por decisão do orientando em 22/09 — vinte dólares é referência de custo-efetividade, e mais crédito é comprado se o protocolo justificar. O que continua em aberto é a projeção completa, que agora depende de quantas células de modelo e quantas réplicas a grade final terá.
+Acumulado até 23/09: **US$ 3,86** em sessões, **US$ 0,27** em avaliação cega, **US$ 0,06** na sonda de turnos.
+
+O orçamento deixou de ser teto rígido por decisão do orientando em 22/09 — vinte dólares é referência de custo-efetividade, e mais crédito é comprado se o protocolo justificar.
 
 ## Descoberta: `temperature` é rejeitada por Sonnet 5
 
