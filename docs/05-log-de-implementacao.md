@@ -21,17 +21,18 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 | Auditoria da semente | Pronta | `tools/seed-audit/` | Nada |
 | Enunciado de T1 | **Reescrito em 17/09** (versão 2, seção 4 da spec de reavaliação) | `tasks/T1-validacao-de-reservas.md` | Congelamento em M3 |
 | Enunciado de T2 | Versionado, inalterado | `tasks/T2-res-142.md` | Congelamento em M3 |
-| Pontos de decisão de T2 | Escritos, nunca testados | `docs/02`, seção 2.4 | Validar contra saídas reais |
+| Pontos de decisão de T2 | **Validados contra três saídas reais em 22/09.** Oito dos dez são vivos; os pontos 5 (limite de horário) e 7 (fuso) voltaram `ausente` nas três | `docs/02`, seção 2.4 | Decisão sobre como reportar os dois pontos inertes — proposta é relato duplo, sem cortá-los |
 | Testes ocultos de T1 | **Prontos, sem alteração.** 26 asserções, linha de base 13/26 | `hidden-tests/T1/run.mjs` | Nada |
 | Implementação de referência de T1 | **Pronta, sem alteração.** 26/26, zero regressões | `reference/T1/` | Nada |
 | **Script de convenções** | **Construído.** Oito regras da seção 2.6; zero violações contra a referência, dispara nas cinco regras esperadas contra uma cópia deliberadamente violadora | `tools/convention-check/` | Nada |
-| **Avaliador cego** | **Construído.** Checklist de qualidade (6 perguntas) e pontos de decisão de T2 (10 pontos), uma passagem por instrumento, cego à condição | `tools/blind-evaluator/` | Conjunto rotulado à mão para medir concordância com humano (D3) — depende de diffs reais de T2, ainda não coletados |
-| Runner mínimo | **Construído, provado por sessões falsas e por uma sessão real (P0).** Agora também aplica contexto (`applyContext`) e grava `violacoes` | `runner/` | Rodar a primeira sessão P1 real (Tarefa 8, fora do escopo desta rodada) |
+| **Avaliador cego** | **Construído e rodado contra as cinco sessões coletadas.** Checklist (6 perguntas) e pontos de decisão (10), uma passagem por instrumento, cego à condição | `tools/blind-evaluator/` | Conjunto rotulado à mão para medir concordância com humano (D3) — os diffs de T2 agora existem, então deixou de estar bloqueado |
+| Runner mínimo | **Construído e provado em cinco sessões reais** (duas de T1, três de T2). Aplica contexto, grava `violacoes`, e recusa combinação de tarefa/contexto/ordem que não implemente | `runner/` | Sequência O2 |
 | Runner completo | Não existe, sem spec | — | Fica para depois das sessões P0/P1 de T1 |
 | **Configuração P1** | **Construída.** Política de domínio de reservas + as oito regras de convenção em linguagem natural + arquitetura, nomenclatura e comandos | `contexts/P1/CLAUDE.md` | Nada para esta rodada |
-| Configuração P2 | Não existe | — | Obrigatória antes da coleta que compara P0/P1/P2 |
+| Configuração P2 | Não existe | — | **Próximo item.** Obrigatória antes da coleta que compara P0/P1/P2 |
+| Sequência O2 | Não existe; o runner recusa `--o O2` em vez de simular | `runner/lib/capabilities.mjs` | **Próximo item.** Quatro chamadas encadeadas, prompts já escritos na seção 3.3 |
 
-**Resumo em uma linha:** semente, instrumento de T1, script de convenções, contexto de P1, runner mínimo até a coluna `violacoes`, e agora o avaliador cego (checklist e pontos de decisão) prontos e provados; as duas primeiras sessões reais de T1 sob o enunciado novo (P0 e P1) já coletadas, com `--dry-run` conferido contra as duas antes de rodar a avaliação de verdade; falta o plugin de P2, a sequência O2, e o conjunto rotulado à mão para medir a confiabilidade do avaliador cego contra classificação humana.
+**Resumo em uma linha:** semente, instrumentos de T1 e T2, script de convenções, contexto de P1, runner e avaliador cego prontos e provados em cinco sessões reais — duas de T1 (P0 e P1) e uma célula completa de T2 com três execuções; falta o plugin de P2 e a sequência O2, que juntos destravam as seis células da grade.
 
 ## Por que o enunciado de T1 mudou
 
@@ -49,9 +50,20 @@ A sessão piloto, por ter medido o enunciado antigo, não é comparável com as 
 
 **Sobre a coluna `model_version`:** ela guarda exatamente o que o CLI do agente reporta no evento `system/init`, sem transformação. Para modelos identificados por um apelido como `claude-sonnet-5`, o CLI não expõe a versão datada correspondente (do tipo `claude-sonnet-5-20260115`) em nenhum campo do transcript — isso é limitação da fonte de dados, não campo mal preenchido pelo runner. A coluna separada `model` guarda o apelido pedido na chamada, que é sempre conhecido.
 
-## Custo por sessão, e por que precisa de decisão
+## Custo por sessão, medido para as duas tarefas
 
-A única medição real disponível é a sessão piloto: US$ 0,4209743 para uma sessão T1/P0. Extrapolado para as 55 sessões da grade principal (seção 4.2 do protocolo) ao mesmo custo por sessão, o total fica em torno de **US$ 23,15** contra **US$ 20** comprados — já insuficiente sem contar as vinte sessões adicionais de células de modelo da seção 4.4, nem T2, cujo custo por sessão ainda não foi medido (mais turnos esperados por não ter testes automáticos como critério de parada). Este ponto já estava em aberto antes desta rodada e continua em aberto: precisa de decisão sobre reforço de orçamento, redução de réplicas ou algum outro corte, antes de a coleta da grade principal começar.
+Cinco sessões reais coletadas dão, pela primeira vez, custo por tarefa em vez de um número único:
+
+| | Sessões | Custo médio | Turnos |
+|---|---|---|---|
+| T1 | 2 (P0, P1) | **US$ 0,44** | 30, 31 |
+| T2 | 3 (P0, mesma célula) | **US$ 0,67** | 34, 43, 37 |
+
+T2 custa cerca de **52% mais** que T1, confirmando a previsão de que uma tarefa sem suíte de testes como critério de parada consome mais turnos. Qualquer extrapolação de orçamento precisa usar os dois números separadamente, não a média dos cinco.
+
+Acumulado até 22/09: **US$ 2,88** em sessões, **US$ 0,22** em avaliação cega, **US$ 0,06** na sonda de turnos.
+
+O orçamento deixou de ser teto rígido por decisão do orientando em 22/09 — vinte dólares é referência de custo-efetividade, e mais crédito é comprado se o protocolo justificar. O que continua em aberto é a projeção completa, que agora depende de quantas células de modelo e quantas réplicas a grade final terá.
 
 ## Descoberta: `temperature` é rejeitada por Sonnet 5
 
