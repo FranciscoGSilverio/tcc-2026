@@ -38,29 +38,43 @@ const countToolCalls = (events) =>
 export function readTranscript(text) {
   const events = parseLines(text);
   const init = events.find((event) => event.type === 'system' && event.subtype === 'init');
-  const result = events.find((event) => event.type === 'result');
+  const results = events.filter((event) => event.type === 'result');
 
-  if (!result) {
+  if (results.length === 0) {
     throw new Error('transcript has no result event: the session did not finish');
   }
+  const last = results[results.length - 1];
 
-  const usage = result.usage ?? {};
+  // O2 chains four calls, so a session's transcript carries one result
+  // per step. Reading only the first recorded step 1 and discarded the
+  // other three quarters of the session.
+  const sum = (pick) => results.reduce((total, result) => total + (pick(result) ?? 0), 0);
+
+  // The same rule as 17/09 -- the model that did the work, by output
+  // volume -- applied across every step's usage map at once.
+  const mergedUsage = {};
+  for (const result of results) {
+    for (const [name, usage] of Object.entries(result.modelUsage ?? {})) {
+      const current = mergedUsage[name] ?? { outputTokens: 0 };
+      mergedUsage[name] = { ...usage, outputTokens: current.outputTokens + (usage.outputTokens ?? 0) };
+    }
+  }
 
   return {
-    model: sessionModel(result, init),
-    modelUsage: result.modelUsage ?? {},
+    model: sessionModel({ modelUsage: mergedUsage }, init),
+    modelUsage: mergedUsage,
     cliVersion: init?.claude_code_version ?? 'unknown',
-    sessionId: result.session_id ?? init?.session_id ?? 'unknown',
-    numTurns: result.num_turns ?? 0,
-    stopReason: result.stop_reason ?? 'unknown',
-    isError: Boolean(result.is_error),
-    costUsd: result.total_cost_usd ?? 0,
-    durationMs: result.duration_ms ?? 0,
+    sessionId: last.session_id ?? init?.session_id ?? 'unknown',
+    numTurns: sum((r) => r.num_turns),
+    stopReason: last.stop_reason ?? 'unknown',
+    isError: Boolean(last.is_error),
+    costUsd: sum((r) => r.total_cost_usd),
+    durationMs: sum((r) => r.duration_ms),
     tokens: {
-      input: usage.input_tokens ?? 0,
-      output: usage.output_tokens ?? 0,
-      cacheCreate: usage.cache_creation_input_tokens ?? 0,
-      cacheRead: usage.cache_read_input_tokens ?? 0,
+      input: sum((r) => r.usage?.input_tokens),
+      output: sum((r) => r.usage?.output_tokens),
+      cacheCreate: sum((r) => r.usage?.cache_creation_input_tokens),
+      cacheRead: sum((r) => r.usage?.cache_read_input_tokens),
     },
     toolCalls: countToolCalls(events),
     rateLimited: events.some((event) => event.type === 'rate_limit_event'),
