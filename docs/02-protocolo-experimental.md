@@ -219,7 +219,11 @@ O texto do enunciado é idêntico nos dois níveis. O que muda é a segmentaçã
 
 ### 3.4 Constantes
 
-Idênticos em toda sessão: commit-semente, texto do enunciado, limite de 40 turnos somados todos os passos, permissões de ferramenta, imagem de contêiner e versões de Node e dependências, versão do CLI do agente, e ausência de intervenção humana.
+Idênticos em toda sessão: commit-semente, texto do enunciado, permissões de ferramenta, imagem de contêiner e versões de Node e dependências, versão do CLI do agente, e ausência de intervenção humana.
+
+**O limite de turnos não está nesta lista, e a redação anterior o incluía por engano.** `--max-turns 40` é **rede de segurança contra laço infinito**, não medida de esforço nem constante que equalize condições. Uma sonda de 22/09/2026 mediu o comportamento real: `--max-turns 3` produziu `num_turns = 6`, com `stop_reason = end_turn` e `subtype = success` — a sessão terminou sozinha, não foi cortada. As duas grandezas não contam a mesma unidade, e em cinco sessões reais sob `--max-turns 40` os turnos registrados foram 30, 31, 34, 37 e 43, nenhuma interrompida pelo limite.
+
+A consequência é de redação, não de desenho: `n_turns` continua sendo **dado observado e reportado**, nunca alvo nem teto efetivo, e a comparação de esforço entre O1 e O2 permanece ancorada em custo, como a seção 8 já determina. Em O2 cada uma das quatro chamadas recebe a mesma rede de 40, e `n_turns` da sessão é a soma das quatro.
 
 **O agente tem acesso irrestrito à internet durante a sessão.** Isto revoga a restrição prevista em versões anteriores deste protocolo. A justificativa é de validade ecológica: buscar informação quando falta é o que um agente faz em uso real, e proibir isso mediria um agente que não existe na prática. Duas consequências foram registradas. A violação "dependência acrescentada" passa a ser genuinamente alcançável, o que sem rede nunca seria o caso, já que a instalação falharia e o agente recuaria. E o repositório de artefatos permanece **privado até o encerramento da coleta em M6**, porque um agente com busca poderia encontrar os testes ocultos, os pontos de decisão ou este próprio protocolo, invalidando silenciosamente a verificação 5 do portão do piloto.
 
@@ -280,7 +284,7 @@ Randomizar a ordem em que as sessões rodam, em vez de executar célula por cél
 | `custo_usd` | decimal | ambas | Custo das chamadas, a partir dos tokens retornados pela API |
 | `duracao_s` | inteiro | ambas | Tempo de parede da sessão |
 | `n_tool_calls` | inteiro | ambas | Contagem de invocações de ferramenta no transcript |
-| `travou` | booleano | ambas | Excedeu o limite de turnos, **ou** terminou sem diff, **ou** build/typecheck falha ao final |
+| `travou` | booleano | ambas | Foi interrompido pela rede de segurança de turnos (laço infinito), **ou** terminou sem diff, **ou** build/typecheck falha ao final. A primeira causa não disparou em nenhuma das sessões coletadas até 22/09/2026 — ver seção 3.4 |
 | `decisoes` | vetor | só T2 | Categoria escolhida em cada um dos 10 pontos de decisão, pelo avaliador cego |
 
 `duracao_s` e `n_tool_calls` custam zero código adicional — já estão no transcript e na resposta da API. `n_tool_calls` é particularmente útil para interpretar a assimetria entre O1 e O2: ajuda a distinguir se O2 ganha por conduzir melhor ou apenas por gastar mais.
@@ -317,7 +321,7 @@ A correção é estrutural, não caso a caso. Uma tabela única declara, para ca
 
    O agente executa **dentro do contêiner**, o que dá ambiente idêntico nas 55 sessões independentemente da máquina, torna `duracao_s` comparável, e contém o raio de dano, o que é o que permite conceder permissão total de ferramentas em sessões sem supervisão. O commit único de mensagem neutra elimina por construção o vazamento por histórico do git, que seria fatal e é fácil de esquecer.
 2. **Aplicar o nível P.** P0: nada. P1: copiar o `CLAUDE.md`. P2: instalar o plugin.
-3. **Executar o nível O.** Uma chamada (O1) ou quatro encadeadas (O2) ao agente em modo headless, com o modelo da célula e o limite de 40 turnos. Capturar transcript e uso de tokens.
+3. **Executar o nível O.** Uma chamada (O1) ou quatro encadeadas (O2) ao agente em modo headless, com o modelo da célula e a rede de segurança de 40 turnos por chamada (seção 3.4). Capturar transcript e uso de tokens.
 4. **Verificar o estado.** Build, verificação de tipos e suíte pré-existente. Registrar resultados.
 
    Três garantias de isolamento valem daqui em diante, e protegem as medições de serem sabotadas pelo próprio agente. Os comandos de verificação vêm do Makefile **congelado**, nunca da cópia que o agente pode ter editado. Os arquivos de teste da semente são **restaurados a partir da versão congelada** antes de medir regressão, e separadamente registra-se se o agente os alterou, o que é a regra 6 do script de convenções. E o servidor é iniciado pelos comandos congelados, com o runner aguardando `GET /health` responder antes de aplicar a suíte oculta.
@@ -356,7 +360,7 @@ Análise **descritiva e exploratória**. Com o número de observações por cél
 | Ameaça | Natureza | Tratamento |
 |---|---|---|
 | **Não-determinismo** | Interna | Repetições por célula; dispersão reportada como piso de interpretação |
-| **Orçamento computacional desigual** | Interna | O2 recebe mais prompting que O1. O limite de turnos é comum, mas a assimetria persiste. Custo e `n_tool_calls` reportados como resultado conjunto; o ganho de O2 deve ser lido por unidade de custo |
+| **Orçamento computacional desigual** | Interna | O2 recebe mais prompting que O1, e a assimetria persiste. A rede de segurança de turnos é comum às duas ordens mas **não equaliza esforço** — ela não prende na prática (seção 3.4). Custo e `n_tool_calls` reportados como resultado conjunto; o ganho de O2 deve ser lido por unidade de custo, que é a única base de comparação justa aqui |
 | **Drift de versão do modelo** | Interna | Versão e data por sessão; célula de controle re-executada na segunda janela |
 | **Viés de expectativa** | Interna | Testes ocultos e pontos de decisão congelados antes do desenvolvimento do plugin; avaliador cego à condição |
 | **Auto-preferência do avaliador** | Interna | Um modelo Claude avalia saídas Claude. Mitigado pelo formato binário e pela cegueira, mas não eliminado. Declarado no artigo |
