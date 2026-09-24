@@ -18,7 +18,9 @@
 
 **2. `--allow-image-change` só é passada quando o digest realmente mudou.** A spec diz "a primeira sessão leva `--allow-image-change` automaticamente, e só a primeira". Ao pé da letra, isso desliga a guarda de deriva de imagem uma vez por lote — cinco vezes ao longo da coleta, sendo que depois da primeira sessão válida a linha de base do dataset *já é* a imagem atual. O driver implementa a intenção e não a letra: lê o digest vivo, compara com o último gravado no dataset, e só gasta a permissão se forem diferentes — e só até uma sessão válida registrar o digest novo. Em todos os lotes seguintes a guarda vale integralmente, sem ninguém precisar lembrar de nada.
 
-**3. Adição de escopo: o driver grava um registro do lote em `sessions/lotes/`.** O passo 2 da skill — "confere que o lote entregou o que prometeu" — é, pela própria spec, a única coisa que o auditor não consegue fazer, porque ele só enxerga o dataset. Mas a skill também não consegue, se a única evidência do que foi prometido for a rolagem do terminal, que quase nunca está no contexto do agente. Um JSON por lote com o plano prometido, o que executou e onde parou é o que torna esse passo executável e testável. **É escopo novo e está aqui declarado para poder ser vetado:** sem ele, o passo 2 da skill vira uma pergunta ao Francisco, e o critério de aceite "a skill detecta um lote que parou antes do limite pedido" não tem como ser verificado.
+**3. Correção aplicada depois da implementação: o avaliador cego roda mesmo quando o lote para.** A primeira versão deste plano escreveu `if (!stopped) runEvaluator()`. Estava errado, e contrariava a própria spec, que argumenta que chamar o avaliador ao fim "é seguro mesmo se o lote parou no meio" porque `evaluate.mjs --all` é idempotente. Com a versão errada, um lote que parasse na sétima de dez deixaria sete sessões válidas sem avaliar, e a verificação 3 do auditor reprovaria na próxima execução com "qualidade vazia" — mascarando a parada, que é o que o passo 2 da skill existe para reportar, com uma falha que não é problema de dado. Corrigido no código, no teste e aqui.
+
+**4. Adição de escopo: o driver grava um registro do lote em `sessions/lotes/`.** O passo 2 da skill — "confere que o lote entregou o que prometeu" — é, pela própria spec, a única coisa que o auditor não consegue fazer, porque ele só enxerga o dataset. Mas a skill também não consegue, se a única evidência do que foi prometido for a rolagem do terminal, que quase nunca está no contexto do agente. Um JSON por lote com o plano prometido, o que executou e onde parou é o que torna esse passo executável e testável. **É escopo novo e está aqui declarado para poder ser vetado:** sem ele, o passo 2 da skill vira uma pergunta ao Francisco, e o critério de aceite "a skill detecta um lote que parou antes do limite pedido" não tem como ser verificado.
 
 ## Global Constraints
 
@@ -764,7 +766,7 @@ test('no allowance is spent when the image already matches the dataset', async (
   assert.deepEqual(runner.calls.map((args) => args.includes('--allow-image-change')), [false, false]);
 });
 
-test('the blind evaluator runs once, after the batch, and not after a stop', async () => {
+test('the blind evaluator runs once at the end of the batch', async () => {
   const { dir, datasetPath } = scratchDataset();
   let evaluated = 0;
   const runner = fakeRunner();
@@ -773,12 +775,24 @@ test('the blind evaluator runs once, after the batch, and not after a stop', asy
     runSession: runner.run, runEvaluator: () => { evaluated += 1; return { status: 0 }; },
   });
   assert.equal(evaluated, 1);
+});
 
-  const stopping = fakeRunner({ outcome: () => 'invalid' });
-  await runBatch({
-    ...baseOptions(datasetPath, dir), limit: 2, seed: 'abc123',
+// The sessions that did land are valid data whatever went wrong with the
+// next one, and evaluate.mjs --all skips whatever already has an
+// evaluation.json. Skipping the evaluator here would leave them
+// unevaluated, and the auditor's verification 3 would then fail on the
+// next run reporting "qualidade vazia" for sessions whose only problem is
+// that a later session broke. The stop is the batch record's business.
+test('the blind evaluator also runs when the batch stopped early', async () => {
+  const { dir, datasetPath } = scratchDataset();
+  let evaluated = 0;
+  const stopping = fakeRunner({ outcome: (_args, counter) => (counter <= 2 ? 'valid' : 'invalid') });
+  const result = await runBatch({
+    ...baseOptions(datasetPath, dir), limit: 5, seed: 'abc123',
     runSession: stopping.run, runEvaluator: () => { evaluated += 1; return { status: 0 }; },
   });
+  assert.ok(result.stopped);
+  assert.equal(result.executed, 2);
   assert.equal(evaluated, 1);
 });
 
@@ -980,11 +994,16 @@ export async function runBatch({
       + ` — valid, $${sessionCost.toFixed(2)} (acumulado $${costUsd.toFixed(2)})`);
   }
 
-  if (!stopped) {
-    out('');
-    out('lote concluído; avaliando o que ainda não tem evaluation.json');
-    runEvaluator();
-  }
+  // Runs even when the batch stopped. The sessions that did land are
+  // valid data whatever went wrong with the next one, evaluate.mjs --all
+  // skips anything that already has evaluation.json, and leaving them
+  // unevaluated would make the auditor's verification 3 fail on the next
+  // run -- reporting "qualidade vazia" for sessions whose only problem is
+  // that a later session broke. The stop is verification 2's job to
+  // report, and it reports it with the right cause.
+  out('');
+  out('avaliando o que ainda não tem evaluation.json');
+  runEvaluator();
 
   const recordPath = writeBatchRecord({
     repoRoot, plan, executed, stopped, startedAt, endedAt: now().toISOString(), datasetPath,
@@ -1010,7 +1029,7 @@ async function main() {
 - [ ] **Passo 4: rodar e ver passar**
 
 Run: `node --test tools/collect/test/run-grid.test.mjs`
-Esperado: 19 testes PASS.
+Esperado: 20 testes PASS.
 
 - [ ] **Passo 5: conferir que `sessions/lotes/` entra no repositório**
 

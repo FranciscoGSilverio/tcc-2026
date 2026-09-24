@@ -221,7 +221,7 @@ test('no allowance is spent when the image already matches the dataset', async (
   assert.deepEqual(runner.calls.map((args) => args.includes('--allow-image-change')), [false, false]);
 });
 
-test('the blind evaluator runs once, after the batch, and not after a stop', async () => {
+test('the blind evaluator runs once at the end of the batch', async () => {
   const { dir, datasetPath } = scratchDataset();
   let evaluated = 0;
   const runner = fakeRunner();
@@ -230,12 +230,24 @@ test('the blind evaluator runs once, after the batch, and not after a stop', asy
     runSession: runner.run, runEvaluator: () => { evaluated += 1; return { status: 0 }; },
   });
   assert.equal(evaluated, 1);
+});
 
-  const stopping = fakeRunner({ outcome: () => 'invalid' });
-  await runBatch({
-    ...baseOptions(datasetPath, dir), limit: 2, seed: 'abc123',
+// The sessions that did land are valid data whatever went wrong with the
+// next one, and evaluate.mjs --all skips whatever already has an
+// evaluation.json. Skipping the evaluator here would leave them
+// unevaluated, and the auditor's verification 3 would then fail on the
+// next run reporting "qualidade vazia" for sessions whose only problem is
+// that a later session broke. The stop is the batch record's business.
+test('the blind evaluator also runs when the batch stopped early', async () => {
+  const { dir, datasetPath } = scratchDataset();
+  let evaluated = 0;
+  const stopping = fakeRunner({ outcome: (_args, counter) => (counter <= 2 ? 'valid' : 'invalid') });
+  const result = await runBatch({
+    ...baseOptions(datasetPath, dir), limit: 5, seed: 'abc123',
     runSession: stopping.run, runEvaluator: () => { evaluated += 1; return { status: 0 }; },
   });
+  assert.ok(result.stopped);
+  assert.equal(result.executed, 2);
   assert.equal(evaluated, 1);
 });
 

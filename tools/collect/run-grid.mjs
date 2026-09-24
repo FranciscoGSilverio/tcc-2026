@@ -195,11 +195,16 @@ export async function runBatch({
       + ` — valid, $${sessionCost.toFixed(2)} (acumulado $${costUsd.toFixed(2)})`);
   }
 
-  if (!stopped) {
-    out('');
-    out('lote concluído; avaliando o que ainda não tem evaluation.json');
-    runEvaluator();
-  }
+  // Runs even when the batch stopped. The sessions that did land are
+  // valid data whatever went wrong with the next one, evaluate.mjs --all
+  // skips anything that already has evaluation.json, and leaving them
+  // unevaluated would make the auditor's verification 3 fail on the next
+  // run -- reporting "qualidade vazia" for sessions whose only problem is
+  // that a later session broke. The stop is verification 2's job to
+  // report, and it reports it with the right cause.
+  out('');
+  out('avaliando o que ainda não tem evaluation.json');
+  runEvaluator();
 
   const recordPath = writeBatchRecord({
     repoRoot, plan, executed, stopped, startedAt, endedAt: now().toISOString(), datasetPath,
