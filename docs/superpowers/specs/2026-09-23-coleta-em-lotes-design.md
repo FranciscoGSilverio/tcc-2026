@@ -64,7 +64,7 @@ node tools/collect/run-grid.mjs [--limite N] [--seed S] [--dataset <caminho>] [-
 node tools/collect/check-dataset.mjs [--dataset <caminho>]
 ```
 
-Sete verificações, cada uma nomeando as sessões que falham. Sai com código diferente de zero se qualquer uma falhar, para poder virar portão.
+Oito verificações, cada uma nomeando as sessões que falham. Sai com código diferente de zero se qualquer uma falhar, para poder virar portão.
 
 1. **Nenhuma linha inválida sem substituta.** Uma sessão `invalid` é aceitável se existir outra `valid` da mesma quíntupla; sozinha, é buraco.
 2. **Nenhuma coluna vazia fora do previsto.** Vazios legítimos são os três do dicionário: `decisao_*` em T1, `taxa_aceitacao` em T2, `invalid_reason` em sessão válida.
@@ -74,9 +74,11 @@ Sete verificações, cada uma nomeando as sessões que falham. Sai com código d
 6. **Toda sessão P2 carregou o plugin.** Lê o evento de init do transcript arquivado e exige `plugins` não vazio. A guarda já recusa em tempo de execução; isto confere o que foi gravado, que é o que a análise vai ler.
 7. **Todo transcript está são.** Abre, não está truncado, traz evento de init, e traz a quantidade certa de eventos `result` — um em O1, quatro em O2. Menos que o esperado em O2 significa cadeia quebrada com linha gravada assim mesmo; transcript ilegível significa sessão que morreu sem que nada percebesse. É a verificação mais direta de "o laço rodou inteiro".
 
+8. **Nenhuma sessão reporta erro do CLI.** Todo evento `result` do transcript traz `is_error: false` e `subtype: success`. Hoje `is_error` é lido por `readTranscript` e **não é gravado em coluna nenhuma nem verificado por nada** — uma sessão em que o CLI reportasse erro entraria como `valid`, sem rastro, desde que tivesse produzido transcript e diff. Fica como verificação do auditor e não como coluna nova: o dado está no transcript arquivado, e acrescentar coluna agora quebraria a guarda de cabeçalho do dataset e exigiria migrar as linhas já coletadas, por informação que já está guardada.
+
 **Duas verificações foram consideradas e cortadas, e o motivo fica registrado para que ninguém as restaure por parecerem lacuna.** "Modelo reportado compatível com o pedido" é redundante: `assertModelMatches` já recusa a sessão em tempo de execução, e conferir o agregado depois não acrescenta nada que a guarda não tenha impedido. "Custo por sessão em faixa plausível" dependeria de um limiar escolhido no chute; ela vira responsabilidade do agente da seção 5, que olha os números em conjunto sem precisar de um corte numérico arbitrário.
 
-As verificações 6 e 7 são as que justificam guardar os transcripts: elas conferem o que ficou registrado, não o que o runner achou na hora.
+As verificações 6, 7 e 8 são as que justificam guardar os transcripts: elas conferem o que ficou registrado, não o que o runner achou na hora.
 
 ## 5. O que isto não faz
 
@@ -96,7 +98,9 @@ Quatro passos e uma resposta binária.
 
 **Confere que o lote entregou o que prometeu.** Esta é a única coisa aqui que o auditor **não pode fazer por construção**: ele só vê o dataset, e não sabe o que o lote deveria ter produzido. Se o driver prometeu dez sessões e parou na sétima sem alarde, o auditor aprova as sete, porque elas estão íntegras. Comparar intenção com resultado é o que revela a parada silenciosa, e é a forma mais direta da pergunta "algo quebrou no meio do laço".
 
-**Abre um ou dois transcripts** e confirma que houve trabalho: ferramentas chamadas, arquivos tocados, sessão que andou. **Não se foi bom** — só se aconteceu.
+**Lê um transcript do lote, inteiro e com atenção**, procurando qualquer coisa que sugira que a medição não aconteceu como desenhada. É amostral por necessidade: conferir formalmente todos os transcripts é mecânico e já é trabalho do auditor, que faz isso melhor; ler *com atenção* não escala — dez transcripts são mais de um megabyte, e passar o olho neles produz a ilusão de atenção, não atenção.
+
+Uma versão anterior desta spec mandava "confirmar que houve trabalho de verdade". **Isso estava errado** e violava a própria proibição abaixo: uma sessão em que o agente não fez nada é dado, não defeito — `travou_sem_diff` existe para registrá-la, e o protocolo manda preservá-la com nota zero. Conferir se houve trabalho suficiente é julgar resultado pela porta dos fundos.
 
 **Responde `all clear` ou `parar`**, com o motivo em uma linha.
 
