@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { emptyRow } from '../../../runner/lib/dataset.mjs';
-import { checkDataset } from '../checks.mjs';
+import { checkDataset, loadTranscript } from '../checks.mjs';
 
 // A row the way the runner leaves it: every collection column filled,
 // and the three legitimate empties of the data dictionary respected.
@@ -145,4 +148,113 @@ test('the cli version check covers the old sessions too, because that constant n
     validRow({ session_id: 'nova', cli_version: '2.1.272' }),
   ], 5).failures;
   assert.equal(failures.length, 2);
+});
+
+const initEvent = (plugins = []) =>
+  JSON.stringify({ type: 'system', subtype: 'init', plugins, claude_code_version: '2.1.272' });
+const resultEvent = (overrides = {}) =>
+  JSON.stringify({ type: 'result', subtype: 'success', is_error: false, num_turns: 12, ...overrides });
+
+// Writes a transcript where the row says it is, inside a throwaway repo
+// root, so the checks exercise the real path handling rather than a stub.
+function scratchRepo(transcripts) {
+  const root = mkdtempSync(join(tmpdir(), 'collect-checks-'));
+  for (const [sessionId, lines] of Object.entries(transcripts)) {
+    mkdirSync(join(root, 'sessions', sessionId), { recursive: true });
+    writeFileSync(join(root, 'sessions', sessionId, 'transcript.jsonl'), lines.join('\n'));
+  }
+  return root;
+}
+
+const onDisk = (rows, transcripts, id) => {
+  const root = scratchRepo(transcripts);
+  return checkDataset({ rows, repoRoot: root }).find((result) => result.id === id);
+};
+
+test('an O1 transcript with one init and one result is sane', () => {
+  const row = validRow({ session_id: 's1', o_level: 'O1', transcript_path: 'sessions/s1/transcript.jsonl' });
+  assert.deepEqual(onDisk([row], { s1: [initEvent(), resultEvent()] }, 7).failures, []);
+});
+
+test('an O2 transcript carries four result events, one per chained call', () => {
+  const row = validRow({ session_id: 's2', o_level: 'O2', transcript_path: 'sessions/s2/transcript.jsonl' });
+  const four = [initEvent(), resultEvent(), resultEvent(), resultEvent(), resultEvent()];
+  assert.deepEqual(onDisk([row], { s2: four }, 7).failures, []);
+
+  const three = [initEvent(), resultEvent(), resultEvent(), resultEvent()];
+  const failures = onDisk([row], { s2: three }, 7).failures;
+  assert.equal(failures.length, 1);
+  assert.match(failures[0], /3 evento\(s\) result, 4 esperado\(s\)/);
+});
+
+test('a truncated transcript is caught, and the last line is named as the break', () => {
+  const row = validRow({ session_id: 's3', transcript_path: 'sessions/s3/transcript.jsonl' });
+  const truncated = [initEvent(), '{"type":"result","subty'];
+  assert.match(onDisk([row], { s3: truncated }, 7).failures[0], /truncado/);
+});
+
+test('a transcript broken in the middle is a different failure from a truncation', () => {
+  const row = validRow({ session_id: 's4', transcript_path: 'sessions/s4/transcript.jsonl' });
+  const broken = [initEvent(), '{isto nao e json}', resultEvent()];
+  assert.match(onDisk([row], { s4: broken }, 7).failures[0], /linha 2 ilegível/);
+});
+
+test('a missing transcript file is caught', () => {
+  const row = validRow({ session_id: 's5', transcript_path: 'sessions/s5/transcript.jsonl' });
+  assert.match(onDisk([row], {}, 7).failures[0], /ausente/);
+});
+
+test('a transcript with no init event is caught', () => {
+  const row = validRow({ session_id: 's6', transcript_path: 'sessions/s6/transcript.jsonl' });
+  assert.match(onDisk([row], { s6: [resultEvent()] }, 7).failures[0], /sem evento de init/);
+});
+
+test('a P2 session whose init reports the plugin passes', () => {
+  const row = validRow({ session_id: 's7', p_level: 'P2', transcript_path: 'sessions/s7/transcript.jsonl' });
+  const lines = [initEvent([{ name: 'meeting-rooms-conventions', version: '1.0.0' }]), resultEvent()];
+  assert.deepEqual(onDisk([row], { s7: lines }, 6).failures, []);
+});
+
+test('a P2 session whose init reports no plugin ran as P1 with extra steps', () => {
+  const row = validRow({ session_id: 's8', p_level: 'P2', transcript_path: 'sessions/s8/transcript.jsonl' });
+  const failures = onDisk([row], { s8: [initEvent([]), resultEvent()] }, 6).failures;
+  assert.equal(failures.length, 1);
+  assert.match(failures[0], /s8/);
+});
+
+test('sessions that are not P2 are outside the plugin check', () => {
+  const row = validRow({ session_id: 's9', p_level: 'P0', transcript_path: 'sessions/s9/transcript.jsonl' });
+  assert.deepEqual(onDisk([row], { s9: [initEvent([]), resultEvent()] }, 6).failures, []);
+});
+
+test('a result event reporting an error is caught even though the row says valid', () => {
+  const row = validRow({ session_id: 's10', transcript_path: 'sessions/s10/transcript.jsonl' });
+  const lines = [initEvent(), resultEvent({ is_error: true })];
+  assert.match(onDisk([row], { s10: lines }, 8).failures[0], /is_error/);
+});
+
+test('a result subtype other than success is caught', () => {
+  const row = validRow({ session_id: 's11', transcript_path: 'sessions/s11/transcript.jsonl' });
+  const lines = [initEvent(), resultEvent({ subtype: 'error_max_turns' })];
+  assert.match(onDisk([row], { s11: lines }, 8).failures[0], /error_max_turns/);
+});
+
+test('an unreadable transcript is reported once, by verification 7 only', () => {
+  const row = validRow({ session_id: 's12', transcript_path: 'sessions/s12/transcript.jsonl' });
+  assert.equal(onDisk([row], {}, 7).failures.length, 1);
+  assert.deepEqual(onDisk([row], {}, 8).failures, []);
+});
+
+test('the loader reads a transcript once even though three checks want it', () => {
+  const row = validRow({ session_id: 's13', transcript_path: 'sessions/s13/transcript.jsonl' });
+  let reads = 0;
+  const counting = (repoRoot, target) => { reads += 1; return healthyTranscript(repoRoot, target); };
+  checkDataset({ rows: [row], repoRoot: '/nao-usado', load: counting });
+  assert.equal(reads, 1);
+});
+
+test('loadTranscript reports the path it could not find', () => {
+  const result = loadTranscript('/nao-existe', { session_id: 'x', transcript_path: 'sessions/x/transcript.jsonl' });
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /sessions\/x\/transcript\.jsonl/);
 });
