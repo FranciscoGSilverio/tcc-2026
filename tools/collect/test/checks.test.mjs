@@ -99,3 +99,50 @@ test('a T2 session with empty decision columns has not been evaluated', () => {
 test('a T1 session with decision columns filled is a misfiled row', () => {
   assert.match(check([validRow({ decisao_1: 'A' })], 3).failures[0], /decisao_1/);
 });
+
+test('one image digest across the new regime passes', () => {
+  assert.deepEqual(check([validRow(), t2Row()], 4).failures, []);
+});
+
+test('a digest that changes mid-collection fails and names both sides', () => {
+  const failures = check([
+    validRow({ session_id: 'a', image_digest: 'sha256:um' }),
+    validRow({ session_id: 'b', image_digest: 'sha256:dois' }),
+  ], 4).failures;
+  assert.equal(failures.length, 2);
+  assert.match(failures.join('\n'), /sha256:um.*a/s);
+  assert.match(failures.join('\n'), /sha256:dois.*b/s);
+});
+
+test('the sessions from before build-image.mjs are excluded and named, not failed', () => {
+  const result = check([
+    validRow({ session_id: 'T1-P0-O1-mu69pgsx', image_digest: 'sha256:antiga-1' }),
+    validRow({ session_id: 'T1-P1-O1-mu69tn5j', image_digest: 'sha256:antiga-2' }),
+    validRow({ session_id: 'nova', image_digest: 'sha256:constante' }),
+  ], 4);
+  assert.deepEqual(result.failures, []);
+  assert.equal(result.notes.length, 1);
+  assert.match(result.notes[0], /T1-P0-O1-mu69pgsx/);
+  assert.match(result.notes[0], /T1-P1-O1-mu69tn5j/);
+});
+
+test('one cli version across the whole collection passes', () => {
+  assert.deepEqual(check([validRow(), t2Row()], 5).failures, []);
+});
+
+test('a cli version that changes fails and names both sides', () => {
+  const failures = check([
+    validRow({ session_id: 'a', cli_version: '2.1.272' }),
+    validRow({ session_id: 'b', cli_version: '2.1.280' }),
+  ], 5).failures;
+  assert.equal(failures.length, 2);
+  assert.match(failures.join('\n'), /2\.1\.280/);
+});
+
+test('the cli version check covers the old sessions too, because that constant never broke', () => {
+  const failures = check([
+    validRow({ session_id: 'T1-P0-O1-mu69pgsx', cli_version: '2.1.100' }),
+    validRow({ session_id: 'nova', cli_version: '2.1.272' }),
+  ], 5).failures;
+  assert.equal(failures.length, 2);
+});

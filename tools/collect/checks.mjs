@@ -80,10 +80,57 @@ function everyValidSessionEvaluated(rows) {
   return { id: 3, name: 'toda sessão válida foi avaliada', failures, notes: [] };
 }
 
+// The eight sessions collected while prepare() still rebuilt the image
+// before every run, each one carrying its own digest -- the defect
+// runner/build-image.mjs fixed on 23/09/2026. Verification 4 excludes
+// them by name and reports them, instead of inferring the boundary from
+// the data: any rule that inferred it (longest constant suffix, first
+// repeated digest) would also read a rebuild in the middle of the
+// collection as "a new regime starting here", which is precisely the
+// event this verification exists to catch.
+export const PRE_BUILD_ONCE = new Set([
+  'T1-P0-O1-mu4t4rvp',
+  'T1-P0-O1-mu69pgsx',
+  'T1-P1-O1-mu69tn5j',
+  'T2-P0-O1-mudcr5pg',
+  'T2-P0-O1-mudcyv6z',
+  'T2-P0-O1-muddre1p',
+  'T1-P2-O1-mue3d690',
+  'T1-P0-O2-mue3ic8e',
+]);
+
+// Groups the sessions by the value of a column that the protocol holds
+// constant, and reports every group when there is more than one. Naming
+// both sides matters: "the digest changed" is not actionable, "these
+// twenty ran on one image and these twenty-three on another" is.
+function constantColumn({ id, name, rows, column, excluded = new Set() }) {
+  const considered = rows.filter((row) => row[column] && !excluded.has(row.session_id));
+  const groups = new Map();
+  for (const row of considered) {
+    if (!groups.has(row[column])) groups.set(row[column], []);
+    groups.get(row[column]).push(row.session_id);
+  }
+
+  const failures = groups.size > 1
+    ? [...groups].map(([value, ids]) => `${value}: ${ids.join(', ')}`)
+    : [];
+
+  const skipped = rows.filter((row) => excluded.has(row.session_id)).map((row) => row.session_id);
+  const notes = skipped.length > 0
+    ? [`${skipped.length} sessão(ões) anterior(es) ao regime de imagem única, fora desta verificação: ${skipped.join(', ')}`]
+    : [];
+
+  return { id, name, failures, notes };
+}
+
 export function checkDataset({ rows }) {
   return [
     invalidWithoutReplacement(rows),
     unexpectedEmptyColumns(rows),
     everyValidSessionEvaluated(rows),
+    constantColumn({
+      id: 4, name: 'image_digest constante', rows, column: 'image_digest', excluded: PRE_BUILD_ONCE,
+    }),
+    constantColumn({ id: 5, name: 'cli_version constante', rows, column: 'cli_version' }),
   ];
 }
