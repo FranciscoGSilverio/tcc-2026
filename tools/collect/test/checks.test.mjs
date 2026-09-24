@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { emptyRow } from '../../../runner/lib/dataset.mjs';
 import { checkDataset, loadTranscript } from '../checks.mjs';
+import { formatReport } from '../check-dataset.mjs';
 
 // A row the way the runner leaves it: every collection column filled,
 // and the three legitimate empties of the data dictionary respected.
@@ -257,4 +258,22 @@ test('loadTranscript reports the path it could not find', () => {
   const result = loadTranscript('/nao-existe', { session_id: 'x', transcript_path: 'sessions/x/transcript.jsonl' });
   assert.equal(result.ok, false);
   assert.match(result.reason, /sessions\/x\/transcript\.jsonl/);
+});
+
+test('the report marks each verification and names what failed', () => {
+  const text = formatReport([
+    { id: 1, name: 'primeira', failures: [], notes: [] },
+    { id: 2, name: 'segunda', failures: ['sessao-x: coluna duracao_s vazia'], notes: [] },
+    { id: 4, name: 'quarta', failures: [], notes: ['2 sessões anteriores: a, b'] },
+  ]);
+  assert.match(text, /OK.*1\. primeira/);
+  assert.match(text, /FALHA.*2\. segunda/);
+  assert.match(text, /sessao-x: coluna duracao_s vazia/);
+  assert.match(text, /nota: 2 sessões anteriores/);
+  assert.match(text, /1 verificação\(ões\) reprovada\(s\)/);
+});
+
+test('a clean report says so in one line', () => {
+  const text = formatReport([{ id: 1, name: 'primeira', failures: [], notes: [] }]);
+  assert.match(text, /dataset íntegro/);
 });
