@@ -127,3 +127,50 @@ test('the O2 steps carry the wording frozen in protocol section 3.3', () => {
   assert.match(texts[2], /Implemente o plano/);
   assert.match(texts[3], /Execute os testes e a verificação de tipos/);
 });
+
+// The image guard lives in run-session.mjs rather than capabilities.mjs,
+// but it throws the same UnsupportedSessionError and for the same reason:
+// a session that cannot run as labelled must not run at all. These probe
+// it through the CLI, which is the only way it is reachable.
+test('a session is refused when the dataset was built on a different image', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { appendRow, emptyRow } = await import('../lib/dataset.mjs');
+
+  const datasetPath = join(mkdtempSync(join(tmpdir(), 'image-guard-')), 'r.csv');
+  appendRow(datasetPath, {
+    ...emptyRow(), session_id: 'earlier', task: 'T1', status: 'valid',
+    image_digest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+  });
+
+  const result = spawnSync('node', [
+    resolve(REPO, 'runner', 'run-session.mjs'),
+    '--fake', 'noop', '--dataset', datasetPath,
+  ], { encoding: 'utf8', cwd: REPO });
+
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /image changed mid-collection/);
+});
+
+test('the same session is accepted when the image change is declared', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { appendRow, emptyRow } = await import('../lib/dataset.mjs');
+
+  const datasetPath = join(mkdtempSync(join(tmpdir(), 'image-guard-')), 'r.csv');
+  appendRow(datasetPath, {
+    ...emptyRow(), session_id: 'earlier', task: 'T1', status: 'valid',
+    image_digest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+  });
+
+  const result = spawnSync('node', [
+    resolve(REPO, 'runner', 'run-session.mjs'),
+    '--fake', 'noop', '--dataset', datasetPath, '--allow-image-change',
+  ], { encoding: 'utf8', cwd: REPO });
+
+  assert.equal(result.status, 0);
+});

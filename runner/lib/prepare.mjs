@@ -1,6 +1,6 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SESSION_IMAGE, buildImage, copyIn, exec, execDetached, imageId, start } from './container.mjs';
+import { SESSION_IMAGE, copyIn, exec, execDetached, imageId, start } from './container.mjs';
 // The context levels live in capabilities.mjs, not here. A second list
 // of levels in a second file is how the dataset label and the actual
 // behaviour drifted apart in the first place, so this module reads the
@@ -116,8 +116,13 @@ async function assertServesBeforeHandover(name, hostPort) {
 export async function prepare({
   name, outDir, hostPort, env, skipStart = false, pLevel, repoRoot = DEFAULT_REPO_ROOT,
 }) {
+  // prepare() no longer builds the image. The protocol holds the image
+  // identical across sessions (section 3.4) and building here recorded a
+  // different digest for every one of the first eight. The image is now
+  // built once, deliberately, by runner/build-image.mjs, and
+  // run-session.mjs refuses to run when it is missing or when its digest
+  // stops matching the dataset.
   if (!skipStart) {
-    buildImage();
     start({ name, outDir, hostPort, env });
   }
 

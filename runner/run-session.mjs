@@ -3,11 +3,11 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { copyIn, exec, stop } from './lib/container.mjs';
+import { SESSION_IMAGE, copyIn, exec, imageId, stop } from './lib/container.mjs';
 import { InfrastructureError, prepare } from './lib/prepare.mjs';
 import { measure } from './lib/measure.mjs';
 import { readTranscript, toMarkdown } from './lib/transcript.mjs';
-import { appendRow, emptyRow } from './lib/dataset.mjs';
+import { appendRow, emptyRow, readRows } from './lib/dataset.mjs';
 import { FAKES } from './lib/fakes.mjs';
 import { UnsupportedSessionError, resolveSession } from './lib/capabilities.mjs';
 
@@ -136,6 +136,47 @@ function assertPluginLoaded(parsed, pluginName) {
   }
 }
 
+// The container image is a declared constant of the experiment (protocol
+// section 3.4), and it used not to be one: prepare() rebuilt before every
+// session, and the first eight sessions recorded eight different digests
+// because the build context is runner/ and that directory changed all
+// through development. The column meant to evidence the constant
+// contradicted it.
+//
+// Building is now its own deliberate step, and this refuses a session
+// whose image is missing or whose digest has drifted from what the
+// dataset already holds. Without the second half, "build once" would be
+// an intention rather than a property: one stray rebuild mid-collection
+// and half the grid runs on a different image, silently.
+function assertImageReady(datasetPath, allowChange) {
+  let digest;
+  try {
+    digest = imageId(SESSION_IMAGE);
+  } catch {
+    throw new UnsupportedSessionError(
+      `the session image ${SESSION_IMAGE} does not exist. Build it once with ` +
+      '`node runner/build-image.mjs` before collecting, and do not rebuild mid-collection.',
+    );
+  }
+
+  const recorded = readRows(datasetPath)
+    .map((row) => row.image_digest)
+    .filter(Boolean);
+  const baseline = recorded[recorded.length - 1];
+
+  if (baseline && baseline !== digest && !allowChange) {
+    throw new UnsupportedSessionError(
+      `the session image changed mid-collection: the dataset was built with ${baseline} ` +
+      `and the image on this machine is now ${digest}. Sessions either side of this point ` +
+      'would not share the environment the protocol holds constant. Re-run with ' +
+      '--allow-image-change if the new image is deliberate; the digest difference then ' +
+      'stays visible in the data.',
+    );
+  }
+
+  return digest;
+}
+
 async function main() {
   const task = argument('--task', 'T1');
   const pLevel = argument('--p', 'P0');
@@ -153,6 +194,7 @@ async function main() {
   // Before anything is created or spent: refuse a session that cannot be
   // run exactly as it will be labelled.
   const plan = resolveSession({ task, pLevel, oLevel });
+  const imageDigest = assertImageReady(datasetPath, process.argv.includes('--allow-image-change'));
 
   const sessionId = `${task}-${pLevel}-${oLevel}-${Date.now().toString(36)}`;
   // A fake session is not data: it never reaches the real dataset, so its
@@ -175,7 +217,7 @@ async function main() {
       name, outDir, hostPort, pLevel, repoRoot: REPO,
       env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? '' },
     });
-    row.image_digest = anchors.imageId;
+    row.image_digest = imageDigest;
     row.cli_version = anchors.cliVersion;
 
     deliverStatement(name, resolve(REPO, plan.statement));

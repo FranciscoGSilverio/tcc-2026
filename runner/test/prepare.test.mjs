@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { exec, stop } from '../lib/container.mjs';
+import { buildImage, exec, stop } from '../lib/container.mjs';
 import { prepare, applyContext, InfrastructureError } from '../lib/prepare.mjs';
 
 const NAME = 'runner-prepare-test';
@@ -11,6 +11,10 @@ const outDir = mkdtempSync(join(tmpdir(), 'runner-prep-'));
 const REPO = resolve(import.meta.dirname, '..', '..');
 
 after(() => stop(NAME));
+
+// prepare() no longer builds the image, so a test that needs a container
+// builds it once here instead of relying on a side effect.
+buildImage();
 
 test('prepares a working copy and reports the reproducibility anchors', async () => {
   const info = await prepare({ name: NAME, outDir, hostPort: 3520, env: {}, pLevel: 'P0', repoRoot: REPO });

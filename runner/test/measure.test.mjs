@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { exec, stop } from '../lib/container.mjs';
+import { buildImage, exec, stop } from '../lib/container.mjs';
 import { prepare } from '../lib/prepare.mjs';
 import { measure } from '../lib/measure.mjs';
 
@@ -12,6 +12,10 @@ const NAME = 'runner-measure-test';
 const outDir = mkdtempSync(join(tmpdir(), 'runner-meas-'));
 
 after(() => stop(NAME));
+
+// prepare() no longer builds the image, so a test that needs a container
+// builds it once here instead of relying on a side effect.
+buildImage();
 
 test('an untouched working copy scores the documented baseline', async () => {
   await prepare({ name: NAME, outDir, hostPort: 3530, env: {}, pLevel: 'P0', repoRoot: REPO });

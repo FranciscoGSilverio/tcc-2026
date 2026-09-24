@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { buildImage } from '../lib/container.mjs';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -13,6 +14,10 @@ const REPO = resolve(import.meta.dirname, '..', '..');
 // `node --test` accumulates fake sessions into it unnoticed. Each test
 // file run gets its own scratch CSV instead.
 const DATASET_PATH = join(mkdtempSync(join(tmpdir(), 'end-to-end-dataset-')), 'resultados.csv');
+
+// run-session.mjs refuses when the session image is missing, so these
+// build it once rather than depending on a side effect of prepare().
+buildImage();
 
 const runFake = (fake) => {
   const result = spawnSync('node', [
