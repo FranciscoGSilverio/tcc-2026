@@ -2,7 +2,7 @@
 
 **Data:** 2026-09-23
 **Protocolo relevante:** seções 4.1 a 4.5 (a grade, as células de modelo, o controle de deriva, a ordem randomizada).
-**Objetivo:** coletar as 48 sessões restantes com um comando, em lotes verificáveis, sem que erro de protocolo ou de medição queime crédito produzindo dado errado.
+**Objetivo:** coletar as 43 sessões restantes com um comando, em lotes verificáveis, sem que erro de protocolo ou de medição queime crédito produzindo dado errado.
 
 ---
 
@@ -37,6 +37,8 @@ export const REPETITIONS = { T1: 2, T2: 3 };
 O controle de deriva da seção 4.3 **não entra**: ele só existe se a coleta ocorrer em duas janelas separadas no tempo, e a decisão é rodar de uma vez. Se isso mudar, ele volta — e essa é a única razão pela qual ele ficaria de fora.
 
 Uma sessão é identificada pela quíntupla tarefa, contexto, ordem, modelo e número de repetição. **O que falta é o alvo menos o que o dataset já tem**, contando só linhas `valid`.
+
+O alvo é 50: trinta da grade principal (seis células × [T1 duas vezes + T2 três vezes]) e vinte das células de modelo (dois modelos × duas células × cinco). O dataset traz sete sessões válidas, todas Sonnet: T1-P0-O1 uma vez, T1-P1-O1 uma vez, T1-P2-O1 uma vez, T1-P0-O2 uma vez e T2-P0-O1 três vezes. Faltam **43** — 23 da grade principal e 20 das células de modelo. Uma versão anterior desta spec dizia 48 em dois lugares; aquele número contava também as cinco sessões do controle de deriva, que a própria seção acima exclui.
 
 ## 3. O driver
 
@@ -110,7 +112,7 @@ A proibição precisa estar escrita com essas palavras porque um agente encarreg
 
 ## 7. Critérios de aceite
 
-- `--dry-run` sobre o dataset atual lista exatamente 48 sessões, agrupadas por bloco, sem chamar a API.
+- `--dry-run` sobre o dataset atual lista exatamente 43 sessões, agrupadas por bloco, sem chamar a API.
 - A soma das sessões listadas bate com a tabela da seção 2: 23 da grade principal e 20 das células de modelo.
 - Rodar o driver duas vezes com `--limite 1` executa duas sessões **diferentes**, provando que o "o que falta" é lido do dataset e não recomeçado.
 - Duas execuções com a mesma `--seed` produzem a mesma ordem; com sementes diferentes, ordens diferentes.
