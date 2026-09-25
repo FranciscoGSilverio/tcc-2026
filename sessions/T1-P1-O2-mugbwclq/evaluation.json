@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P1-O2-mugbwclq",
+  "evaluatedAt": "2026-09-25T03:12:36.907Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (assertValidDuration, assertIsFuture, assertRoomExists, assertUserExists, verificação de overlap) foi adicionada em src/modules/bookings/service.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não altera nenhum arquivo de schema (schema.ts); as novas regras são checadas via funções imperativas no service.ts (assertValidDuration, assertIsFuture), não por validação de schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Cada caminho de erro lança validationFailed (400), notFound (404) ou bookingConflict (409), ex.: 'throw validationFailed(\"End must be after start\")' e 'throw notFound(\"Room\")'."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Os limites de duração foram nomeados como constantes: 'const MIN_DURATION_MINUTES = 30;' e 'const MAX_DURATION_MINUTES = 8 * 60;'."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos fazem requisições HTTP via app.inject/book e checam apenas statusCode e corpo da resposta, ex.: 'expect(response.statusCode).toBe(409); expect(response.json().error.code).toBe(\"BOOKING_CONFLICT\")'."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service.ts reutiliza utilitários existentes como 'durationMinutes(start, end)', 'isBefore(a, b)' de shared/time.ts e 'validationFailed'/'notFound'/'bookingConflict' de shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.027758
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.027758
+}

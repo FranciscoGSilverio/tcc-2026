@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-mugd3ds7",
+  "evaluatedAt": "2026-09-25T03:17:53.139Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A rota apenas delega para `service.listAvailableSlots(request.query)` em routes.ts, toda a lógica de cálculo de slots está em service.ts."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "`AvailableSlotsQuery` é um schema TypeBox com `Type.String({ minLength: 1 })` e `Type.Integer({ minimum: 1 })` usado no `querystring` da rota."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os caminhos de erro lançam `notFound('Room')`, `bookingConflict(conflict.id)` e `validationFailed(...)`, que são `AppError` com `statusCode` definido e tratados pelo error handler global."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Foram criadas constantes nomeadas `MIN_DURATION_MINUTES = 30` e `MAX_DURATION_MINUTES = 8 * 60` em vez de literais soltos na validação de duração."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos verificam `response.statusCode` e `response.json().data`/`error.code` via `app.inject`, comportamento observável via HTTP, não implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reusa `parseInstant`, `isBefore` e `MINUTE_IN_MS` de `shared/time.js` e `notFound`/`bookingConflict`/`validationFailed` de `shared/errors.js` em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.028504
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/available-slots, com schema, service e repository dedicados, ao invés de alterar a listagem existente ou enriquecer o erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "A função listAvailableSlots calcula os 'gaps' entre reservas ativas e retorna exatamente esses intervalos livres (AvailableSlot com startsAt/endsAt representando disponibilidade), não os horários ocupados."
+      },
+      "3": {
+        "categoria": "parametrizável",
+        "justificativa": "O parâmetro `duration` é recebido via query string (Type.Integer) e usado para filtrar quais gaps são grandes o suficiente, permitindo ao cliente escolher a granularidade dentro de um range validado (30 a 480 min)."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailableSlotsQuery exige `from` e `to` como strings obrigatórias (minLength: 1), sem valores default para um dia ou semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há restrição de horário comercial nem limite fixo de 24h aplicado à janela `from`/`to`; a única validação de faixa é sobre a duração do slot, não sobre o horário do dia."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "roomId é um parâmetro obrigatório único no AvailableSlotsQuery, e a busca de conflitos/overlaps é feita para essa sala específica (findRoomById, listActiveOverlapping por roomId)."
+      },
+      "7": {
+        "categoria": "explícito no contrato",
+        "justificativa": "As datas são tratadas via parseInstant e o schema reutiliza DateString, mantendo o mesmo padrão explícito ISO já usado no restante do módulo de bookings, sem introduzir tratamento de fuso separado."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns the whole window as one slot when there are no bookings' confirma que, sem reservas, toda a janela solicitada é retornada como um único slot livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "O diff não implementa nenhuma filtragem ou tratamento específico para janelas de tempo no passado; from/to são aceitos e processados sem checagem em relação ao momento atual."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro de conflito (bookingConflict) continua sendo lançado da mesma forma, retornando apenas conflictingBookingId, como evidenciado pelos testes existentes reaproveitados; não há sugestão de horários alternativos incorporada ao 409."
+      }
+    },
+    "costUsd": 0.033698
+  },
+  "totalCostUsd": 0.062202
+}

@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P2-O2-mugdovul",
+  "evaluatedAt": "2026-09-25T03:15:28.728Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "As novas regras (assertValidWindow, assertFuture, checagem de conflito) foram adicionadas em service.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "As novas validações (janela, duração, data futura) são funções custom em service.ts usando validationFailed, não schemas Typebox novos em schema.ts."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros lançam AppError específicos como bookingConflict (409), notFound (404) e validationFailed (400), refletidos nos testes com statusCode explícitos."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "'export const MIN_DURATION_MINUTES = 30;' e 'MAX_DURATION_MINUTES = 8 * 60;' substituem literais soltos."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Testes usam app.inject e verificam apenas statusCode e corpo da resposta, ex.: 'expect(response.statusCode).toBe(409);'."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff importa e usa 'durationMinutes, isBefore, parseInstant' de shared/time.ts e 'validationFailed' de shared/errors.ts em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.029506
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.029506
+}

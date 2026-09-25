@@ -1,0 +1,337 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..8dc43c8 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -1,4 +1,4 @@
+-import type { Booking, Prisma } from '@prisma/client';
++import type { Booking, Prisma, PrismaClient } from '@prisma/client';
+ import { prisma } from '../../db/client.js';
+ import { BOOKING_ACTIVE } from './schema.js';
+ 
+@@ -20,21 +20,38 @@ export interface BookingFilter {
+   offset: number;
+ }
+ 
+-export function create(data: BookingData): Promise<Booking> {
+-  return prisma.booking.create({ data });
+-}
++export type CreateResult = { conflict: Booking } | { booking: Booking };
++export type UpdateResult = { conflict: Booking } | { booking: Booking };
++
++type PrismaTx = Prisma.TransactionClient | PrismaClient;
+ 
+-export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Booking | null> {
+-  return prisma.booking.findFirst({
++function findConflict(
++  tx: PrismaTx,
++  roomId: string,
++  startsAt: Date,
++  endsAt: Date,
++  excludeId?: string,
++): Promise<Booking | null> {
++  return tx.booking.findFirst({
+     where: {
+       roomId,
+       status: BOOKING_ACTIVE,
+-      startsAt: { lte: startsAt },
++      startsAt: { lt: endsAt },
+       endsAt: { gt: startsAt },
++      ...(excludeId ? { id: { not: excludeId } } : {}),
+     },
+   });
+ }
+ 
++export async function createChecked(data: BookingData): Promise<CreateResult> {
++  return prisma.$transaction(async (tx) => {
++    const conflict = await findConflict(tx, data.roomId, data.startsAt, data.endsAt);
++    if (conflict) return { conflict };
++    const booking = await tx.booking.create({ data });
++    return { booking };
++  });
++}
++
+ export function findById(id: string): Promise<Booking | null> {
+   return prisma.booking.findUnique({ where: { id } });
+ }
+@@ -62,6 +79,19 @@ export function update(id: string, data: Partial<BookingData>): Promise<Booking>
+   return prisma.booking.update({ where: { id }, data });
+ }
+ 
++export async function updateChecked(
++  id: string,
++  data: Partial<BookingData>,
++  window: { roomId: string; startsAt: Date; endsAt: Date },
++): Promise<UpdateResult> {
++  return prisma.$transaction(async (tx) => {
++    const conflict = await findConflict(tx, window.roomId, window.startsAt, window.endsAt, id);
++    if (conflict) return { conflict };
++    const booking = await tx.booking.update({ where: { id }, data });
++    return { booking };
++  });
++}
++
+ export function updateStatus(id: string, status: string): Promise<Booking> {
+   return prisma.booking.update({ where: { id }, data: { status } });
+ }
+diff --git a/src/modules/bookings/schema.ts b/src/modules/bookings/schema.ts
+index 9069332..2d343a3 100644
+--- a/src/modules/bookings/schema.ts
++++ b/src/modules/bookings/schema.ts
+@@ -4,6 +4,9 @@ import { DateString } from '../../shared/schema.js';
+ export const BOOKING_ACTIVE = 'ACTIVE';
+ export const BOOKING_CANCELLED = 'CANCELLED';
+ 
++export const MIN_DURATION_MINUTES = 30;
++export const MAX_DURATION_MINUTES = 8 * 60;
++
+ export const BookingResponse = Type.Object({
+   id: Type.String(),
+   roomId: Type.String(),
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..9813b9b 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -1,32 +1,58 @@
+ import type { Booking } from '@prisma/client';
+-import { bookingConflict, notFound } from '../../shared/errors.js';
++import { bookingConflict, notFound, validationFailed } from '../../shared/errors.js';
+ import {
+   normalizeLimit,
+   normalizeOffset,
+   paginated,
+   type Page,
+ } from '../../shared/pagination.js';
+-import { parseInstant } from '../../shared/time.js';
++import { durationMinutes, isBefore, parseInstant } from '../../shared/time.js';
++import { getRoom } from '../rooms/service.js';
++import { getUser } from '../users/service.js';
+ import * as repository from './repository.js';
+-import { BOOKING_CANCELLED } from './schema.js';
++import { BOOKING_CANCELLED, MAX_DURATION_MINUTES, MIN_DURATION_MINUTES } from './schema.js';
+ import type { CreateBookingInput, ListBookingsInput, UpdateBookingInput } from './schema.js';
+ 
++function assertValidWindow(startsAt: Date, endsAt: Date): void {
++  if (!isBefore(startsAt, endsAt)) {
++    throw validationFailed('endsAt must be after startsAt', { startsAt, endsAt });
++  }
++  const duration = durationMinutes(startsAt, endsAt);
++  if (duration < MIN_DURATION_MINUTES || duration > MAX_DURATION_MINUTES) {
++    throw validationFailed('Booking duration must be between 30 minutes and 8 hours', {
++      minMinutes: MIN_DURATION_MINUTES,
++      maxMinutes: MAX_DURATION_MINUTES,
++      durationMinutes: duration,
++    });
++  }
++}
++
++function assertFuture(startsAt: Date): void {
++  if (isBefore(startsAt, new Date())) {
++    throw validationFailed('startsAt cannot be in the past', { startsAt });
++  }
++}
++
+ export async function createBooking(input: CreateBookingInput): Promise<Booking> {
+   const startsAt = parseInstant(input.startsAt);
+   const endsAt = parseInstant(input.endsAt);
++  assertValidWindow(startsAt, endsAt);
++  assertFuture(startsAt);
+ 
+-  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
+-  if (conflict) {
+-    throw bookingConflict(conflict.id);
+-  }
++  await getRoom(input.roomId);
++  await getUser(input.userId);
+ 
+-  return repository.create({
++  const result = await repository.createChecked({
+     roomId: input.roomId,
+     userId: input.userId,
+     title: input.title,
+     startsAt,
+     endsAt,
+   });
++  if ('conflict' in result) {
++    throw bookingConflict(result.conflict.id);
++  }
++  return result.booking;
+ }
+ 
+ export async function getBooking(id: string): Promise<Booking> {
+@@ -53,14 +79,42 @@ export async function listBookings(query: ListBookingsInput): Promise<Page<Booki
+ }
+ 
+ export async function updateBooking(id: string, input: UpdateBookingInput): Promise<Booking> {
+-  await getBooking(id);
+-  return repository.update(id, {
++  const existing = await getBooking(id);
++
++  if (input.userId !== undefined) {
++    await getUser(input.userId);
++  }
++
++  const data: Partial<repository.BookingData> = {
+     ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+     ...(input.userId !== undefined ? { userId: input.userId } : {}),
+     ...(input.title !== undefined ? { title: input.title } : {}),
+     ...(input.startsAt !== undefined ? { startsAt: parseInstant(input.startsAt) } : {}),
+     ...(input.endsAt !== undefined ? { endsAt: parseInstant(input.endsAt) } : {}),
+-  });
++  };
++
++  const changesRoomOrSchedule =
++    input.roomId !== undefined || input.startsAt !== undefined || input.endsAt !== undefined;
++
++  if (!changesRoomOrSchedule) {
++    return repository.update(id, data);
++  }
++
++  const roomId = data.roomId ?? existing.roomId;
++  const startsAt = data.startsAt ?? existing.startsAt;
++  const endsAt = data.endsAt ?? existing.endsAt;
++  assertValidWindow(startsAt, endsAt);
++  assertFuture(startsAt);
++
++  if (input.roomId !== undefined) {
++    await getRoom(input.roomId);
++  }
++
++  const result = await repository.updateChecked(id, data, { roomId, startsAt, endsAt });
++  if ('conflict' in result) {
++    throw bookingConflict(result.conflict.id);
++  }
++  return result.booking;
+ }
+ 
+ export async function cancelBooking(id: string): Promise<Booking> {
+diff --git a/tests/bookings.test.ts b/tests/bookings.test.ts
+index 7b4db38..4de59ea 100644
+--- a/tests/bookings.test.ts
++++ b/tests/bookings.test.ts
+@@ -180,4 +180,126 @@ describe('bookings', () => {
+     const response = await book(24.5, 25.5, 'Overlap');
+     expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+   });
++
++  it('rejects a booking that starts before and ends inside an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23.5, 24.5, 'Straddles start');
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('rejects a booking that fully contains an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23.5, 25.5, 'Engulfs');
++    expect(response.statusCode).toBe(409);
++  });
++
++  it('accepts a booking that ends exactly when another starts', async () => {
++    const base = Date.now();
++    const at = (hours: number) => new Date(base + hours * HOUR).toISOString();
++    await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId, title: 'Second', startsAt: at(25), endsAt: at(26) },
++    });
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId, title: 'Before', startsAt: at(24), endsAt: at(25) },
++    });
++    expect(response.statusCode).toBe(201);
++  });
++
++  it('rejects a booking shorter than 30 minutes', async () => {
++    const response = await book(24, 24.25, 'Too short');
++    expect(response.statusCode).toBe(400);
++    expect(response.json().error.code).toBe('VALIDATION_ERROR');
++  });
++
++  it('rejects a booking longer than 8 hours', async () => {
++    const response = await book(24, 33, 'Too long');
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('rejects a booking whose end is not after its start', async () => {
++    const response = await book(25, 24, 'Backwards');
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('rejects a booking that starts in the past', async () => {
++    const response = await book(-1, 0, 'Past');
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('rejects a booking for a room that does not exist', async () => {
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId: 'missing-room', userId, title: 'Sync', startsAt: inHours(24), endsAt: inHours(25) },
++    });
++    expect(response.statusCode).toBe(404);
++  });
++
++  it('rejects a booking for a user that does not exist', async () => {
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId: 'missing-user', title: 'Sync', startsAt: inHours(24), endsAt: inHours(25) },
++    });
++    expect(response.statusCode).toBe(404);
++  });
++
++  it('rejects moving a booking onto a conflicting slot via PATCH', async () => {
++    await book(24, 25);
++    const second = await book(30, 31, 'Movable');
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { startsAt: inHours(24.5), endsAt: inHours(25.5) },
++    });
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('rejects moving a booking into a room with a conflict via PATCH', async () => {
++    await book(24, 25);
++    const other = await app.inject({
++      method: 'POST',
++      url: '/rooms',
++      payload: { name: 'Borealis', capacity: 4 },
++    });
++    const movable = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: {
++        roomId: other.json().id,
++        userId,
++        title: 'Elsewhere',
++        startsAt: inHours(24),
++        endsAt: inHours(25),
++      },
++    });
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${movable.json().id}`,
++      payload: { roomId },
++    });
++    expect(response.statusCode).toBe(409);
++  });
++
++  it('allows moving a booking into a free slot via PATCH', async () => {
++    const created = await book(24, 25);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${created.json().id}`,
++      payload: { startsAt: inHours(30), endsAt: inHours(31) },
++    });
++    expect(response.statusCode).toBe(200);
++  });
++
++  it('only one of two concurrent bookings for the same slot succeeds', async () => {
++    const [first, second] = await Promise.all([book(24, 25, 'Race A'), book(24, 25, 'Race B')]);
++    const statuses = [first.statusCode, second.statusCode].sort();
++    expect(statuses).toEqual([201, 409]);
++  });
+ });

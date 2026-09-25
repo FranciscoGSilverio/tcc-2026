@@ -77,3 +77,32 @@ test('still finds the text block when it is the only one', async () => {
   const result = await callModel({ apiKey: 'x', prompt: 'hello', fetchImpl });
   assert.equal(result.text, 'plain answer');
 });
+
+// Measured on 25/09/2026: a decision-points call spent 1365 of its 2048
+// tokens on thinking and was cut mid-sentence, so the truncated text
+// reached JSON.parse and failed as "Unterminated string in JSON at
+// position 2348". The cause has to be named where it happens.
+test('throws when the response was cut off at max_tokens', async () => {
+  const fetchImpl = async () => ({
+    ok: true,
+    json: async () => ({
+      stop_reason: 'max_tokens',
+      content: [{ type: 'text', text: '{"1": {"categoria": "endpoint no' }],
+      usage: { input_tokens: 6764, output_tokens: 2048, output_tokens_details: { thinking_tokens: 1365 } },
+    }),
+  });
+  await assert.rejects(
+    () => callModel({ apiKey: 'k', prompt: 'p', fetchImpl }),
+    /truncated at max_tokens.*2048.*1365/s,
+  );
+});
+
+test('the default ceiling leaves room for thinking and the answer together', async () => {
+  let sent;
+  const fetchImpl = async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return { ok: true, json: async () => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }], usage: {} }) };
+  };
+  await callModel({ apiKey: 'k', prompt: 'p', fetchImpl });
+  assert.ok(sent.max_tokens >= 8192, `max_tokens is ${sent.max_tokens}`);
+});

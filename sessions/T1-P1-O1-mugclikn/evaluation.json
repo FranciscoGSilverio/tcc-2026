@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P1-O1-mugclikn",
+  "evaluatedAt": "2026-09-25T03:13:50.643Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a validação nova (assertValidPeriod, assertFuture, assertRoomExists, assertUserExists, assertNoConflict) foi adicionada em src/modules/bookings/service.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não mostra alterações em schema.ts nem em rotas; a validação nova é feita via funções assert* na camada de serviço, não por schema declarativo."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os asserts lançam validationFailed/notFound/bookingConflict, que já mapeiam para 400/404/409 conforme os testes (`expect(response.statusCode).toBe(409)` etc.)."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Durações foram nomeadas em constantes: `const MIN_DURATION_MINUTES = 30;` e `const MAX_DURATION_MINUTES = 8 * 60;`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes chamam a API via `app.inject` e checam `response.statusCode`/`error.code`, sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reusa `isBefore` e `MINUTE_IN_MS` de shared/time.ts: `import { isBefore, MINUTE_IN_MS, parseInstant } from '../../shared/time.js';`."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.020720000000000002
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.020720000000000002
+}

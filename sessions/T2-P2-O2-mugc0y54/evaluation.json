@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-mugc0y54",
+  "evaluatedAt": "2026-09-25T03:13:12.694Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A nova lógica de detecção de conflito (findConflict, cálculo de roomChanged/hoursChanged) foi adicionada em service.ts e repository.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não adiciona nem altera nenhum schema de validação para os novos parâmetros (startsAt/endsAt/roomId já existiam); nenhuma mudança em arquivos de schema aparece no diff."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O caminho de erro lança `throw bookingConflict(conflict.id);` tanto em createBooking quanto no novo bloco de updateBooking, reutilizando o erro com status 409."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhuma constante nomeada nova para durações/limites/janelas; os valores usados (startsAt, endsAt) vêm diretamente do input, sem literais fixos adicionados."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e verificam `response.statusCode` e `response.json().error.code`, comportamento observável via HTTP, sem inspecionar estado interno."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O código novo reutiliza `parseInstant` e `bookingConflict` do material de referência (shared/time.ts e shared/errors.ts) em vez de reimplementar parsing de datas ou construção de erro."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.024606000000000003
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "ausente",
+        "justificativa": "O diff não cria endpoint novo, não altera nenhuma listagem existente e não acrescenta informação ao corpo do erro 409 (que continua trazendo apenas conflictingBookingId); a mudança real é apenas corrigir a lógica de detecção de sobreposição de horários no create/update de reservas."
+      },
+      "2": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhum endpoint ou campo novo que retorne horários livres, ocupados ou ambos; o diff só melhora a checagem de conflito existente."
+      },
+      "3": {
+        "categoria": "ausente",
+        "justificativa": "Não existe qualquer noção de intervalos/slots sendo retornados ou calculados; a mudança é apenas na query de conflito (overlap por startsAt/endsAt)."
+      },
+      "4": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhum parâmetro de janela temporal (dia, semana, etc.) introduzido no diff."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Nenhum limite de horário comercial ou configurável é mencionado ou implementado no diff."
+      },
+      "6": {
+        "categoria": "ausente",
+        "justificativa": "Não há alteração relacionada a consultar disponibilidade de uma, várias ou todas as salas; a lógica de conflito continua por sala única (roomId) já existente."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não toca em tratamento de fuso horário; usa parseInstant já existente sem mudanças de contrato quanto a UTC/local."
+      },
+      "8": {
+        "categoria": "ausente",
+        "justificativa": "Não há endpoint de disponibilidade, logo não há decisão sobre o que retornar quando uma sala não tem reservas."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há filtragem ou inclusão de reservas passadas; a mudança é sobre overlap de datas em create/update, sem tratar especificamente reservas passadas."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro 409 continua com o mesmo formato (bookingConflict com conflictingBookingId); nenhuma sugestão de horários alternativos foi adicionada ao contrato do POST."
+      }
+    },
+    "costUsd": 0.02656
+  },
+  "totalCostUsd": 0.051166
+}

@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O2-mugc9fcy",
+  "evaluatedAt": "2026-09-25T03:13:44.983Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (computeFreeSlots, suggestAlternatives, getRoomAvailability, verificação de conflito no updateBooking) está em service.ts; routes.ts apenas chama `service.getRoomAvailability(request.query)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A rota `/availability` usa `schema: { querystring: AvailabilityQuery, response: { 200: AvailabilityResponse } }`, com `AvailabilityQuery` definido via TypeBox com `minLength`/`Integer({minimum:1})`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os novos caminhos de erro usam `throw notFound('Room')`, `throw validationFailed(...)` e `throw bookingConflict(...)`, que carregam statusCode 404/400/409 já tratados pelo error handler existente."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Valores como `DEFAULT_SLOT_DURATION_MINUTES = 30`, `SUGGESTION_LIMIT = 3` e `SUGGESTION_WINDOW_MS = 24 * 60 * 60 * 1000` foram nomeados em vez de usados como literais soltos."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes fazem requisições via `app.inject` e checam `response.statusCode`/`response.json()`, por exemplo `expect(response.statusCode).toBe(409)`, sem acessar funções internas do service."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service reusa `parseInstant` e `MINUTE_IN_MS` de `shared/time.ts` e `notFound`/`validationFailed`/`bookingConflict` de `shared/errors.ts` em vez de reimplementar essas funções."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.033492
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "combinação",
+        "justificativa": "O diff cria um endpoint novo (GET /bookings/availability) e também enriquece o erro 409 (BOOKING_CONFLICT) com `details.suggestions`, além de corrigir a lógica de conflito usada tanto no POST quanto no PATCH."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "A função `computeFreeSlots` e o endpoint `getRoomAvailability` retornam `slots` representando os intervalos livres da sala, não os ocupados."
+      },
+      "3": {
+        "categoria": "parametrizável",
+        "justificativa": "`AvailabilityQuery` inclui `durationMinutes` como `Type.Optional(Type.Integer(...))`, com fallback para `DEFAULT_SLOT_DURATION_MINUTES` (30) quando não informado."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "`from` e `to` são campos obrigatórios (`Type.String({ minLength: 1 })`, sem `Optional`) em `AvailabilityQuery`, e o service valida `to <= from` lançando erro."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há restrição de horário comercial nem limite de 24h aplicado à janela `from`/`to` do endpoint de disponibilidade; a janela de 24h (`SUGGESTION_WINDOW_MS`) é usada apenas internamente para sugestões de conflito, não como limite exposto no contrato."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "`AvailabilityQuery.roomId` é um único `Type.String`, e a resposta traz `roomId` único com seus `slots`; não há suporte a múltiplas salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não introduz nenhum campo ou documentação de fuso horário no contrato; usa `DateString`/`parseInstant` já existentes sem especificar UTC ou local explicitamente."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns the whole window as free when there are no bookings' confirma que, sem reservas, `computeFreeSlots` retorna um único slot cobrindo toda a janela `from`-`to`."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma lógica no diff que filtre ou trate especialmente horários passados; a janela `from`/`to` é aceita e processada como fornecida, sem checagem contra o momento atual."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "`bookingConflict` agora recebe `suggestions` e o service calcula `suggestAlternatives`, incluindo `details.suggestions` no corpo do erro 409 retornado pelo POST /bookings."
+      }
+    },
+    "costUsd": 0.036246
+  },
+  "totalCostUsd": 0.069738
+}
