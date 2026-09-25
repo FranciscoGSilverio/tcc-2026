@@ -118,7 +118,7 @@ test('a digest that changes mid-collection fails and names both sides', () => {
   assert.match(failures.join('\n'), /sha256:dois.*b/s);
 });
 
-test('the sessions from before build-image.mjs are excluded and named, not failed', () => {
+test('the sessions from before the digest was stable are excluded and named, not failed', () => {
   const result = check([
     validRow({ session_id: 'T1-P0-O1-mu69pgsx', image_digest: 'sha256:antiga-1' }),
     validRow({ session_id: 'T1-P1-O1-mu69tn5j', image_digest: 'sha256:antiga-2' }),

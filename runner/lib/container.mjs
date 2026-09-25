@@ -10,9 +10,24 @@ export const SESSION_IMAGE = 'meeting-rooms-session:1.0.0';
 const docker = (args, options = {}) =>
   spawnSync('docker', args, { encoding: 'utf8', ...options });
 
+// --provenance=false is what makes image_digest mean anything. BuildKit
+// attaches a provenance attestation to every build, which becomes an extra
+// manifest in a manifest list, and `docker inspect --format {{.Id}}`
+// reports that list's digest. The attestation carries build timestamps, so
+// the digest changes on every build even when every layer is CACHED and
+// the resulting filesystem is byte-identical -- measured directly on
+// 25/09: two consecutive builds gave different .Id values with identical
+// RootFS layers and identical Config.
+//
+// That is why the first sessions each recorded a different image_digest
+// while running the same environment: the column was recording BuildKit's
+// attestation nonce, not the container. Without the attestation the id is
+// the image manifest digest, which is stable for identical content -- so
+// a digest that changes now means the environment really changed, which is
+// exactly what the drift guard in run-session.mjs is there to catch.
 export function buildImage() {
   const result = docker([
-    'build', '-f', resolve(REPO, 'runner', 'Dockerfile.session'),
+    'build', '--provenance=false', '-f', resolve(REPO, 'runner', 'Dockerfile.session'),
     '-t', SESSION_IMAGE, resolve(REPO, 'runner'),
   ]);
   if (result.status !== 0) {

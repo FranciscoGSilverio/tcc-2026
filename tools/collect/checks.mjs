@@ -82,15 +82,30 @@ function everyValidSessionEvaluated(rows) {
   return { id: 3, name: 'toda sessão válida foi avaliada', failures, notes: [] };
 }
 
-// The eight sessions collected while prepare() still rebuilt the image
-// before every run, each one carrying its own digest -- the defect
-// runner/build-image.mjs fixed on 23/09/2026. Verification 4 excludes
-// them by name and reports them, instead of inferring the boundary from
-// the data: any rule that inferred it (longest constant suffix, first
-// repeated digest) would also read a rebuild in the middle of the
-// collection as "a new regime starting here", which is precisely the
+// The sessions collected while image_digest could not hold still.
+//
+// Two separate causes, both now fixed, and both producing the same
+// symptom -- a different digest per session for one unchanging
+// environment. Until 23/09 prepare() rebuilt the image before every run.
+// And until 25/09 buildImage() let BuildKit attach a provenance
+// attestation, whose build timestamps changed .Id on every build even when
+// every layer was CACHED: measured directly, two consecutive builds gave
+// different .Id with identical RootFS layers and identical Config.
+//
+// So the environment never actually drifted -- the column was recording
+// BuildKit's nonce. These rows keep the digests that were measured rather
+// than being rewritten with one inferred later: the images they ran on are
+// gone and their content cannot be checked now, and replacing a measured
+// value with a plausible one is not something a dataset should carry.
+// Verification 4 excludes them by name and reports them, so the exclusion
+// is visible in every run of the auditor.
+//
+// They are named here rather than inferred from the data, because any rule
+// that inferred the boundary would also read a rebuild in the middle of
+// the collection as "a new regime starting here", which is precisely the
 // event this verification exists to catch.
-export const PRE_BUILD_ONCE = new Set([
+export const PRE_STABLE_DIGEST = new Set([
+  // Rebuilt per session, before runner/build-image.mjs existed.
   'T1-P0-O1-mu4t4rvp',
   'T1-P0-O1-mu69pgsx',
   'T1-P1-O1-mu69tn5j',
@@ -99,6 +114,9 @@ export const PRE_BUILD_ONCE = new Set([
   'T2-P0-O1-muddre1p',
   'T1-P2-O1-mue3d690',
   'T1-P0-O2-mue3ic8e',
+  // Built once, but before --provenance=false made the digest stable.
+  'T2-P2-O2-mug80u5e',
+  'T2-P0-O1-mug8g8uw',
 ]);
 
 // Groups the sessions by the value of a column that the protocol holds
@@ -119,7 +137,7 @@ function constantColumn({ id, name, rows, column, excluded = new Set() }) {
 
   const skipped = rows.filter((row) => excluded.has(row.session_id)).map((row) => row.session_id);
   const notes = skipped.length > 0
-    ? [`${skipped.length} sessão(ões) anterior(es) ao regime de imagem única, fora desta verificação: ${skipped.join(', ')}`]
+    ? [`${skipped.length} sessão(ões) anterior(es) ao digest estável, fora desta verificação: ${skipped.join(', ')}`]
     : [];
 
   return { id, name, failures, notes };
@@ -240,7 +258,7 @@ export function checkDataset({ rows, repoRoot, load = loadTranscript }) {
     unexpectedEmptyColumns(rows),
     everyValidSessionEvaluated(rows),
     constantColumn({
-      id: 4, name: 'image_digest constante', rows, column: 'image_digest', excluded: PRE_BUILD_ONCE,
+      id: 4, name: 'image_digest constante', rows, column: 'image_digest', excluded: PRE_STABLE_DIGEST,
     }),
     constantColumn({ id: 5, name: 'cli_version constante', rows, column: 'cli_version' }),
     pluginLoadedInP2(rows, repoRoot, read),

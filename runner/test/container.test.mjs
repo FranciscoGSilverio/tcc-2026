@@ -15,6 +15,17 @@ test('builds the session image and reports an id', () => {
   assert.match(imageId('meeting-rooms-session:1.0.0'), /^sha256:/);
 });
 
+// The property the whole image_digest column rests on. Before
+// --provenance=false this failed: BuildKit's provenance attestation
+// carries build timestamps, so rebuilding identical content produced a new
+// .Id every time, and the eight sessions collected before 25/09 each
+// recorded a different digest for the same environment.
+test('rebuilding identical content reports the same id', () => {
+  const first = imageId('meeting-rooms-session:1.0.0');
+  buildImage();
+  assert.equal(imageId('meeting-rooms-session:1.0.0'), first);
+});
+
 test('the image carries the pinned agent cli', () => {
   start({ name: NAME, outDir, hostPort: 3510, env: {} });
   const result = exec(NAME, ['claude', '--version']);

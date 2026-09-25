@@ -282,13 +282,13 @@
   <line x1="20" y1="350" x2="960" y2="350" stroke="var(--line)"/>
   <text class="s-big" x="20"  y="392" fill="var(--ink)">50</text>
   <text class="s-sm"  x="20"  y="412" fill="var(--soft)">sessões no total</text>
-  <text class="s-big" x="180" y="392" fill="var(--ink)">7</text>
+  <text class="s-big" x="180" y="392" fill="var(--ink)">8</text>
   <text class="s-sm"  x="180" y="412" fill="var(--soft)">já coletadas</text>
-  <text class="s-big" x="330" y="392" fill="var(--gate)">43</text>
+  <text class="s-big" x="330" y="392" fill="var(--gate)">42</text>
   <text class="s-sm"  x="330" y="412" fill="var(--soft)">a coletar</text>
 </svg>
 </div>
-<figcaption>As células de modelo só repetem as duas configurações extremas — sem contexto e ordem simples, contra contexto máximo e ordem segmentada — para ver se o efeito do contexto e da ordem depende do modelo.</figcaption>
+<figcaption>Contagens de 25/09/2026. As células de modelo só repetem as duas configurações extremas — sem contexto e ordem simples, contra contexto máximo e ordem segmentada — para ver se o efeito do contexto e da ordem depende do modelo.</figcaption>
 </figure>
 
 <div class="note cond">
@@ -492,7 +492,7 @@
 <table>
 <thead><tr><th>Constante</th><th>Como é mantida</th></tr></thead>
 <tbody>
-<tr><td>Imagem do contêiner</td><td>Construída <strong>uma vez</strong> por <code>runner/build-image.mjs</code>. Toda sessão grava o digest, e o runner recusa rodar se o digest divergir do que o dataset já tem.</td></tr>
+<tr><td>Imagem do contêiner</td><td>Construída <strong>uma vez</strong> por <code>runner/build-image.mjs</code>, com <code>--provenance=false</code> para que builds de conteúdo idêntico deem o mesmo digest. Toda sessão grava o digest, e o runner recusa rodar se ele divergir do que o dataset já tem.</td></tr>
 <tr><td>Versão do CLI do agente</td><td>Gravada por sessão; o auditor exige que seja uma só em toda a coleta.</td></tr>
 <tr><td>Repositório-semente</td><td>Congelado. Os testes da semente são restaurados a partir do commit congelado antes de medir regressão.</td></tr>
 <tr><td>Enunciados e etapas de O2</td><td>Arquivos versionados; a sequência que roda e a sequência publicada vêm do mesmo lugar.</td></tr>
@@ -520,7 +520,8 @@
 <tr><td>Nível de contexto obrigatório</td><td><code>--p P1</code> gravava P1 e o contêiner não recebia contexto nenhum. O parâmetro deixou de ter valor padrão: omitir dá erro.</td></tr>
 <tr><td>Modelo conferido no transcript</td><td>Uma sessão gravou &#8220;Haiku&#8221; numa coluna que é fator experimental, porque a ferramenta pegava a primeira chave do relatório em vez do modelo que fez o trabalho.</td></tr>
 <tr><td>Plugin conferido no init</td><td>Uma sessão P2 cujo plugin não carrega é uma sessão P1 com passos a mais. O evento de inicialização lista o que carregou de fato — dá para conferir, em vez de torcer.</td></tr>
-<tr><td>Digest da imagem estável</td><td>As oito primeiras sessões gravaram oito digests diferentes, porque a imagem era reconstruída antes de cada uma. A coluna que devia evidenciar a constante contradizia a constante.</td></tr>
+<tr><td>Digest da imagem estável</td><td>As nove primeiras sessões gravaram nove digests diferentes para o <strong>mesmo</strong> ambiente. Duas causas: a imagem era reconstruída antes de cada sessão (até 23/09), e o BuildKit anexava um atestado de proveniência cujos timestamps trocavam o <code>.Id</code> a cada build, mesmo com todas as camadas em cache (até 25/09). A coluna registrava o nonce do build, não o contêiner.</td></tr>
+<tr><td>Diff contra o commit inicial</td><td>O diff era tirado contra o índice (<code>git diff --cached</code>), e um agente que commitasse o próprio trabalho esvaziava o índice: a sessão gravava <code>session.diff</code> vazio para uma implementação inteira, e com ele <code>qualidade</code>, <code>violacoes</code> e <code>travou_sem_diff</code> errados. Aconteceu de verdade em 25/09.</td></tr>
 <tr><td>Varredura de vestígios</td><td>Qualquer diretório ou palavra do estudo alcançável dentro da cópia de trabalho aborta a sessão antes de o agente ver.</td></tr>
 </tbody>
 </table>
@@ -806,7 +807,7 @@ node runner/build-image.mjs</pre>
 <ol class="steps">
 <li><strong>Veja o que vai rodar, sem gastar nada</strong>
 <pre>node tools/collect/run-grid.mjs --dry-run</pre>
-<p>Imprime a semente do embaralhamento, quantas faltam por bloco, e a lista numerada. Hoje deve dizer <code>faltam 43 sessões (principal: 23, modelo: 20)</code>. Confira esse número antes de autorizar qualquer gasto.</p></li>
+<p>Imprime a semente do embaralhamento, quantas faltam por bloco, e a lista numerada. Em 25/09/2026 dizia <code>faltam 42 sessões (principal: 23, modelo: 19)</code>. Confira esse número antes de autorizar qualquer gasto.</p></li>
 
 <li><strong>Rode o primeiro lote pequeno</strong>
 <pre>node tools/collect/run-grid.mjs <b>--limite 2</b></pre>
@@ -839,7 +840,7 @@ node tools/collect/check-dataset.mjs</pre>
 <p>Pode rodar quantas vezes quiser, inclusive depois da coleta inteira. Não escreve nada em lugar nenhum. As oito verificações: linha inválida sem substituta; coluna vazia fora do previsto; sessão válida não avaliada; digest da imagem constante; versão do CLI constante; plugin carregado em toda sessão P2; transcript íntegro com o número certo de eventos; e nenhum erro reportado pelo CLI.</p>
 
 <div class="note">
-<p>A verificação do digest exclui, <strong>nomeando-as</strong>, as sete sessões coletadas antes de 23/09 — cada uma tem seu próprio digest, porque a imagem era reconstruída antes de cada sessão até aquela data. É uma nota, não uma reprovação, e a análise precisa saber que essas sete não compartilham imagem com as outras 43.</p>
+<p>A verificação do digest exclui, <strong>nomeando-as</strong>, as nove sessões coletadas antes de o digest ficar estável — cada uma tem o seu, e nenhuma delas por o ambiente ter mudado. É uma nota, não uma reprovação. A análise precisa saber que, para essas nove, a evidência de que o ambiente era o mesmo não é a coluna: é a imagem base presa por digest, o <code>package-lock.json</code> e o hash da árvore <code>seed/</code>, como o dicionário registra. <strong>Elas mantêm o valor medido e não foram reescritas</strong> — as imagens em que rodaram não existem mais, e trocar valor medido por valor inferido não é coisa que um dataset deva carregar.</p>
 </div>
 
 <h2>Referência de flags do driver</h2>
