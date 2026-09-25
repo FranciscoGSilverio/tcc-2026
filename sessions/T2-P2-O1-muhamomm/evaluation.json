@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O1-muhamomm",
+  "evaluatedAt": "2026-09-25T18:53:04.882Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A função `getRoomAvailability` com toda a lógica de cálculo de slots livres foi adicionada em `service.ts`, e a rota em `routes.ts` apenas chama `service.getRoomAvailability(request.query)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A query da nova rota é validada pelo schema `AvailabilityQuery` (roomId, from, to, duration) usado em `{ schema: { querystring: AvailabilityQuery, ... } }`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros de caminho são lançados explicitamente com `throw notFound('Room')` e `throw validationFailed('\"from\" must be before \"to\"')`, testados como 404 e 400 respectivamente."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz valores fixos como durações ou janelas hardcoded (o parâmetro `duration` vem da query), então não há evidência de literais que precisassem ser nomeados."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e checam apenas `statusCode` e o JSON de resposta (`response.json().data`), sem acessar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reutiliza `parseInstant`, `isBefore` e `durationMinutes` de `shared/time.ts` e `notFound`/`validationFailed` de `shared/errors.ts` em vez de reimplementar essa lógica."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.028678000000000002
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff cria uma nova rota GET /bookings/availability, com schema, service e repository próprios, sem alterar o endpoint de listagem existente nem o corpo do erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O service getRoomAvailability monta 'slots' a partir dos gaps entre reservas ativas e retorna esses intervalos livres; os testes confirmam que o retorno são os horários disponíveis, não os ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots são calculados a partir dos horários reais de início/fim das reservas ativas (cursor avança conforme startsAt/endsAt de cada booking), não em blocos fixos de tempo; o parâmetro 'duration' apenas filtra por duração mínima, não define granularidade dos slots."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige 'from' e 'to' como strings obrigatórias (sem Optional), e o service lança erro de validação se from não for antes de to; não há default de dia ou semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem a uma janela de 24h fixa nem configuração de limite; o intervalo é inteiramente definido pelos parâmetros from/to informados pelo cliente."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige roomId como string única obrigatória e o service busca uma única room via roomsRepository.findById(query.roomId), sem suporte a múltiplas salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff usa parseInstant e o tipo DateString já existentes no projeto, mas não introduz nenhuma indicação explícita de fuso horário (UTC ou local) no contrato da nova rota."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns the full window as available when there are no bookings' confirma que, sem reservas, o slot único cobre todo o intervalo from-to, ou seja, tudo é considerado livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma lógica no service ou schema que filtre ou trate especificamente horários passados; o cálculo dos slots depende apenas do intervalo from/to fornecido, sem checagem contra o momento atual."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O diff não modifica routes/service/schema relacionados à criação de reserva (createBooking) nem ao erro bookingConflict; a nova funcionalidade é implementada como endpoint separado, sem tocar no contrato do POST existente."
+      }
+    },
+    "costUsd": 0.024072
+  },
+  "totalCostUsd": 0.052750000000000005
+}

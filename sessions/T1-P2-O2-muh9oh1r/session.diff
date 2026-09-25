@@ -1,0 +1,398 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..42e60f2 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -20,17 +20,25 @@ export interface BookingFilter {
+   offset: number;
+ }
+ 
++export interface OverlapQuery {
++  roomId: string;
++  startsAt: Date;
++  endsAt: Date;
++  excludeId?: string;
++}
++
+ export function create(data: BookingData): Promise<Booking> {
+   return prisma.booking.create({ data });
+ }
+ 
+-export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Booking | null> {
++export function findOverlapping(query: OverlapQuery): Promise<Booking | null> {
+   return prisma.booking.findFirst({
+     where: {
+-      roomId,
++      roomId: query.roomId,
+       status: BOOKING_ACTIVE,
+-      startsAt: { lte: startsAt },
+-      endsAt: { gt: startsAt },
++      startsAt: { lt: query.endsAt },
++      endsAt: { gt: query.startsAt },
++      ...(query.excludeId ? { id: { not: query.excludeId } } : {}),
+     },
+   });
+ }
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..6766890 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -1,24 +1,72 @@
+ import type { Booking } from '@prisma/client';
+-import { bookingConflict, notFound } from '../../shared/errors.js';
++import { bookingConflict, notFound, validationFailed } from '../../shared/errors.js';
+ import {
+   normalizeLimit,
+   normalizeOffset,
+   paginated,
+   type Page,
+ } from '../../shared/pagination.js';
+-import { parseInstant } from '../../shared/time.js';
++import { durationMinutes, isBefore, parseInstant } from '../../shared/time.js';
++import { getRoom } from '../rooms/service.js';
++import { getUser } from '../users/service.js';
+ import * as repository from './repository.js';
+-import { BOOKING_CANCELLED } from './schema.js';
++import { BOOKING_ACTIVE, BOOKING_CANCELLED } from './schema.js';
+ import type { CreateBookingInput, ListBookingsInput, UpdateBookingInput } from './schema.js';
+ 
+-export async function createBooking(input: CreateBookingInput): Promise<Booking> {
+-  const startsAt = parseInstant(input.startsAt);
+-  const endsAt = parseInstant(input.endsAt);
++const MIN_DURATION_MINUTES = 30;
++const MAX_DURATION_MINUTES = 8 * 60;
++
++function assertInterval(startsAt: Date, endsAt: Date): void {
++  if (!isBefore(startsAt, endsAt)) {
++    throw validationFailed('Booking must end after it starts');
++  }
++  const minutes = durationMinutes(startsAt, endsAt);
++  if (minutes < MIN_DURATION_MINUTES) {
++    throw validationFailed('Booking is shorter than the minimum duration', {
++      minimumMinutes: MIN_DURATION_MINUTES,
++    });
++  }
++  if (minutes > MAX_DURATION_MINUTES) {
++    throw validationFailed('Booking is longer than the maximum duration', {
++      maximumMinutes: MAX_DURATION_MINUTES,
++    });
++  }
++}
+ 
+-  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
++function assertFuture(startsAt: Date): void {
++  if (isBefore(startsAt, new Date())) {
++    throw validationFailed('Booking cannot start in the past');
++  }
++}
++
++async function assertNoOverlap(
++  roomId: string,
++  startsAt: Date,
++  endsAt: Date,
++  excludeId?: string,
++): Promise<void> {
++  const conflict = await repository.findOverlapping({
++    roomId,
++    startsAt,
++    endsAt,
++    ...(excludeId ? { excludeId } : {}),
++  });
+   if (conflict) {
+     throw bookingConflict(conflict.id);
+   }
++}
++
++export async function createBooking(input: CreateBookingInput): Promise<Booking> {
++  const startsAt = parseInstant(input.startsAt);
++  const endsAt = parseInstant(input.endsAt);
++
++  assertInterval(startsAt, endsAt);
++  assertFuture(startsAt);
++
++  await getRoom(input.roomId);
++  await getUser(input.userId);
++
++  await assertNoOverlap(input.roomId, startsAt, endsAt);
+ 
+   return repository.create({
+     roomId: input.roomId,
+@@ -53,13 +101,35 @@ export async function listBookings(query: ListBookingsInput): Promise<Page<Booki
+ }
+ 
+ export async function updateBooking(id: string, input: UpdateBookingInput): Promise<Booking> {
+-  await getBooking(id);
++  const current = await getBooking(id);
++
++  const roomId = input.roomId ?? current.roomId;
++  const startsAt =
++    input.startsAt !== undefined ? parseInstant(input.startsAt) : current.startsAt;
++  const endsAt = input.endsAt !== undefined ? parseInstant(input.endsAt) : current.endsAt;
++
++  if (input.userId !== undefined) {
++    await getUser(input.userId);
++  }
++
++  const touchesSchedule =
++    input.roomId !== undefined || input.startsAt !== undefined || input.endsAt !== undefined;
++
++  if (touchesSchedule) {
++    assertInterval(startsAt, endsAt);
++    assertFuture(startsAt);
++    await getRoom(roomId);
++    if (current.status === BOOKING_ACTIVE) {
++      await assertNoOverlap(roomId, startsAt, endsAt, id);
++    }
++  }
++
+   return repository.update(id, {
+     ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+     ...(input.userId !== undefined ? { userId: input.userId } : {}),
+     ...(input.title !== undefined ? { title: input.title } : {}),
+-    ...(input.startsAt !== undefined ? { startsAt: parseInstant(input.startsAt) } : {}),
+-    ...(input.endsAt !== undefined ? { endsAt: parseInstant(input.endsAt) } : {}),
++    ...(input.startsAt !== undefined ? { startsAt } : {}),
++    ...(input.endsAt !== undefined ? { endsAt } : {}),
+   });
+ }
+ 
+diff --git a/tests/bookings.test.ts b/tests/bookings.test.ts
+index 7b4db38..6bfddbb 100644
+--- a/tests/bookings.test.ts
++++ b/tests/bookings.test.ts
+@@ -1,5 +1,6 @@
+ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+ import type { FastifyInstance } from 'fastify';
++import { prisma } from '../src/db/client.js';
+ import { createTestApp, resetDb } from './helpers/app.js';
+ 
+ const HOUR = 3_600_000;
+@@ -180,4 +181,229 @@ describe('bookings', () => {
+     const response = await book(24.5, 25.5, 'Overlap');
+     expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+   });
++
++  it('rejects a booking that starts before and overlaps an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23.5, 24.5, 'Leading overlap');
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('rejects a booking that fully contains an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23, 26, 'Around');
++    expect(response.statusCode).toBe(409);
++  });
++
++  it('accepts a booking that ends exactly when another starts', async () => {
++    const later = await book(24, 25);
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: {
++        roomId,
++        userId,
++        title: 'Before',
++        startsAt: inHours(23),
++        endsAt: later.json().startsAt,
++      },
++    });
++    expect(response.statusCode).toBe(201);
++  });
++
++  it('rejects a booking that ends before it starts', async () => {
++    const response = await book(25, 24, 'Backwards');
++    expect(response.statusCode).toBe(400);
++    expect(response.json().error.code).toBe('VALIDATION_ERROR');
++  });
++
++  it('rejects a booking that ends at the instant it starts', async () => {
++    const instant = inHours(24);
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId, title: 'Empty', startsAt: instant, endsAt: instant },
++    });
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('rejects a booking shorter than thirty minutes', async () => {
++    const response = await book(24, 24 + 29 / 60, 'Too short');
++    expect(response.statusCode).toBe(400);
++    expect(response.json().error.details.minimumMinutes).toBe(30);
++  });
++
++  it('accepts a booking of exactly thirty minutes', async () => {
++    const response = await book(24, 24.5, 'Exactly the minimum');
++    expect(response.statusCode).toBe(201);
++  });
++
++  it('rejects a booking longer than eight hours', async () => {
++    const response = await book(24, 33, 'Too long');
++    expect(response.statusCode).toBe(400);
++    expect(response.json().error.details.maximumMinutes).toBe(480);
++  });
++
++  it('accepts a booking of exactly eight hours', async () => {
++    const response = await book(24, 32, 'Exactly the maximum');
++    expect(response.statusCode).toBe(201);
++  });
++
++  it('rejects a booking that starts in the past', async () => {
++    const response = await book(-2, -1, 'Yesterday');
++    expect(response.statusCode).toBe(400);
++    expect(response.json().error.code).toBe('VALIDATION_ERROR');
++  });
++
++  it('rejects a booking that started in the past and ends in the future', async () => {
++    const response = await book(-1, 1, 'Ongoing');
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('answers 404 for a booking that points at a room that does not exist', async () => {
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: {
++        roomId: 'missing-room',
++        userId,
++        title: 'Sync',
++        startsAt: inHours(24),
++        endsAt: inHours(25),
++      },
++    });
++    expect(response.statusCode).toBe(404);
++    expect(response.json().error.code).toBe('NOT_FOUND');
++  });
++
++  it('answers 404 for a booking that points at a user that does not exist', async () => {
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: {
++        roomId,
++        userId: 'missing-user',
++        title: 'Sync',
++        startsAt: inHours(24),
++        endsAt: inHours(25),
++      },
++    });
++    expect(response.statusCode).toBe(404);
++  });
++
++  it('rejects a reschedule that overlaps another active booking', async () => {
++    const first = await book(24, 25);
++    const second = await book(26, 27, 'Later');
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { startsAt: inHours(24.5), endsAt: inHours(25.5) },
++    });
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
++  });
++
++  it('accepts a reschedule that keeps the booking in its own slot', async () => {
++    const created = await book(24, 25);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${created.json().id}`,
++      payload: { startsAt: created.json().startsAt, endsAt: created.json().endsAt },
++    });
++    expect(response.statusCode).toBe(200);
++  });
++
++  it('rejects a reschedule that inverts the interval', async () => {
++    const created = await book(24, 25);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${created.json().id}`,
++      payload: { endsAt: inHours(23) },
++    });
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('rejects a reschedule into the past', async () => {
++    const created = await book(24, 25);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${created.json().id}`,
++      payload: { startsAt: inHours(-2), endsAt: inHours(-1) },
++    });
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('rejects a reschedule that stretches past the maximum duration', async () => {
++    const created = await book(24, 25);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${created.json().id}`,
++      payload: { endsAt: inHours(33) },
++    });
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('answers 404 when a reschedule points at a room that does not exist', async () => {
++    const created = await book(24, 25);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${created.json().id}`,
++      payload: { roomId: 'missing-room' },
++    });
++    expect(response.statusCode).toBe(404);
++  });
++
++  it('answers 404 when a reschedule points at a user that does not exist', async () => {
++    const created = await book(24, 25);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${created.json().id}`,
++      payload: { userId: 'missing-user' },
++    });
++    expect(response.statusCode).toBe(404);
++  });
++
++  it('renames a booking whose start already passed', async () => {
++    const past = await prisma.booking.create({
++      data: {
++        roomId,
++        userId,
++        title: 'Yesterday',
++        startsAt: new Date(Date.now() - 2 * HOUR),
++        endsAt: new Date(Date.now() - HOUR),
++      },
++    });
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${past.id}`,
++      payload: { title: 'Renamed afterwards' },
++    });
++    expect(response.statusCode).toBe(200);
++    expect(response.json().title).toBe('Renamed afterwards');
++  });
++
++  it('accepts a reschedule into a slot released by a cancellation', async () => {
++    const first = await book(24, 25);
++    const second = await book(26, 27, 'Later');
++    await app.inject({ method: 'POST', url: `/bookings/${first.json().id}/cancel` });
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { startsAt: inHours(24.5), endsAt: inHours(25.5) },
++    });
++    expect(response.statusCode).toBe(200);
++  });
++
++  it('lets a cancelled booking be rescheduled onto an occupied slot', async () => {
++    await book(24, 25);
++    const second = await book(26, 27, 'Later');
++    await app.inject({ method: 'POST', url: `/bookings/${second.json().id}/cancel` });
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { startsAt: inHours(24.5), endsAt: inHours(25.5) },
++    });
++    expect(response.statusCode).toBe(200);
++    expect(response.json().status).toBe('CANCELLED');
++  });
+ });

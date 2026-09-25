@@ -1,0 +1,215 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..d63c313 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -35,6 +35,18 @@ export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Boo
+   });
+ }
+ 
++export function findActiveOverlapping(roomId: string, from: Date, to: Date): Promise<Booking[]> {
++  return prisma.booking.findMany({
++    where: {
++      roomId,
++      status: BOOKING_ACTIVE,
++      startsAt: { lt: to },
++      endsAt: { gt: from },
++    },
++    orderBy: { startsAt: 'asc' },
++  });
++}
++
+ export function findById(id: string): Promise<Booking | null> {
+   return prisma.booking.findUnique({ where: { id } });
+ }
+diff --git a/src/modules/bookings/routes.ts b/src/modules/bookings/routes.ts
+index 82aa79c..ba7a5c6 100644
+--- a/src/modules/bookings/routes.ts
++++ b/src/modules/bookings/routes.ts
+@@ -1,5 +1,7 @@
+ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
+ import {
++  AvailabilityQuery,
++  AvailabilityResponse,
+   BookingIdParams,
+   BookingPage,
+   BookingResponse,
+@@ -16,6 +18,10 @@ export const bookingsRoutes: FastifyPluginAsyncTypebox = async (app) => {
+   app.get('/', { schema: { querystring: ListBookingsQuery, response: { 200: BookingPage } } },
+     async (request) => service.listBookings(request.query));
+ 
++  app.get('/availability',
++    { schema: { querystring: AvailabilityQuery, response: { 200: AvailabilityResponse } } },
++    async (request) => ({ data: await service.getRoomAvailability(request.query) }));
++
+   app.get('/:id', { schema: { params: BookingIdParams, response: { 200: BookingResponse } } },
+     async (request) => service.getBooking(request.params.id));
+ 
+diff --git a/src/modules/bookings/schema.ts b/src/modules/bookings/schema.ts
+index 9069332..ee6aee9 100644
+--- a/src/modules/bookings/schema.ts
++++ b/src/modules/bookings/schema.ts
+@@ -50,6 +50,24 @@ export const BookingPage = Type.Object({
+   }),
+ });
+ 
++export const AvailabilityQuery = Type.Object({
++  roomId: Type.String({ minLength: 1 }),
++  from: Type.String({ minLength: 1 }),
++  to: Type.String({ minLength: 1 }),
++  duration: Type.Optional(Type.Integer({ minimum: 1 })),
++});
++
++export const AvailabilitySlot = Type.Object({
++  startsAt: DateString,
++  endsAt: DateString,
++});
++
++export const AvailabilityResponse = Type.Object({
++  data: Type.Array(AvailabilitySlot),
++});
++
+ export type CreateBookingInput = Static<typeof CreateBookingBody>;
+ export type UpdateBookingInput = Static<typeof UpdateBookingBody>;
+ export type ListBookingsInput = Static<typeof ListBookingsQuery>;
++export type AvailabilityInput = Static<typeof AvailabilityQuery>;
++export type AvailabilitySlotOutput = Static<typeof AvailabilitySlot>;
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..4b5de0c 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -1,15 +1,22 @@
+ import type { Booking } from '@prisma/client';
+-import { bookingConflict, notFound } from '../../shared/errors.js';
++import { bookingConflict, notFound, validationFailed } from '../../shared/errors.js';
++import * as roomsRepository from '../rooms/repository.js';
+ import {
+   normalizeLimit,
+   normalizeOffset,
+   paginated,
+   type Page,
+ } from '../../shared/pagination.js';
+-import { parseInstant } from '../../shared/time.js';
++import { durationMinutes, isBefore, parseInstant } from '../../shared/time.js';
+ import * as repository from './repository.js';
+ import { BOOKING_CANCELLED } from './schema.js';
+-import type { CreateBookingInput, ListBookingsInput, UpdateBookingInput } from './schema.js';
++import type {
++  AvailabilityInput,
++  AvailabilitySlotOutput,
++  CreateBookingInput,
++  ListBookingsInput,
++  UpdateBookingInput,
++} from './schema.js';
+ 
+ export async function createBooking(input: CreateBookingInput): Promise<Booking> {
+   const startsAt = parseInstant(input.startsAt);
+@@ -75,3 +82,39 @@ export async function deleteBooking(id: string): Promise<void> {
+   await getBooking(id);
+   await repository.remove(id);
+ }
++
++export async function getRoomAvailability(query: AvailabilityInput): Promise<AvailabilitySlotOutput[]> {
++  const room = await roomsRepository.findById(query.roomId);
++  if (!room) {
++    throw notFound('Room');
++  }
++
++  const from = parseInstant(query.from);
++  const to = parseInstant(query.to);
++  if (!isBefore(from, to)) {
++    throw validationFailed('"from" must be before "to"');
++  }
++
++  const busy = await repository.findActiveOverlapping(query.roomId, from, to);
++
++  const slots: AvailabilitySlotOutput[] = [];
++  let cursor = from;
++  for (const booking of busy) {
++    const busyStart = isBefore(booking.startsAt, from) ? from : booking.startsAt;
++    if (isBefore(cursor, busyStart)) {
++      slots.push({ startsAt: cursor, endsAt: busyStart });
++    }
++    if (isBefore(cursor, booking.endsAt)) {
++      cursor = booking.endsAt;
++    }
++  }
++  if (isBefore(cursor, to)) {
++    slots.push({ startsAt: cursor, endsAt: to });
++  }
++
++  const minDuration = query.duration;
++  if (minDuration === undefined) {
++    return slots;
++  }
++  return slots.filter((slot) => durationMinutes(slot.startsAt, slot.endsAt) >= minDuration);
++}
+diff --git a/tests/bookings.test.ts b/tests/bookings.test.ts
+index 7b4db38..66602e2 100644
+--- a/tests/bookings.test.ts
++++ b/tests/bookings.test.ts
+@@ -180,4 +180,65 @@ describe('bookings', () => {
+     const response = await book(24.5, 25.5, 'Overlap');
+     expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+   });
++
++  async function availability(from: number, to: number, duration?: number) {
++    const params = new URLSearchParams({
++      roomId,
++      from: inHours(from),
++      to: inHours(to),
++    });
++    if (duration !== undefined) params.set('duration', String(duration));
++    return app.inject({ method: 'GET', url: `/bookings/availability?${params.toString()}` });
++  }
++
++  it('returns the full window as available when there are no bookings', async () => {
++    const response = await availability(24, 26);
++    expect(response.statusCode).toBe(200);
++    expect(response.json().data).toHaveLength(1);
++  });
++
++  it('excludes an active booking from the availability window', async () => {
++    const created = await book(24, 25);
++    const response = await availability(24, 26);
++    const slots = response.json().data;
++    expect(slots).toHaveLength(1);
++    expect(slots[0].startsAt).toBe(created.json().endsAt);
++  });
++
++  it('returns free slots before and after a busy interval', async () => {
++    const created = await book(24.5, 25.5);
++    const response = await availability(24, 26);
++    const slots = response.json().data;
++    expect(slots).toHaveLength(2);
++    expect(slots[0].endsAt).toBe(created.json().startsAt);
++    expect(slots[1].startsAt).toBe(created.json().endsAt);
++  });
++
++  it('treats a cancelled booking as available again', async () => {
++    const created = await book(24, 25);
++    await app.inject({ method: 'POST', url: `/bookings/${created.json().id}/cancel` });
++    const response = await availability(24, 26);
++    expect(response.json().data).toHaveLength(1);
++  });
++
++  it('filters out free slots shorter than the requested duration', async () => {
++    const created = await book(24.5, 25);
++    const response = await availability(24, 26.5, 45);
++    const slots = response.json().data;
++    expect(slots).toHaveLength(1);
++    expect(slots[0].startsAt).toBe(created.json().endsAt);
++  });
++
++  it('answers 404 for availability of a room that does not exist', async () => {
++    const response = await app.inject({
++      method: 'GET',
++      url: `/bookings/availability?roomId=missing&from=${encodeURIComponent(inHours(0))}&to=${encodeURIComponent(inHours(1))}`,
++    });
++    expect(response.statusCode).toBe(404);
++  });
++
++  it('rejects an availability window where "from" is not before "to"', async () => {
++    const response = await availability(26, 24);
++    expect(response.statusCode).toBe(400);
++  });
+ });

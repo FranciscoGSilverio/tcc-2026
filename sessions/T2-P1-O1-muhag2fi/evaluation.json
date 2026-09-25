@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P1-O1-muhag2fi",
+  "evaluatedAt": "2026-09-25T18:52:30.260Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A lógica de disponibilidade (cálculo de slots livres, validação de janela, checagem de conflito) está em service.ts (`export async function getAvailability(...)`), enquanto routes.ts só chama `service.getAvailability(request.query)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A nova query é validada via schema TypeBox `AvailabilityQuery = Type.Object({ roomId: Type.String(...), from: Type.String(...), to: Type.String(...) })` usado em `querystring: AvailabilityQuery` na rota."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os caminhos de erro lançam `notFound` (via `getRoom`), `validationFailed('\"from\" must be before \"to\"', ...)` e `bookingConflict(conflict.id)`, que mapeiam para 404/400/409 conforme os testes (`expect(response.statusCode).toBe(404/400/409)`)."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhum valor fixo novo (duração, limite ou janela) que precisasse ser nomeado; não há evidência no diff de constantes criadas ou de literais que deveriam ter sido nomeados."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos verificam apenas comportamento observável via HTTP, como `expect(response.statusCode).toBe(409)` e `expect(response.json().slots).toEqual([...])`, sem acessar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reusa utilitários existentes como `parseInstant` e `isBefore` de `shared/time.ts` (`import { isBefore, parseInstant } from '../../shared/time.js'`) em vez de reimplementar parsing/comparação de datas."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.03218
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff cria uma nova rota GET /bookings/availability, com schema, service e repository próprios, sem alterar a listagem existente nem enriquecer o erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O service getAvailability calcula os 'gaps' entre reservas ativas e retorna apenas os slots livres (startsAt/endsAt), não as reservas ocupadas."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots retornados são calculados dinamicamente a partir das reservas sobrepostas (cursor avançando conforme startsAt/endsAt de cada booking), sem tamanho fixo nem parâmetro de granularidade."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige 'from' e 'to' como strings obrigatórias (minLength: 1), sem valor padrão definido no schema ou service."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma validação ou restrição de horário comercial, 24h ou configuração de limite de horário no código; apenas valida-se que from < to."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery define roomId como Type.String único obrigatório, e o service busca disponibilidade para essa sala específica via getRoom(query.roomId)."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não define explicitamente fuso horário no contrato; usa parseInstant e DateString sem indicar UTC, local ou especificação explícita de timezone."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window as free when there are no bookings' confirma que, sem reservas, o slot retornado cobre toda a janela from-to como livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhum filtro ou tratamento especial para janelas no passado; apenas valida-se from < to, sem checar se está no passado."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro bookingConflict continua sendo lançado da mesma forma no createBooking/updateBooking, sem alteração no payload ou sugestão de horários alternativos no 409."
+      }
+    },
+    "costUsd": 0.027894000000000002
+  },
+  "totalCostUsd": 0.060074
+}

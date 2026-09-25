@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P1-O2-muhawah5",
+  "evaluatedAt": "2026-09-25T18:53:16.875Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "As novas funções assertValidPeriod e assertRoomAndUserExist, além da lógica de conflito, foram adicionadas em service.ts, não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "A validação é feita imperativamente em código (ex: 'if (!isBefore(startsAt, endsAt)) { throw validationFailed(...) }'), não via schema de validação."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Cada caminho inválido lança um erro tipado com status embutido, ex: 'throw validationFailed(...)', 'throw notFound(\\'Room\\')' e 'throw bookingConflict(conflict.id)'."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Os limites de duração são nomeados em constantes: 'const MIN_DURATION_MINUTES = 30;' e 'const MAX_DURATION_MINUTES = 8 * 60;'."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam 'app.inject' e verificam 'response.statusCode' e 'response.json().error.code', comportamento observável via HTTP, sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff importa e reutiliza utilitários existentes como 'durationMinutes, isBefore, parseInstant' de '../../shared/time.js' e 'bookingConflict, notFound, validationFailed' de '../../shared/errors.js'."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.02703
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.02703
+}
