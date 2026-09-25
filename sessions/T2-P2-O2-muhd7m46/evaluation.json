@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-muhd7m46",
+  "evaluatedAt": "2026-09-25T20:30:56.956Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A rota apenas chama `service.getAvailability(request.query)`, e toda a lógica de cálculo de janelas ocupadas/livres está em `service.ts`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A nova rota `/bookings/availability` usa `schema: { querystring: AvailabilityQuery, response: { 200: AvailabilityResponse } }`, com `AvailabilityQuery` definido via Typebox em `schema.ts`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O serviço lança `throw validationFailed(...)`, `throw notFound('Room')` e `throw bookingConflict(conflict.id)`, erros tipados com status code (400/404/409) que o error handler já trata."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhuma constante nomeada para durações, limites ou janelas de tempo; os valores usados (from/to) vêm diretamente da query, sem literais fixos a nomear."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes fazem `app.inject` e verificam `response.statusCode` e `response.json()` (ex.: `body.busy`, `body.free`), validando comportamento HTTP observável, não implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reusa `parseInstant`, `isBefore` de `shared/time.ts` e `notFound`/`bookingConflict`/`validationFailed` de `shared/errors.ts` em vez de reimplementar essas validações."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.030312
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/availability, com schema, service e repository próprios, sem alterar o comportamento da listagem existente nem enriquecer o erro 409 do POST."
+      },
+      "2": {
+        "categoria": "ambos",
+        "justificativa": "AvailabilityResponse retorna tanto o array `busy` (intervalos ocupados) quanto `free` (intervalos livres), calculados a partir das reservas sobrepostas."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os intervalos de `free`/`busy` são calculados a partir dos horários reais das reservas (clip e cursor), não de slots fixos nem de um parâmetro de granularidade."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige `from` e `to` como strings obrigatórias (minLength: 1), sem valores padrão para dia ou semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição a horário comercial, a 24 horas nem um parâmetro de configuração de limite; a janela é simplesmente definida por from/to."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige um único `roomId` string, e o repository consulta apenas essa sala (findRoomById/findOverlapping por roomId)."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não define nem documenta explicitamente o fuso horário usado (UTC, local, ou explícito no contrato); apenas reutiliza parseInstant/DateString já existentes, sem mudanças aparentes sobre timezone."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window as free when there are no bookings' confirma que, sem reservas, o array `busy` fica vazio e `free` cobre toda a janela solicitada."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhum filtro ou tratamento específico para horários passados; o serviço apenas valida from < to e calcula busy/free sem considerar o momento atual."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "createBooking continua lançando bookingConflict(conflict.id) da mesma forma, sem adicionar sugestões de horários alternativos na resposta do 409."
+      }
+    },
+    "costUsd": 0.027625999999999998
+  },
+  "totalCostUsd": 0.057937999999999996
+}

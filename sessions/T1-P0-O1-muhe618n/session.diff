@@ -1,0 +1,236 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..47bf635 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -35,6 +35,17 @@ export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Boo
+   });
+ }
+ 
++export function findConflict(roomId: string, startsAt: Date, endsAt: Date): Promise<Booking | null> {
++  return prisma.booking.findFirst({
++    where: {
++      roomId,
++      status: BOOKING_ACTIVE,
++      startsAt: { lt: endsAt },
++      endsAt: { gt: startsAt },
++    },
++  });
++}
++
+ export function findById(id: string): Promise<Booking | null> {
+   return prisma.booking.findUnique({ where: { id } });
+ }
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..e0f0768 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -1,5 +1,5 @@
+ import type { Booking } from '@prisma/client';
+-import { bookingConflict, notFound } from '../../shared/errors.js';
++import { bookingConflict, notFound, validationFailed } from '../../shared/errors.js';
+ import {
+   normalizeLimit,
+   normalizeOffset,
+@@ -7,6 +7,8 @@ import {
+   type Page,
+ } from '../../shared/pagination.js';
+ import { parseInstant } from '../../shared/time.js';
++import * as roomRepository from '../rooms/repository.js';
++import * as userRepository from '../users/repository.js';
+ import * as repository from './repository.js';
+ import { BOOKING_CANCELLED } from './schema.js';
+ import type { CreateBookingInput, ListBookingsInput, UpdateBookingInput } from './schema.js';
+@@ -15,7 +17,24 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
+   const startsAt = parseInstant(input.startsAt);
+   const endsAt = parseInstant(input.endsAt);
+ 
+-  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
++  if (startsAt >= endsAt) {
++    throw validationFailed('Booking end time must be after start time', {
++      startsAt: input.startsAt,
++      endsAt: input.endsAt,
++    });
++  }
++
++  const room = await roomRepository.findById(input.roomId);
++  if (!room) {
++    throw notFound('Room');
++  }
++
++  const user = await userRepository.findById(input.userId);
++  if (!user) {
++    throw notFound('User');
++  }
++
++  const conflict = await repository.findConflict(input.roomId, startsAt, endsAt);
+   if (conflict) {
+     throw bookingConflict(conflict.id);
+   }
+@@ -53,13 +72,48 @@ export async function listBookings(query: ListBookingsInput): Promise<Page<Booki
+ }
+ 
+ export async function updateBooking(id: string, input: UpdateBookingInput): Promise<Booking> {
+-  await getBooking(id);
++  const booking = await getBooking(id);
++
++  const startsAt = input.startsAt !== undefined ? parseInstant(input.startsAt) : booking.startsAt;
++  const endsAt = input.endsAt !== undefined ? parseInstant(input.endsAt) : booking.endsAt;
++
++  if (startsAt >= endsAt) {
++    throw validationFailed('Booking end time must be after start time', {
++      startsAt: input.startsAt || booking.startsAt.toISOString(),
++      endsAt: input.endsAt || booking.endsAt.toISOString(),
++    });
++  }
++
++  const roomId = input.roomId !== undefined ? input.roomId : booking.roomId;
++  const userId = input.userId !== undefined ? input.userId : booking.userId;
++
++  if (input.roomId !== undefined) {
++    const room = await roomRepository.findById(input.roomId);
++    if (!room) {
++      throw notFound('Room');
++    }
++  }
++
++  if (input.userId !== undefined) {
++    const user = await userRepository.findById(input.userId);
++    if (!user) {
++      throw notFound('User');
++    }
++  }
++
++  if (input.startsAt !== undefined || input.endsAt !== undefined) {
++    const conflict = await repository.findConflict(roomId, startsAt, endsAt);
++    if (conflict && conflict.id !== id) {
++      throw bookingConflict(conflict.id);
++    }
++  }
++
+   return repository.update(id, {
+     ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+     ...(input.userId !== undefined ? { userId: input.userId } : {}),
+     ...(input.title !== undefined ? { title: input.title } : {}),
+-    ...(input.startsAt !== undefined ? { startsAt: parseInstant(input.startsAt) } : {}),
+-    ...(input.endsAt !== undefined ? { endsAt: parseInstant(input.endsAt) } : {}),
++    ...(input.startsAt !== undefined ? { startsAt } : {}),
++    ...(input.endsAt !== undefined ? { endsAt } : {}),
+   });
+ }
+ 
+diff --git a/tests/conflict-test.test.ts b/tests/conflict-test.test.ts
+new file mode 100644
+index 0000000..589092a
+--- /dev/null
++++ b/tests/conflict-test.test.ts
+@@ -0,0 +1,110 @@
++import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
++import type { FastifyInstance } from 'fastify';
++import { createTestApp, resetDb } from './helpers/app.js';
++
++const HOUR = 3_600_000;
++
++function inHours(hours: number): string {
++  return new Date(Date.now() + hours * HOUR).toISOString();
++}
++
++describe('booking conflicts - edge cases', () => {
++  let app: FastifyInstance;
++  let roomId: string;
++  let userId: string;
++
++  beforeAll(async () => {
++    app = await createTestApp();
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  beforeEach(async () => {
++    await resetDb();
++    const room = await app.inject({
++      method: 'POST',
++      url: '/rooms',
++      payload: { name: 'Aurora', capacity: 6 },
++    });
++    roomId = room.json().id;
++    const user = await app.inject({
++      method: 'POST',
++      url: '/users',
++      payload: { name: 'Ada Lovelace', email: 'ada@example.com' },
++    });
++    userId = user.json().id;
++  });
++
++  async function book(startHours: number, endHours: number, title = 'Sync') {
++    return app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId, title, startsAt: inHours(startHours), endsAt: inHours(endHours) },
++    });
++  }
++
++  it('rejects a booking that starts before and ends inside an active booking', async () => {
++    await book(25, 26);
++    const response = await book(24, 25.5, 'Overlap from before');
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('rejects a booking that completely contains an active booking', async () => {
++    await book(25, 26);
++    const response = await book(24, 27, 'Contains all');
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('rejects a booking when end time is before or equal to start time', async () => {
++    const response = await book(25, 25, 'Invalid time');
++    expect(response.statusCode).toBe(400);
++    expect(response.json().error.code).toBe('VALIDATION_ERROR');
++  });
++
++  it('rejects a booking with non-existent room', async () => {
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId: 'invalid-room', userId, title: 'Test', startsAt: inHours(24), endsAt: inHours(25) },
++    });
++    expect(response.statusCode).toBe(404);
++    expect(response.json().error.code).toBe('NOT_FOUND');
++  });
++
++  it('rejects a booking with non-existent user', async () => {
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId: 'invalid-user', title: 'Test', startsAt: inHours(24), endsAt: inHours(25) },
++    });
++    expect(response.statusCode).toBe(404);
++    expect(response.json().error.code).toBe('NOT_FOUND');
++  });
++
++  it('rejects a booking update that creates a time conflict', async () => {
++    const first = await book(25, 26);
++    const second = await book(30, 31);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { startsAt: inHours(25.5), endsAt: inHours(26.5) },
++    });
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('allows updating a booking if times remain the same', async () => {
++    const booking = await book(25, 26);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${booking.json().id}`,
++      payload: { title: 'Updated title' },
++    });
++    expect(response.statusCode).toBe(200);
++    expect(response.json().title).toBe('Updated title');
++  });
++});

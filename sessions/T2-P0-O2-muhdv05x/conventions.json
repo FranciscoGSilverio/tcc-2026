@@ -1,0 +1,37 @@
+{
+  "violacoes": 1,
+  "rules": {
+    "1": {
+      "violated": false,
+      "detail": ""
+    },
+    "2": {
+      "violated": false,
+      "detail": ""
+    },
+    "3": {
+      "violated": true,
+      "detail": "prisma/schema.prisma"
+    },
+    "4": {
+      "violated": false,
+      "detail": ""
+    },
+    "5": {
+      "violated": false,
+      "detail": ""
+    },
+    "6": {
+      "violated": false,
+      "detail": ""
+    },
+    "7": {
+      "violated": false,
+      "detail": ""
+    },
+    "8": {
+      "violated": false,
+      "detail": ""
+    }
+  }
+}

@@ -1,0 +1,12 @@
+
+> meeting-rooms-api@1.0.0 build
+> tsc -p tsconfig.json
+
+
+> meeting-rooms-api@1.0.0 start
+> node dist/server.js
+
+{"level":30,"time":1790366140130,"pid":2018,"hostname":"ead484d6033a","msg":"Server listening at http://127.0.0.1:3000"}
+{"level":30,"time":1790366140131,"pid":2018,"hostname":"ead484d6033a","msg":"Server listening at http://172.17.0.2:3000"}
+{"level":30,"time":1790366140284,"pid":2018,"hostname":"ead484d6033a","reqId":"req-1","req":{"method":"GET","url":"/health","host":"localhost:3893","remoteAddress":"172.17.0.1","remotePort":47942},"msg":"incoming request"}
+{"level":30,"time":1790366140291,"pid":2018,"hostname":"ead484d6033a","reqId":"req-1","res":{"statusCode":200},"responseTime":6.188614994287491,"msg":"request completed"}

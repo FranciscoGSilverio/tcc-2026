@@ -1,0 +1,189 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..151670e 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -24,13 +24,19 @@ export function create(data: BookingData): Promise<Booking> {
+   return prisma.booking.create({ data });
+ }
+ 
+-export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Booking | null> {
++export function findConflict(
++  roomId: string,
++  startsAt: Date,
++  endsAt: Date,
++  excludeBookingId?: string,
++): Promise<Booking | null> {
+   return prisma.booking.findFirst({
+     where: {
+       roomId,
+       status: BOOKING_ACTIVE,
+-      startsAt: { lte: startsAt },
++      startsAt: { lt: endsAt },
+       endsAt: { gt: startsAt },
++      ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
+     },
+   });
+ }
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..c62e945 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -15,9 +15,9 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
+   const startsAt = parseInstant(input.startsAt);
+   const endsAt = parseInstant(input.endsAt);
+ 
+-  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
++  const conflict = await repository.findConflict(input.roomId, startsAt, endsAt);
+   if (conflict) {
+-    throw bookingConflict(conflict.id);
++    throw bookingConflict({ id: conflict.id, startsAt: conflict.startsAt, endsAt: conflict.endsAt });
+   }
+ 
+   return repository.create({
+@@ -53,7 +53,22 @@ export async function listBookings(query: ListBookingsInput): Promise<Page<Booki
+ }
+ 
+ export async function updateBooking(id: string, input: UpdateBookingInput): Promise<Booking> {
+-  await getBooking(id);
++  const existing = await getBooking(id);
++
++  const roomId = input.roomId ?? existing.roomId;
++  const startsAt = input.startsAt ? parseInstant(input.startsAt) : existing.startsAt;
++  const endsAt = input.endsAt ? parseInstant(input.endsAt) : existing.endsAt;
++
++  const hasTimeOrRoomChange =
++    input.roomId !== undefined || input.startsAt !== undefined || input.endsAt !== undefined;
++
++  if (hasTimeOrRoomChange) {
++    const conflict = await repository.findConflict(roomId, startsAt, endsAt, id);
++    if (conflict) {
++      throw bookingConflict({ id: conflict.id, startsAt: conflict.startsAt, endsAt: conflict.endsAt });
++    }
++  }
++
+   return repository.update(id, {
+     ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+     ...(input.userId !== undefined ? { userId: input.userId } : {}),
+diff --git a/src/shared/errors.ts b/src/shared/errors.ts
+index 278d089..59bc7bb 100644
+--- a/src/shared/errors.ts
++++ b/src/shared/errors.ts
+@@ -54,8 +54,14 @@ export function emailTaken(email: string): AppError {
+   return new AppError('EMAIL_TAKEN', 409, 'Email is already in use', { email });
+ }
+ 
+-export function bookingConflict(conflictingBookingId: string): AppError {
++export function bookingConflict(conflict: {
++  id: string;
++  startsAt: Date;
++  endsAt: Date;
++}): AppError {
+   return new AppError('BOOKING_CONFLICT', 409, 'Room is already booked for this period', {
+-    conflictingBookingId,
++    conflictingBookingId: conflict.id,
++    conflictingStartsAt: conflict.startsAt.toISOString(),
++    conflictingEndsAt: conflict.endsAt.toISOString(),
+   });
+ }
+diff --git a/tests/bookings.test.ts b/tests/bookings.test.ts
+index 7b4db38..913140d 100644
+--- a/tests/bookings.test.ts
++++ b/tests/bookings.test.ts
+@@ -162,6 +162,20 @@ describe('bookings', () => {
+     expect(response.statusCode).toBe(409);
+   });
+ 
++  it('rejects a booking that starts before and ends inside an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23, 24.5, 'Starts before');
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('rejects a booking that starts inside and ends after an active booking', async () => {
++    await book(24, 25);
++    const response = await book(24.5, 26, 'Ends after');
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
+   it('accepts a booking that starts exactly when another ends', async () => {
+     await book(24, 25);
+     const response = await book(25, 26, 'Adjacent');
+@@ -180,4 +194,56 @@ describe('bookings', () => {
+     const response = await book(24.5, 25.5, 'Overlap');
+     expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+   });
++
++  it('includes conflict times in error details', async () => {
++    const first = await book(24, 25);
++    const response = await book(24.5, 25.5, 'Overlap');
++    const details = response.json().error.details;
++    expect(details.conflictingStartsAt).toBeDefined();
++    expect(details.conflictingEndsAt).toBeDefined();
++    expect(details.conflictingStartsAt).toBe(first.json().startsAt);
++    expect(details.conflictingEndsAt).toBe(first.json().endsAt);
++  });
++
++  it('rejects an update that moves booking into conflict', async () => {
++    await book(24, 25);
++    const second = await book(30, 31, 'Later');
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { startsAt: inHours(24.5), endsAt: inHours(25.5) },
++    });
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++    expect(response.json().error.details.conflictingStartsAt).toBeDefined();
++  });
++
++  it('allows updating only the title without conflict check', async () => {
++    await book(24, 25);
++    const second = await book(30, 31, 'Later');
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { title: 'Renamed' },
++    });
++    expect(response.statusCode).toBe(200);
++    expect(response.json().title).toBe('Renamed');
++  });
++
++  it('allows updating booking to a new room without conflict in new room', async () => {
++    const other = await app.inject({
++      method: 'POST',
++      url: '/rooms',
++      payload: { name: 'Borealis', capacity: 4 },
++    });
++    await book(24, 25);
++    const second = await book(26, 27, 'Later');
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { roomId: other.json().id },
++    });
++    expect(response.statusCode).toBe(200);
++    expect(response.json().roomId).toBe(other.json().id);
++  });
+ });
+diff --git a/tests/shared.test.ts b/tests/shared.test.ts
+index 1c37df4..bddbaa5 100644
+--- a/tests/shared.test.ts
++++ b/tests/shared.test.ts
+@@ -12,9 +12,13 @@ describe('errors', () => {
+   });
+ 
+   it('carries the conflicting booking in the details', () => {
+-    const error = bookingConflict('abc');
++    const startsAt = new Date('2030-01-01T10:00:00Z');
++    const endsAt = new Date('2030-01-01T11:00:00Z');
++    const error = bookingConflict({ id: 'abc', startsAt, endsAt });
+     expect(error.statusCode).toBe(409);
+-    expect(error.details).toEqual({ conflictingBookingId: 'abc' });
++    expect(error.details.conflictingBookingId).toBe('abc');
++    expect(error.details.conflictingStartsAt).toBe('2030-01-01T10:00:00.000Z');
++    expect(error.details.conflictingEndsAt).toBe('2030-01-01T11:00:00.000Z');
+   });
+ 
+   it('wraps a payload in the error envelope', () => {

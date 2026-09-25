@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O2-muhdv05x",
+  "evaluatedAt": "2026-09-25T20:32:16.476Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Em routes.ts as rotas apenas chamam `service.createBooking`, `service.getAvailability`, `service.createBookingsBatch` etc., e toda a lógica (transação, retry, cálculo de slots livres) está em service.ts."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "As novas entradas têm schemas TypeBox dedicados, como `AvailabilityQuery = Type.Object({ roomId, from, to })` e `BatchCreateBookingsBody = Type.Array(CreateBookingBody, { minItems: 1, maxItems: 20 })`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros lançam `bookingConflict` (409) e `validationFailed` (400) em `getAvailability`/`createBooking`/`updateBooking`, confirmados pelos testes que checam `response.statusCode` 409/400."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "Apesar de `WRITE_CONFLICT_CODE = 'P2034'` ser nomeado, valores como `maxItems: 20` em `BatchCreateBookingsBody` e `attempts = 3` em `withConflictRetry` permanecem como literais inline não nomeados."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e verificam `response.statusCode` e o corpo JSON retornado (ex.: `expect(response.json().freeSlots).toHaveLength(1)`), sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reusa utilitários de shared/, como `parseInstant`, `isBefore` (shared/time.ts) e `bookingConflict`, `notFound`, `validationFailed`, `AppError` (shared/errors.ts), em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.038141999999999995
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona dois endpoints novos (`GET /bookings/availability` e `POST /bookings/batch`) para resolver o problema de tentativa e erro; não há enriquecimento do payload do erro 409 nem alteração da listagem existente (`GET /bookings/` permanece igual)."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O endpoint de disponibilidade retorna explicitamente `freeSlots`, calculados como os intervalos livres dentro do período consultado."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os `freeSlots` são calculados a partir dos gaps entre as reservas ativas retornadas por `listActiveInRange`, sem uma grade fixa de intervalos (ex.: 30min) nem parâmetro de granularidade."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "`AvailabilityQuery` define `from` e `to` como campos obrigatórios (`Type.String({ minLength: 1 })`), sem default de dia ou semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há validação de horário comercial nem constante de 24h; o range é inteiramente definido por `from`/`to` do cliente, mas o diff não expõe isso como um parâmetro de configuração explícito de limite (ex.: horário de funcionamento), apenas usa o range livre informado."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "`AvailabilityQuery` exige `roomId: Type.String(...)` como único identificador de sala, e a lógica de negócio consulta reservas de uma sala por vez."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma menção a fuso horário no schema, no service ou nos testes; datas são tratadas via `parseInstant`/`DateString` sem contrato explícito de timezone."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole range as free when there are no bookings' confirma que, sem reservas, o range inteiro é retornado como um único slot livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há filtragem de reservas passadas nem lógica que trate `from`/`to` anteriores ao momento atual; o cálculo de disponibilidade é puramente sobre o intervalo informado."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro `bookingConflict` continua sendo lançado da mesma forma (apenas com `conflictingBookingId`), sem sugestões de horários alternativos incluídas na resposta 409."
+      }
+    },
+    "costUsd": 0.035056000000000004
+  },
+  "totalCostUsd": 0.073198
+}

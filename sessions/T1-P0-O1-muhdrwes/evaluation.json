@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P0-O1-muhdrwes",
+  "evaluatedAt": "2026-09-25T20:31:40.119Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a nova lógica (assertValidPeriod, assertRoomExists, assertUserExists, verificação de conflito) foi adicionada em src/modules/bookings/service.ts, e não em routes.ts."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "A validação de período/existência é feita via checagens manuais no service (`if (startsAt.getTime() >= endsAt.getTime()) throw validationFailed(...)`), não há alteração em schema.ts nem uso de schema declarativo para essas novas regras."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os caminhos inválidos lançam erros tipados com status explícito, como `throw notFound('Room')` (404), `throw bookingConflict(conflict.id)` (409) e `throw validationFailed(...)` (400), confirmados pelos testes (`expect(response.statusCode).toBe(409)`)."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhuma constante nomeada para durações/limites/janelas; as comparações usam apenas `startsAt.getTime() >= endsAt.getTime()` sem valores fixos extraídos."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e verificam `response.statusCode` e `response.json().error.code`, checando comportamento HTTP observável, não detalhes internos."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service reutiliza utilitários existentes como `parseInstant` de shared/time.ts e `bookingConflict`/`notFound`/`validationFailed` de shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.027136
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.027136
+}

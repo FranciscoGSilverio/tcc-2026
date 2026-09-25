@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O1-muhego67",
+  "evaluatedAt": "2026-09-25T20:33:19.446Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "routes.ts apenas delega para `service.getAvailability(request.query)`, e toda a lógica de cálculo de slots livres está em service.ts."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "Foi criado `AvailabilityQuery = Type.Object({...})` em schema.ts e usado como `querystring: AvailabilityQuery` na rota."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "getAvailability lança `validationFailed('to must be after from')` (400) e `getRoom` gera `notFound` (404), reusando AppError com statusCode definido."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz valores fixos (durações, limites, janelas) que precisem ser nomeados; todos os parâmetros de tempo vêm da query do usuário."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam `app.inject` e verificam `response.statusCode` e `response.json().freeSlots`, comportamento HTTP observável, sem acessar internals."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reusa `parseInstant`, `isBefore` de shared/time.ts e `validationFailed`, `notFound`, `bookingConflict` de shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.03055
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff cria uma nova rota GET /bookings/availability, com schema, service e repository dedicados, ao invés de alterar a listagem existente ou apenas enriquecer o erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "A resposta do endpoint (AvailabilityResponse) e o cálculo em getAvailability retornam apenas 'freeSlots', não expõem os intervalos ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os freeSlots são calculados dinamicamente a partir das reservas ativas no intervalo (findActiveInRange), sem tamanho fixo de slot nem parâmetro de granularidade."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige 'from' e 'to' como strings obrigatórias (minLength: 1), sem valores default para dia ou semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma validação ou schema limitando o intervalo a horário comercial, 24 horas fixas, ou algo configurável; o serviço aceita qualquer from/to válido onde to > from."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery e getAvailability recebem um único 'roomId' obrigatório, não uma lista de salas nem 'todas'."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não altera nem introduz tratamento explícito de fuso horário; usa parseInstant/DateString já existentes sem qualquer menção a UTC ou local no contrato novo."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window as free when there are no bookings' confirma que, sem reservas, o freeSlots cobre toda a janela solicitada, e não retorna lista vazia ou 404."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma lógica ou teste que filtre ou trate especificamente intervalos no passado; o cálculo de freeSlots opera igualmente sobre qualquer from/to fornecido."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O createBooking e updateBooking continuam lançando bookingConflict com o mesmo formato (conflictingBookingId), sem qualquer sugestão de horários alternativos no corpo do erro 409."
+      }
+    },
+    "costUsd": 0.026074
+  },
+  "totalCostUsd": 0.056624
+}

@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P1-O2-muhdk5kb",
+  "evaluatedAt": "2026-09-25T20:31:24.295Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A rota apenas chama `service.getAvailability(request.query)`, enquanto toda a lógica (cálculo de janelas livres, validação de from/to, checagem de sala) está em `service.ts`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "`AvailabilityQuery` define schema Typebox com `minLength`, `Type.Integer({ minimum, maximum })` para validar roomId/from/to/duration na rota `/availability`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O serviço lança `bookingConflict`/`validationFailed`/`notFound` (via `getRoom`) e os testes confirmam status 409, 400 e 404 explícitos para os novos caminhos de erro."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Foram criadas as constantes `MIN_BOOKING_DURATION_MINUTES` e `MAX_BOOKING_DURATION_MINUTES` em vez de usar 30 e 480 soltos no código."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e verificam `response.statusCode`/`response.json().slots`, sem acessar implementação interna do serviço ou repositório."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reusa `parseInstant`, `isBefore` e `MINUTE_IN_MS` de `shared/time.ts` e `validationFailed`/`bookingConflict`/`notFound` de `shared/errors.ts` em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.027914
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/availability, com novo schema, service e repository, sem alterar a listagem existente nem enriquecer o erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "getAvailability calcula os 'gaps' entre reservas ativas e retorna slots livres (startsAt/endsAt) que não estão ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots são calculados a partir dos limites reais das reservas existentes (cursor avança para booking.endsAt), não usam grade fixa de tempo; 'duration' só define o tamanho mínimo aceitável do gap."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige 'from' e 'to' como strings obrigatórias (minLength:1, sem default), não há valor padrão como dia ou semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem a 24h, nem parâmetro de configuração de limite de horário; a janela é livremente definida por from/to."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige roomId único (Type.String), e o service chama getRoom(query.roomId) para uma sala específica, sem suporte a múltiplas salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não especifica explicitamente o fuso horário usado; usa parseInstant e DateString sem indicar UTC, local ou contrato explícito de timezone."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns the whole window as free when there are no bookings' confirma que, sem reservas, todo o intervalo from-to é retornado como um único slot livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma lógica ou teste que filtre horários passados da janela de disponibilidade; o cálculo trata from/to como uma janela genérica sem considerar o momento atual."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro 409 continua retornando apenas conflictingBookingId (visto nos testes existentes), sem qualquer sugestão de horários alternativos incluída no contrato do POST."
+      }
+    },
+    "costUsd": 0.027148
+  },
+  "totalCostUsd": 0.055062
+}
