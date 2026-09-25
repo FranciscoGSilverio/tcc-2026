@@ -232,6 +232,25 @@ function transcriptsSane(rows, repoRoot, load) {
   return { id: 7, name: 'todo transcript está são', failures, notes: [] };
 }
 
+// Checks that every CLI error is ACCOUNTED FOR BY A COLUMN, not that no
+// CLI error exists. The difference matters, and getting it wrong made this
+// verification judge results.
+//
+// The turn ceiling is a safety stop against an infinite loop, never a
+// measure of quality or performance. A session that reaches it is data:
+// travou_turnos records it, travou includes it, and the protocol preserves
+// the session with a score of zero rather than discarding it. Two opus
+// sessions of 25/09 came back with subtype error_max_turns, both with a
+// diff of fifteen files, a building application and a full classification
+// -- and this verification failed them, which is exactly the filtering by
+// hypothesis the auditor is forbidden from doing.
+//
+// So error_max_turns fails only when travou_turnos did NOT record it,
+// which is the case the verification was written for: a CLI error that
+// enters the dataset as valid with no trace anywhere. That case still has
+// teeth, and it covers a real gap -- in O2 the runner reads the stop
+// reason from the last of the four calls, so a middle step that hit the
+// ceiling would leave travou_turnos false and be caught here.
 function noCliError(rows, repoRoot, load) {
   const failures = [];
   for (const row of validRows(rows)) {
@@ -240,6 +259,15 @@ function noCliError(rows, repoRoot, load) {
     // twice would double-count one defect.
     if (!transcript.ok) continue;
     for (const [index, result] of transcript.results.entries()) {
+      if (result.subtype === 'error_max_turns') {
+        if (String(row.travou_turnos) !== 'true') {
+          failures.push(
+            `${row.session_id}: evento result ${index + 1} bateu no teto de turnos e `
+            + `travou_turnos não registrou (vale "${row.travou_turnos}")`,
+          );
+        }
+        continue;
+      }
       if (result.is_error) {
         failures.push(`${row.session_id}: evento result ${index + 1} com is_error true`);
       }
@@ -248,7 +276,7 @@ function noCliError(rows, repoRoot, load) {
       }
     }
   }
-  return { id: 8, name: 'nenhuma sessão reporta erro do CLI', failures, notes: [] };
+  return { id: 8, name: 'todo erro do CLI está registrado em coluna', failures, notes: [] };
 }
 
 export function checkDataset({ rows, repoRoot, load = loadTranscript }) {

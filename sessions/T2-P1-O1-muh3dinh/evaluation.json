@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P1-O1-muh3dinh",
+  "evaluatedAt": "2026-09-25T16:21:25.883Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A rota `/availability` apenas chama `service.getRoomAvailability(request.query)`, e toda a lógica de cálculo de slots livres está em `service.ts`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "Foi criado `AvailabilityQuery` em schema.ts e aplicado em `{ schema: { querystring: AvailabilityQuery, ... } }` na rota."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O service lança `validationFailed('\"from\" must be before \"to\"', ...)` e `roomsService.getRoom` propaga `notFound`, ambos mapeados para status 400/404 pelo tratamento de erros existente."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhum valor fixo novo (duração, limite, janela) nem constantes nomeadas para tal; não há evidência dessa prática no diff."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e verificam `response.statusCode` e o corpo JSON retornado, sem acessar detalhes internos do service/repository."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service reusa `isBefore` e `parseInstant` de `shared/time.ts` e `validationFailed`/`notFound` de `shared/errors.ts` em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.02874
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/availability, com schema, service e repository próprios, em vez de alterar a listagem existente ou o erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "Os testes e a lógica do service constroem 'slots' representando os intervalos livres (ex.: 'reports the whole window as free', 'excludes booked time from the free slots'), não os ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots são calculados a partir dos limites das reservas ativas (startsAt/endsAt de cada booking), sem nenhum parâmetro de tamanho de intervalo fixo ou configurável."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige 'from' e 'to' como strings obrigatórias (minLength: 1), sem valores default de dia ou semana."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem parâmetro de configuração; o cálculo considera qualquer horário dentro do intervalo from/to informado, tratando o dia inteiro como passível de disponibilidade."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige um único 'roomId' obrigatório, e o service/repository operam sobre uma sala por vez."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não introduz nenhuma indicação explícita de fuso horário no contrato (schema usa DateString genérico e reaproveita parseInstant existente), sem menção a UTC/local."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window as free when there are no bookings' confirma que, sem reservas, todo o intervalo from-to é retornado como um único slot livre."
+      },
+      "9": {
+        "categoria": "incluído",
+        "justificativa": "Não há nenhum filtro que exclua horários passados da consulta ou do cálculo; o service processa qualquer intervalo from/to fornecido, incluindo potencialmente datas passadas."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "createBooking continua lançando bookingConflict(conflict.id) da mesma forma, sem incluir sugestões de horários alternativos no corpo do erro 409."
+      }
+    },
+    "costUsd": 0.029404
+  },
+  "totalCostUsd": 0.058144
+}

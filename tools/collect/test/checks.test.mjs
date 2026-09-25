@@ -234,10 +234,14 @@ test('a result event reporting an error is caught even though the row says valid
   assert.match(onDisk([row], { s10: lines }, 8).failures[0], /is_error/);
 });
 
+// This used error_max_turns as its example until 25/09, when that subtype
+// became the one exempted case: the turn ceiling is a safety stop and a
+// session that reaches it is data, recorded by travou_turnos. Any other
+// non-success subtype is still an unaccounted failure.
 test('a result subtype other than success is caught', () => {
   const row = validRow({ session_id: 's11', transcript_path: 'sessions/s11/transcript.jsonl' });
-  const lines = [initEvent(), resultEvent({ subtype: 'error_max_turns' })];
-  assert.match(onDisk([row], { s11: lines }, 8).failures[0], /error_max_turns/);
+  const lines = [initEvent(), resultEvent({ subtype: 'error_during_execution' })];
+  assert.match(onDisk([row], { s11: lines }, 8).failures[0], /error_during_execution/);
 });
 
 test('an unreadable transcript is reported once, by verification 7 only', () => {
@@ -276,4 +280,46 @@ test('the report marks each verification and names what failed', () => {
 test('a clean report says so in one line', () => {
   const text = formatReport([{ id: 1, name: 'primeira', failures: [], notes: [] }]);
   assert.match(text, /dataset íntegro/);
+});
+
+// The turn ceiling is a safety stop, not a quality measure, and a session
+// that reaches it is data the protocol preserves with a score of zero.
+// Failing it here would be the auditor filtering the dataset by the
+// hypothesis, which is the one thing it must never do. Two real opus
+// sessions of 25/09 were failed this way before the rule was narrowed.
+test('a session that hit the turn ceiling passes when travou_turnos recorded it', () => {
+  const row = validRow({ session_id: 'teto', travou_turnos: 'true',
+    transcript_path: 'sessions/teto/transcript.jsonl' });
+  const lines = [initEvent(), resultEvent({ is_error: true, subtype: 'error_max_turns' })];
+  assert.deepEqual(onDisk([row], { teto: lines }, 8).failures, []);
+});
+
+test('the same session fails when no column recorded the ceiling', () => {
+  const row = validRow({ session_id: 'teto', travou_turnos: 'false',
+    transcript_path: 'sessions/teto/transcript.jsonl' });
+  const lines = [initEvent(), resultEvent({ is_error: true, subtype: 'error_max_turns' })];
+  const failures = onDisk([row], { teto: lines }, 8).failures;
+  assert.equal(failures.length, 1);
+  assert.match(failures[0], /travou_turnos não registrou/);
+});
+
+// An O2 chain takes its stop reason from the last of four calls, so a
+// middle step that hit the ceiling leaves travou_turnos false. That is a
+// real gap in the runner and this verification is what would catch it.
+test('an O2 chain whose middle step hit the ceiling is still caught', () => {
+  const row = validRow({ session_id: 'meio', o_level: 'O2', travou_turnos: 'false',
+    transcript_path: 'sessions/meio/transcript.jsonl' });
+  const lines = [initEvent(), resultEvent(), resultEvent({ is_error: true, subtype: 'error_max_turns' }),
+    resultEvent(), resultEvent()];
+  assert.match(onDisk([row], { meio: lines }, 8).failures[0], /result 2/);
+});
+
+test('any other CLI error still fails regardless of the columns', () => {
+  const row = validRow({ session_id: 'outro', travou_turnos: 'true',
+    transcript_path: 'sessions/outro/transcript.jsonl' });
+  const lines = [initEvent(), resultEvent({ is_error: true, subtype: 'error_during_execution' })];
+  const failures = onDisk([row], { outro: lines }, 8).failures;
+  assert.equal(failures.length, 2);
+  assert.match(failures.join('\n'), /is_error true/);
+  assert.match(failures.join('\n'), /error_during_execution/);
 });
