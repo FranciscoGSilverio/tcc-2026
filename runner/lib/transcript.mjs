@@ -68,6 +68,14 @@ export function readTranscript(text) {
     numTurns: sum((r) => r.num_turns),
     stopReason: last.stop_reason ?? 'unknown',
     isError: Boolean(last.is_error),
+    // Any step, not just the last. The CLI says plainly when it stopped a
+    // call at the turn ceiling, and that is the only reliable signal:
+    // `num_turns` is not on the same scale as --max-turns, and sessions
+    // that finished on their own have reported more turns than the ceiling
+    // they ran under (48 against a ceiling of 40, measured 25/09/2026).
+    // Reading only the last step would miss an O2 chain whose second call
+    // was cut and whose fourth ended cleanly.
+    maxTurnsReached: results.some((result) => result.subtype === 'error_max_turns'),
     costUsd: sum((r) => r.total_cost_usd),
     durationMs: sum((r) => r.duration_ms),
     tokens: {

@@ -145,3 +145,35 @@ test('a single result event still behaves exactly as before', () => {
   assert.equal(parsed.model, 'claude-sonnet-5');
   assert.equal(parsed.stopReason, 'end_turn');
 });
+
+// travou_turnos reads this, and it has to read the CLI's own subtype
+// rather than compare num_turns against the ceiling: the two are not on
+// the same scale. Measured 25/09/2026, sessions that finished on their
+// own reported 42, 43 and 48 turns under a ceiling of 40, while the two
+// that were actually cut reported 41.
+test('reports the turn ceiling from the CLI subtype, not from a turn count', () => {
+  const cut = readTranscript([
+    JSON.stringify({ type: 'result', subtype: 'error_max_turns', is_error: true,
+      stop_reason: 'tool_use', num_turns: 41 }),
+  ].join('\n'));
+  assert.equal(cut.maxTurnsReached, true);
+
+  const finished = readTranscript([
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false,
+      stop_reason: 'end_turn', num_turns: 48 }),
+  ].join('\n'));
+  assert.equal(finished.maxTurnsReached, false);
+});
+
+// An O2 chain takes its stop reason from the last of four calls, so a
+// middle step cut at the ceiling used to leave travou_turnos false.
+test('a chained session reports the ceiling from any of its steps', () => {
+  const parsed = readTranscript([
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false, num_turns: 10 }),
+    JSON.stringify({ type: 'result', subtype: 'error_max_turns', is_error: true, num_turns: 41 }),
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false, num_turns: 8 }),
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false, stop_reason: 'end_turn', num_turns: 5 }),
+  ].join('\n'));
+  assert.equal(parsed.maxTurnsReached, true);
+  assert.equal(parsed.stopReason, 'end_turn');
+});

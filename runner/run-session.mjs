@@ -14,6 +14,18 @@ import { UnsupportedSessionError, resolveSession } from './lib/capabilities.mjs'
 const REPO = resolve(import.meta.dirname, '..');
 const TIMEOUT_MS = 30 * 60 * 1000;
 
+// The safety stop against an infinite loop, never a measure of quality or
+// performance. Raised from 40 to 100 on 25/09/2026: at 40 it was binding
+// for opus and for nothing else -- two of the three sessions of the
+// T2-P0-O1 opus cell were cut at the ceiling -- which right-censors
+// n_turns, custo_usd, duracao_s and n_tool_calls for exactly the model
+// expected to spend the most, and the analysis reads those columns. The
+// ceiling is not visible to the agent (verified across every archived
+// transcript: it appears only in the CLI's own closing event), so a
+// session that finished on its own is unaffected by the change, and only
+// the two censored sessions were re-collected.
+const MAX_TURNS = 100;
+
 const argument = (flag, fallback) => {
   const index = process.argv.indexOf(flag);
   return index === -1 ? fallback : process.argv[index + 1];
@@ -64,7 +76,7 @@ function runAgent({ name, model, plan, repoRoot, outDir }) {
     const command = [
       'cd /app',
       `claude -p "$(cat ${promptPath})" --output-format stream-json --verbose ` +
-      `--max-turns 40 --model ${model} ${pluginFlag} ${sessionFlag} --dangerously-skip-permissions`,
+      `--max-turns ${MAX_TURNS} --model ${model} ${pluginFlag} ${sessionFlag} --dangerously-skip-permissions`,
     ].join(' && ');
     return exec(name, ['sh', '-c', `${command} > /out/${outFile} 2>>/out/agent.log`]);
   };
@@ -262,7 +274,11 @@ async function main() {
       baselineCommit: anchors.baselineCommit,
     });
 
-    const hitTurnLimit = parsed.stopReason !== 'end_turn' && parsed.numTurns >= 40;
+    // The CLI's own subtype, not a turn count compared against the
+    // ceiling: `num_turns` counts more than --max-turns limits, so the old
+    // `numTurns >= 40` clause compared two different scales and would have
+    // become meaningless the moment the ceiling moved.
+    const hitTurnLimit = parsed.maxTurnsReached;
     row.ended_at = new Date().toISOString();
     row.status = 'valid';
     row.model_version = parsed.model;

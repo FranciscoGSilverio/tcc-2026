@@ -496,7 +496,7 @@
 <tr><td>Versão do CLI do agente</td><td>Gravada por sessão; o auditor exige que seja uma só em toda a coleta.</td></tr>
 <tr><td>Repositório-semente</td><td>Congelado. Os testes da semente são restaurados a partir do commit congelado antes de medir regressão.</td></tr>
 <tr><td>Enunciados e etapas de O2</td><td>Arquivos versionados; a sequência que roda e a sequência publicada vêm do mesmo lugar.</td></tr>
-<tr><td>Teto de turnos (40)</td><td><strong>Parada de segurança contra laço infinito</strong>, não medida de qualidade nem de desempenho. Bater no teto é registrado na coluna <code>travou_turnos</code>.</td></tr>
+<tr><td>Teto de turnos (100, por chamada)</td><td><strong>Parada de segurança contra laço infinito</strong>, não medida de qualidade nem de desempenho. Era 40 até 25/09/2026, quando passou a apertar: duas das três sessões da célula T2-P0-O1 em Opus foram cortadas, contra zero em 25 sessões de Sonnet e Haiku. Sessão cortada tem turnos, custo e duração <strong>censurados</strong> — medem o teto, não o agente — e a análise lê essas colunas. O teto não é visível ao agente, então sessão que terminou sozinha não foi afetada; só as duas censuradas foram recoletadas. Em O1 vale um teto por sessão, em O2 um por etapa.</td></tr>
 </tbody>
 </table>
 </div>
