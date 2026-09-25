@@ -1,0 +1,137 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..4556ed6 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -69,3 +69,39 @@ export function updateStatus(id: string, status: string): Promise<Booking> {
+ export function remove(id: string): Promise<Booking> {
+   return prisma.booking.delete({ where: { id } });
+ }
++
++export async function findAvailableSlots(
++  roomId: string,
++  startTime: Date,
++  slotDuration: number,
++  count: number = 5,
++): Promise<Array<{ startsAt: Date; endsAt: Date }>> {
++  const searchWindow = new Date(startTime.getTime() + slotDuration * count * 2);
++  const bookings = await prisma.booking.findMany({
++    where: {
++      roomId,
++      status: BOOKING_ACTIVE,
++      startsAt: { lt: searchWindow },
++      endsAt: { gt: startTime },
++    },
++    orderBy: { startsAt: 'asc' },
++  });
++
++  const slots: Array<{ startsAt: Date; endsAt: Date }> = [];
++  let currentStart = new Date(startTime);
++
++  while (slots.length < count) {
++    const currentEnd = new Date(currentStart.getTime() + slotDuration);
++    const hasConflict = bookings.some(
++      (b) => b.startsAt <= currentStart && b.endsAt > currentStart,
++    );
++
++    if (!hasConflict) {
++      slots.push({ startsAt: new Date(currentStart), endsAt: new Date(currentEnd) });
++    }
++
++    currentStart = new Date(currentStart.getTime() + slotDuration);
++  }
++
++  return slots;
++}
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..00eba40 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -17,7 +17,18 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
+ 
+   const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
+   if (conflict) {
+-    throw bookingConflict(conflict.id);
++    const slotDuration = endsAt.getTime() - startsAt.getTime();
++    const availableSlots = await repository.findAvailableSlots(input.roomId, startsAt, slotDuration, 3);
++
++    throw bookingConflict(conflict.id, {
++      conflictingBooking: {
++        id: conflict.id,
++        title: conflict.title,
++        startsAt: conflict.startsAt,
++        endsAt: conflict.endsAt,
++      },
++      suggestedSlots: availableSlots,
++    });
+   }
+ 
+   return repository.create({
+diff --git a/src/shared/errors.ts b/src/shared/errors.ts
+index 278d089..99a2b5c 100644
+--- a/src/shared/errors.ts
++++ b/src/shared/errors.ts
+@@ -54,8 +54,12 @@ export function emailTaken(email: string): AppError {
+   return new AppError('EMAIL_TAKEN', 409, 'Email is already in use', { email });
+ }
+ 
+-export function bookingConflict(conflictingBookingId: string): AppError {
++export function bookingConflict(
++  conflictingBookingId: string,
++  details: Record<string, unknown> = {},
++): AppError {
+   return new AppError('BOOKING_CONFLICT', 409, 'Room is already booked for this period', {
+     conflictingBookingId,
++    ...details,
+   });
+ }
+diff --git a/tests/bookings.test.ts b/tests/bookings.test.ts
+index 7b4db38..cdd5c76 100644
+--- a/tests/bookings.test.ts
++++ b/tests/bookings.test.ts
+@@ -180,4 +180,46 @@ describe('bookings', () => {
+     const response = await book(24.5, 25.5, 'Overlap');
+     expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+   });
++
++  it('provides details of the conflicting booking and suggests available slots', async () => {
++    const first = await book(24, 25);
++    const response = await book(24.5, 25.5, 'Overlap');
++    const details = response.json().error.details;
++
++    expect(details.conflictingBooking).toBeDefined();
++    expect(details.conflictingBooking.id).toBe(first.json().id);
++    expect(details.conflictingBooking.title).toBe('Sync');
++    expect(details.conflictingBooking.startsAt).toBeDefined();
++    expect(details.conflictingBooking.endsAt).toBeDefined();
++
++    expect(details.suggestedSlots).toBeDefined();
++    expect(Array.isArray(details.suggestedSlots)).toBe(true);
++    expect(details.suggestedSlots.length).toBeGreaterThan(0);
++    expect(details.suggestedSlots[0].startsAt).toBeDefined();
++    expect(details.suggestedSlots[0].endsAt).toBeDefined();
++  });
++
++  it('allows booking a suggested slot from conflict response', async () => {
++    await book(24, 25);
++    await book(26, 27);
++    const conflictResponse = await book(24.5, 25.5, 'Overlap');
++
++    const suggestedSlot = conflictResponse.json().error.details.suggestedSlots[0];
++    expect(suggestedSlot).toBeDefined();
++
++    const successResponse = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: {
++        roomId,
++        userId,
++        title: 'Rebooked',
++        startsAt: suggestedSlot.startsAt,
++        endsAt: suggestedSlot.endsAt,
++      },
++    });
++
++    expect(successResponse.statusCode).toBe(201);
++    expect(successResponse.json().title).toBe('Rebooked');
++  });
+ });
