@@ -17,8 +17,24 @@ const SEED_TEST_FILES = [
   'tests/amenities.test.ts',
 ];
 
-function captureDiff(name, outDir) {
-  exec(name, ['sh', '-c', 'cd /app && git add -A && git diff --cached > /out/session.diff']);
+// Diffs against the initial commit, never against the index. `git diff
+// --cached` reports what is staged, so an agent that runs `git commit`
+// empties it and the session records an empty diff for a full
+// implementation -- see the comment on initHistory in prepare.mjs for the
+// session where this happened. `git add -A` still runs first, so files the
+// agent created but never tracked are in the comparison too.
+//
+// `baselineCommit` deliberately has no default. A missing sha must fail
+// the session rather than quietly fall back to the index and reproduce the
+// defect this replaced.
+function captureDiff(name, outDir, baselineCommit) {
+  if (!/^[0-9a-f]{40}$/.test(baselineCommit ?? '')) {
+    throw new Error(
+      `measure: baselineCommit must be the sha of the working copy's initial commit; got "${baselineCommit}"`,
+    );
+  }
+  exec(name, ['sh', '-c',
+    `cd /app && git add -A && git diff ${baselineCommit} > /out/session.diff`]);
   const path = join(outDir, 'session.diff');
   return existsSync(path) && statSync(path).size > 0;
 }
@@ -105,8 +121,10 @@ function runHiddenSuite(repoRoot, hostPort) {
   }
 }
 
-export async function measure({ name, outDir, hostPort, repoRoot, hiddenSuite = true }) {
-  const hasDiff = captureDiff(name, outDir);
+export async function measure({
+  name, outDir, hostPort, repoRoot, hiddenSuite = true, baselineCommit,
+}) {
+  const hasDiff = captureDiff(name, outDir, baselineCommit);
   const conventions = measureConventions(name, outDir, repoRoot);
 
   restoreFrozenTests(name, repoRoot);

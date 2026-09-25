@@ -1,0 +1,9 @@
+
+> meeting-rooms-api@1.0.0 build
+> tsc -p tsconfig.json
+
+src/modules/bookings/repository.ts(108,33): error TS18048: 'nextBooking' is possibly 'undefined'.
+src/modules/bookings/repository.ts(110,23): error TS18048: 'nextBooking' is possibly 'undefined'.
+src/modules/bookings/repository.ts(111,12): error TS18048: 'nextBooking' is possibly 'undefined'.
+src/modules/bookings/repository.ts(114,19): error TS18048: 'nextBooking' is possibly 'undefined'.
+make: *** [Makefile:39: build] Error 2

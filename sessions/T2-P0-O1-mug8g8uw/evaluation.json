@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-mug8g8uw",
+  "evaluatedAt": "2026-09-25T00:42:55.602Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "nao",
+        "justificativa": "O diff não foi fornecido no material apresentado, portanto não é possível verificar onde a lógica nova foi implementada."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não contém alterações visíveis, não há como confirmar validação de schema para entradas novas."
+      },
+      "3": {
+        "resposta": "nao",
+        "justificativa": "Não há diff apresentado que mostre caminhos de erro tratados com códigos de status."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "Sem o diff não é possível verificar se valores fixos foram nomeados em vez de literais."
+      },
+      "5": {
+        "resposta": "nao",
+        "justificativa": "Não há testes visíveis no diff fornecido para avaliar comportamento observável."
+      },
+      "6": {
+        "resposta": "nao",
+        "justificativa": "O diff está vazio/ausente, não sendo possível confirmar reuso de utilitários do material de referência."
+      }
+    },
+    "qualidade": 0,
+    "costUsd": 0.010284
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "ausente",
+        "justificativa": "Nenhum diff foi fornecido no chamado; não há código para inferir a forma da solução adotada."
+      },
+      "2": {
+        "categoria": "ausente",
+        "justificativa": "Sem o diff, não é possível determinar se o retorno representa horários livres, ocupados ou ambos."
+      },
+      "3": {
+        "categoria": "ausente",
+        "justificativa": "Não há trecho de código disponível que indique como os intervalos foram definidos."
+      },
+      "4": {
+        "categoria": "ausente",
+        "justificativa": "Nenhuma evidência no diff (ausente) sobre qual seria a janela temporal padrão usada."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Sem diff, não há como saber se existe um limite de horário e qual seria."
+      },
+      "6": {
+        "categoria": "ausente",
+        "justificativa": "Não há informação sobre o escopo de salas contemplado pela mudança, pois o diff não foi fornecido."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "Nenhum indício sobre tratamento de fuso horário, já que o diff está vazio."
+      },
+      "8": {
+        "categoria": "ausente",
+        "justificativa": "Não é possível inferir o comportamento para salas sem reservas sem o código da mudança."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Sem o diff, não há como saber se horários passados são filtrados ou incluídos."
+      },
+      "10": {
+        "categoria": "ausente",
+        "justificativa": "Não há evidência de alteração (ou não) no contrato do POST de reserva, pois o diff não foi disponibilizado."
+      }
+    },
+    "costUsd": 0.009058
+  },
+  "totalCostUsd": 0.019341999999999998
+}

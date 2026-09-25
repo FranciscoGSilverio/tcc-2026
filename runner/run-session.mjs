@@ -259,6 +259,7 @@ async function main() {
 
     const measured = await measure({
       name, outDir, hostPort, repoRoot: REPO, hiddenSuite: plan.hiddenSuite,
+      baselineCommit: anchors.baselineCommit,
     });
 
     const hitTurnLimit = parsed.stopReason !== 'end_turn' && parsed.numTurns >= 40;

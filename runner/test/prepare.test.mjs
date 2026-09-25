@@ -20,6 +20,9 @@ test('prepares a working copy and reports the reproducibility anchors', async ()
   const info = await prepare({ name: NAME, outDir, hostPort: 3520, env: {}, pLevel: 'P0', repoRoot: REPO });
   assert.match(info.imageId, /^sha256:/);
   assert.match(info.cliVersion, /^\d+\./);
+  // The sha measure() diffs against. Without it a session cannot be
+  // measured at all, so it belongs with the other anchors.
+  assert.match(info.baselineCommit, /^[0-9a-f]{40}$/);
 });
 
 test('the working copy history holds exactly one neutral commit', () => {

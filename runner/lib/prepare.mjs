@@ -58,6 +58,17 @@ function assertNoArtefacts(name) {
   }
 }
 
+// Returns the sha of the initial commit. measure() diffs against this sha
+// rather than against the index, because an agent that commits its own
+// work empties the index: `git diff --cached` then reports nothing while
+// the working copy holds a full implementation. That happened for real in
+// session T2-P0-O1-mug8g8uw (25/09), which recorded an empty session.diff,
+// travou_sem_diff = true and qualidade = 0 for an agent that had written
+// four production files and a test, then committed them.
+//
+// The sha is carried on the host rather than marked inside the container
+// (a tag would do the same job) so the working copy keeps no trace of the
+// harness for the agent to find.
 function initHistory(name) {
   const script = [
     'cd /app',
@@ -67,11 +78,17 @@ function initHistory(name) {
     'git config user.name Developer',
     'git add -A',
     'git commit -q -m "Initial commit"',
+    'git rev-parse HEAD',
   ].join(' && ');
   const result = exec(name, ['sh', '-c', script]);
   if (result.status !== 0) {
     throw new InfrastructureError(`could not initialise the working copy history: ${result.stderr}`);
   }
+  const sha = result.stdout.trim().split('\n').pop() ?? '';
+  if (!/^[0-9a-f]{40}$/.test(sha)) {
+    throw new InfrastructureError(`could not read the baseline commit of the working copy: got "${sha}"`);
+  }
+  return sha;
 }
 
 // Neither pkill nor plain job-control kill reliably stops `make start`
@@ -133,12 +150,13 @@ export async function prepare({
   applyContext({ name, pLevel, repoRoot });
 
   assertNoArtefacts(name);
-  initHistory(name);
+  const baselineCommit = initHistory(name);
   await assertServesBeforeHandover(name, hostPort);
 
   const version = exec(name, ['claude', '--version']);
   return {
     imageId: imageId(SESSION_IMAGE),
     cliVersion: version.stdout.trim().split(' ')[0],
+    baselineCommit,
   };
 }
