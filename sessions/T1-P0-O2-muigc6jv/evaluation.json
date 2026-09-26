@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P0-O2-muigc6jv",
+  "evaluatedAt": "2026-09-26T14:15:14.207Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A nova regra de validação (assertOrdered) e a lógica de conflito foram adicionadas em src/modules/bookings/service.ts, sem alterações em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não mostra nenhuma alteração em schema.ts; a validação de startsAt/endsAt é feita via checagem manual (`assertOrdered`) no service, não por schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os caminhos de erro lançam `bookingConflict(...)` e `validationFailed(...)`, que mapeiam para 409 e 400 respectivamente conforme os testes `expect(response.statusCode).toBe(409/400)`."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhuma constante nomeada para durações/limites; os únicos valores numéricos aparecem apenas nos testes (ex. `book(24, 25)`), não em código de produção."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos usam `app.inject` e checam `response.statusCode` e `response.json().error.code`, validando comportamento HTTP observável, não funções internas."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff importa e usa `isBefore` de `../../shared/time.js` e `validationFailed` de `../../shared/errors.js` em vez de reimplementar a checagem de ordem de datas."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.025432
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.025432
+}

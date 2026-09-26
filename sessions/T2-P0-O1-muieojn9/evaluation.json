@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-muieojn9",
+  "evaluatedAt": "2026-09-26T14:14:07.305Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (findAvailability, suggestOpenings, requireFree, requireRoomAndUser) está em service.ts dos módulos availability e bookings; routes.ts apenas chama `service.findAvailability(request.query)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A rota `/availability` declara `schema: { querystring: AvailabilityQuery, response: { 200: AvailabilityPage } }` com tipos TypeBox validando os novos parâmetros."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros novos usam `notFound('Room')`, `notFound('User')` (404) e `bookingConflict(...)` (409), além de `validationFailed('Search window is too wide', ...)` (400)."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Valores como `DEFAULT_WINDOW_DAYS`, `MAX_WINDOW_DAYS`, `DEFAULT_SLOT_MINUTES` e `SUGGESTION_COUNT` são constantes nomeadas em schema.ts, em vez de literais soltos."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes em `tests/availability.test.ts` e `tests/bookings.test.ts` fazem chamadas HTTP via `app.inject` e checam status/JSON de resposta, não implementação interna (ex.: 'offers free slots alongside a conflict')."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O código novo reutiliza `parseInstant`, `normalizeLimit/normalizeOffset/paginated`, `notFound`, `validationFailed` e `bookingConflict` do material de referência em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.049980000000000004
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "combinação",
+        "justificativa": "O diff cria um endpoint novo (`GET /availability`) e também enriquece o erro 409 de conflito com sugestões de horários livres (`bookingConflict` agora recebe `suggestions`), então a solução combina as duas abordagens."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O serviço `findAvailability` e a função `freeSlots` calculam e retornam os gaps livres (slots) entre as reservas, não os horários ocupados."
+      },
+      "3": {
+        "categoria": "parametrizável",
+        "justificativa": "O parâmetro `durationMinutes` na query (`AvailabilityQuery`) controla o tamanho mínimo/granularidade dos slots retornados, com default de 30 minutos."
+      },
+      "4": {
+        "categoria": "semana",
+        "justificativa": "`DEFAULT_WINDOW_DAYS = 7` e o código usa `from` (padrão agora) + 7 dias quando `to` não é informado, conforme documentado no README ('Default `from` + 7 days')."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem parâmetro de configuração para isso; a janela de busca cobre qualquer intervalo de horas do dia livremente, sem limite de expediente."
+      },
+      "6": {
+        "categoria": "todas",
+        "justificativa": "Quando `roomId` não é informado, o serviço lista todas as salas (paginadas) via `rooms.list`; o filtro por uma sala específica é apenas uma restrição opcional sobre esse comportamento padrão de cobrir todas as salas."
+      },
+      "7": {
+        "categoria": "UTC",
+        "justificativa": "Os testes usam `Date.UTC` e as respostas usam ISO strings com sufixo `Z` (ex.: `2030-01-01T09:00:00.000Z`), indicando que toda a aritmética de datas é feita em UTC, sem conversão para fuso local."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window as free for an empty room' confirma que uma sala sem reservas retorna o array de slots cobrindo toda a janela como livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "O diff não trata explicitamente reservas ou janelas no passado; o único valor padrão é `from = now`, mas não há filtragem ou inclusão deliberada de intervalos passados quando informados explicitamente pelo cliente."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "`bookingConflict` agora recebe `suggestions` geradas por `suggestOpenings`, e o erro 409 do POST (e do PATCH) de reserva passa a incluir essas sugestões de horários livres no campo `details.suggestions`."
+      }
+    },
+    "costUsd": 0.070804
+  },
+  "totalCostUsd": 0.120784
+}

@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-muigfrfy",
+  "evaluatedAt": "2026-09-26T14:15:44.842Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (assertWindow, freeSlots, nextAvailableStart, conflictFor, listAvailability) foi adicionada em src/modules/bookings/service.ts, enquanto routes.ts apenas registra `app.get('/availability', ..., async (request) => service.listAvailability(request.query))`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A nova query de disponibilidade é validada via schema Typebox: `export const AvailabilityQuery = Type.Object({ roomId: Type.String({ minLength: 1 }), from: Type.String(...), to: Type.String(...), durationMinutes: Type.Optional(Type.Integer({ minimum: 1 })) })` e usado em `{ schema: { querystring: AvailabilityQuery, ... } }`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros lançam AppError tipados com status explícito, ex.: `throw notFound('Room')` (404), `throw validationFailed('Booking must end after it starts')` (400) e `throw await conflictFor(...)` que gera `bookingConflict` (409)."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Limites de duração e janelas foram nomeados em constantes, ex.: `export const MIN_DURATION_MINUTES = 30;`, `export const MAX_DURATION_MINUTES = 480;`, `const MAX_WINDOW_MINUTES = 31 * MINUTES_IN_DAY;` e `const SUGGESTION_WINDOW_MINUTES = 7 * MINUTES_IN_DAY;`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e verificam apenas `response.statusCode` e `response.json()`, como em `it('splits the window around an active booking', ...)` que checa `response.json().slots` sem acessar internals do serviço."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reutiliza utilitários existentes como `parseInstant`, `durationMinutes`, `isBefore`, `MINUTE_IN_MS` de shared/time.ts e `bookingConflict`, `notFound`, `validationFailed` de shared/errors.ts, em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.03827
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "combinação",
+        "justificativa": "O diff cria um endpoint novo (GET /bookings/availability) e também enriquece o erro 409 existente com `nextAvailableStart`, atacando o problema por dois ângulos."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "AvailabilityResponse retorna `slots`, calculados pela função `freeSlots`, que representam os intervalos livres entre reservas ativas."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "`freeSlots` varre as reservas ordenadas e gera os slots a partir dos gaps entre elas, não usando blocos fixos (ex.: 30 em 30 min)."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "`AvailabilityQuery` exige `from` e `to` como strings obrigatórias, sem valor default de dia ou semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição de horário comercial nem configuração de horário de funcionamento; apenas limites de duração (30min-8h) e janela máxima de 31 dias, que não correspondem a limite de horário do dia."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "`AvailabilityQuery.roomId` é obrigatório e único, e `assertRoomExists` valida apenas uma sala por vez."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não altera nem introduz tratamento explícito de fuso horário; usa `DateString`/`parseInstant` já existentes sem indicação de UTC ou fuso local no contrato."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window as free when the room has no booking' confirma que a ausência de reservas retorna um único slot cobrindo toda a janela."
+      },
+      "9": {
+        "categoria": "filtrado",
+        "justificativa": "O código ajusta `from` para `now` quando a janela solicitada começa no passado ('searched from now on'), e o teste 'never offers a slot that starts in the past' confirma isso."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "`conflictFor` calcula `nextAvailableStart` e `bookingConflict` agora aceita `extra` para incluir essa sugestão nos detalhes do erro 409."
+      }
+    },
+    "costUsd": 0.038374
+  },
+  "totalCostUsd": 0.07664399999999999
+}
