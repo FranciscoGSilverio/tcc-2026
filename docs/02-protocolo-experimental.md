@@ -311,6 +311,8 @@ Randomizar a ordem em que as sessões rodam, em vez de executar célula por cél
 
 `convergencia` = proporção dos 10 pontos de decisão em que as **três execuções da célula registraram a mesma categoria**.
 
+**Célula aqui é a tripla modelo, contexto e ordem** — não o par contexto e ordem. A seção 4.2 trata as configurações de modelo como células e elas carregam T2 três vezes cada, exatamente como as da grade principal; são elas que tornam a comparação central do artigo disponível também em T2. São portanto **dez células** de três execuções: seis em Sonnet e quatro de modelo. `tools/analysis/convergencia.mjs` agrupava por contexto e ordem apenas, o que foi inócuo enquanto T2 só existia em Sonnet e passou a bloquear quando as células de modelo entraram — P0-O1 e P2-O2 ficaram com nove sessões cada, de três modelos misturados, e o script as recusou. Corrigido em 26/09/2026; **nenhuma sessão precisou ser recoletada**, porque as dez células já tinham exatamente três execuções classificadas cada.
+
 Métrica secundária: número médio de categorias distintas por ponto de decisão, que mostra *quão* dispersas foram as escolhas quando não houve unanimidade.
 
 Como depende das três execuções, é calculada na análise, não pelo runner.

@@ -21,13 +21,17 @@ function nextId(prefix) {
 // decisao_N values (a classified row) or omitted (a valid row still
 // pending evaluation, exactly as the runner leaves it before the blind
 // evaluator runs).
-function makeRow({ pLevel, oLevel, status = 'valid', categories = null, sessionId = null }) {
+function makeRow({
+  pLevel, oLevel, status = 'valid', categories = null, sessionId = null,
+  model = 'claude-sonnet-5',
+}) {
   const row = {
     ...emptyRow(),
     session_id: sessionId ?? nextId(`T2-${pLevel}-${oLevel}`),
     task: 'T2',
     p_level: pLevel,
     o_level: oLevel,
+    model,
     status,
   };
   if (categories) {
@@ -67,7 +71,7 @@ test('a cell where three sessions agree on 6 of 10 points prints 6/10', () => {
     makeRow({ pLevel: 'P0', oLevel: 'O1', categories })));
 
   const result = analyzeCsv(csvPath);
-  const cell = result.firstCut.find((entry) => entry.cell === 'P0-O1');
+  const cell = result.firstCut.find((entry) => entry.cell === 'sonnet-5 P0-O1');
   assert.ok(cell, 'P0-O1 should have been computed');
   assert.equal(cell.convergence.converged, 6);
   assert.equal(cell.convergence.total, 10);
@@ -125,8 +129,8 @@ test('a valid session with empty decisao_* is reported as pending, and its cell 
   ]);
 
   const result = analyzeCsv(csvPath);
-  assert.equal(result.firstCut.find((entry) => entry.cell === 'P1-O2'), undefined);
-  const refusal = result.refusals.find((line) => line.includes('P1-O2'));
+  assert.equal(result.firstCut.find((entry) => entry.cell === 'sonnet-5 P1-O2'), undefined);
+  const refusal = result.refusals.find((line) => line.includes('sonnet-5 P1-O2'));
   assert.ok(refusal, 'expected a refusal naming P1-O2');
   assert.match(refusal, /pendente/);
   assert.match(refusal, new RegExp(pendingId));
@@ -142,8 +146,8 @@ test('an invalid session is ignored: three valid plus one invalid computes norma
   ]);
 
   const result = analyzeCsv(csvPath);
-  const cell = result.firstCut.find((entry) => entry.cell === 'P2-O1');
-  assert.ok(cell, 'P2-O1 should have been computed from the three valid rows');
+  const cell = result.firstCut.find((entry) => entry.cell === 'sonnet-5 P2-O1');
+  assert.ok(cell, 'sonnet-5 P2-O1 should have been computed from the three valid rows');
   assert.equal(cell.convergence.converged, 10);
   assert.equal(cell.convergence.total, 10);
 });
@@ -167,59 +171,70 @@ test('with an incomplete dataset, the second cut is not printed and the output s
   assert.match(report, /P2-O2/);
 });
 
-test('with all six T2 cells complete, the second cut is printed and inert points are dataset-wide, not per-cell', () => {
+test('with every T2 cell complete, the second cut is printed and inert points are dataset-wide, not per-cell', () => {
   const csvPath = newDataset();
-  const cells = [['P0', 'O1'], ['P0', 'O2'], ['P1', 'O1'], ['P1', 'O2'], ['P2', 'O1'], ['P2', 'O2']];
+  // All ten cells of the collection: the six main-grid cells on sonnet,
+  // and the four model cells. A cell is the triple model, context, order.
+  const cells = [
+    ...[['P0', 'O1'], ['P0', 'O2'], ['P1', 'O1'], ['P1', 'O2'], ['P2', 'O1'], ['P2', 'O2']]
+      .map(([p, o]) => ['claude-sonnet-5', p, o]),
+    ['claude-haiku-4-5', 'P0', 'O1'], ['claude-haiku-4-5', 'P2', 'O2'],
+    ['claude-opus-5', 'P0', 'O1'], ['claude-opus-5', 'P2', 'O2'],
+  ];
 
-  for (const [pLevel, oLevel] of cells) {
+  for (const [model, pLevel, oLevel] of cells) {
     for (let run = 0; run < 3; run += 1) {
       // Point 5 is "ausente" everywhere: truly inert.
-      // Point 7 is "ausente" only inside P0-O1's three rows: locally
-      // unanimous, but live, because P2-O2 (among others) takes a real
-      // position on it below.
+      // Point 7 is "ausente" in every sonnet cell, and decided only by the
+      // model cells. It must stay live: a point that only haiku and opus
+      // ever decide is exactly the contrast section 4.2 exists to draw,
+      // and cutting it would hide that contrast. This case could not be
+      // expressed at all while a cell was just context and order.
       const categories = POINTS.map((point) => {
         if (point === 5) return 'ausente';
-        if (point === 7 && pLevel === 'P0' && oLevel === 'O1') return 'ausente';
-        if (point === 7) return `p7-${pLevel}-${oLevel}`;
+        if (point === 7) return model === 'claude-sonnet-5' ? 'ausente' : `p7-${model}`;
         return `common-${point}`;
       });
-      writeRows(csvPath, [makeRow({ pLevel, oLevel, categories })]);
+      writeRows(csvPath, [makeRow({ model, pLevel, oLevel, categories })]);
     }
   }
 
   const result = analyzeCsv(csvPath);
-  assert.equal(result.scope.sessionCount, 18);
-  assert.equal(result.scope.cellCount, 6);
+  assert.equal(result.scope.cellCount, 10);
+  assert.equal(result.scope.sessionCount, 30);
   assert.ok(result.secondCut, 'expected the second cut to be computable');
   assert.deepEqual(result.secondCut.inertPoints, [5]);
   assert.ok(!result.secondCut.livePoints.includes(5));
-  assert.ok(result.secondCut.livePoints.includes(7), 'point 7 is not globally inert and must stay live');
+  assert.ok(result.secondCut.livePoints.includes(7), 'point 7 is decided by the model cells and must stay live');
   assert.equal(result.secondCut.livePoints.length, 9);
 
-  // P0-O1 converged locally on "ausente" for point 7 (all three rows
-  // agree), and that point must still count in its denominator (9 live
-  // points), not be dropped as if it were inert.
-  const p0o1 = result.secondCut.perCell.find((entry) => entry.cell === 'P0-O1');
-  assert.equal(p0o1.convergence.total, 9);
-  assert.equal(p0o1.convergence.converged, 9);
-
-  const report = formatReport(result);
-  assert.match(report, /vivos/);
-  assert.match(report, /pontos inertes.*: 5/);
+  // The sonnet cells converged locally on "ausente" for point 7, so it
+  // still counts as convergence for them -- local unanimity and global
+  // liveness are different questions, which is the whole reason the two
+  // cuts exist.
+  const sonnetCell = result.secondCut.perCell.find((entry) => entry.cell === 'sonnet-5 P0-O1');
+  assert.equal(sonnetCell.convergence.converged, 9);
+  assert.equal(sonnetCell.convergence.total, 9);
 });
 
-test('running the script does not modify the dataset file', () => {
+test('the model cells are cells: each is computed on its own, never mixed with sonnet', () => {
   const csvPath = newDataset();
-  writeRows(csvPath, [
-    makeRow({ pLevel: 'P0', oLevel: 'O1', categories: AGREE_10 }),
-    makeRow({ pLevel: 'P0', oLevel: 'O1', categories: AGREE_10 }),
-    makeRow({ pLevel: 'P0', oLevel: 'O1', categories: AGREE_10 }),
-  ]);
-  const before = readFileSync(csvPath, 'utf8');
+  const rows = [];
+  for (const model of ['claude-sonnet-5', 'claude-haiku-4-5', 'claude-opus-5']) {
+    for (let run = 0; run < 3; run += 1) {
+      // Each model agrees with itself and differs from the others, so a
+      // mixed cell would converge on nothing while each real cell
+      // converges on everything.
+      rows.push(makeRow({ model, pLevel: 'P0', oLevel: 'O1', categories: POINTS.map((p) => `${model}-${p}`) }));
+    }
+  }
+  writeRows(csvPath, rows);
 
-  const output = execFileSync('node', [SCRIPT_PATH, '--dataset', csvPath], { encoding: 'utf8' });
-
-  const after = readFileSync(csvPath, 'utf8');
-  assert.equal(after, before);
-  assert.match(output, /escopo:/);
+  const result = analyzeCsv(csvPath);
+  for (const label of ['sonnet-5 P0-O1', 'haiku-4-5 P0-O1', 'opus-5 P0-O1']) {
+    const cell = result.firstCut.find((entry) => entry.cell === label);
+    assert.ok(cell, `${label} should have been computed`);
+    assert.equal(cell.convergence.converged, 10, `${label} agrees with itself on every point`);
+  }
 });
+

@@ -10,14 +10,34 @@
 // It only reads. It never writes a byte anywhere.
 import { resolve } from 'node:path';
 import { readRows } from '../../runner/lib/dataset.mjs';
+import { GRID } from '../../tools/collect/grid.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 
-const P_LEVELS = ['P0', 'P1', 'P2'];
-const O_LEVELS = ['O1', 'O2'];
-// Fixed print order: by P, then by O -- the same order the grid in
-// protocol section 4.1 is read in.
-export const CELLS = P_LEVELS.flatMap((p) => O_LEVELS.map((o) => `${p}-${o}`));
+// A cell is the triple model, context, order -- not the pair context,
+// order. Section 5.2 defines convergence over "as três execuções da
+// célula", and section 4.2 calls the model configurations cells too: they
+// carry T2 three times each, exactly like the main grid, and they are what
+// makes the article's central comparison possible for T2 as well as T1.
+//
+// This script grouped by context and order alone until 26/09/2026, which
+// was harmless only while T2 existed on sonnet. Once the model cells were
+// collected, P0-O1 and P2-O2 held nine sessions each -- three sonnet,
+// three haiku, three opus -- and the script refused them for having more
+// than three, naming over-collection as the cause when the cause was that
+// it was mixing models inside one cell. The guard saved the number by
+// refusing rather than computing across models; the fix makes the number
+// exist.
+//
+// Derived from GRID rather than listed again: the composition of the
+// collection has one declaration, and a second copy here is how a label
+// and the thing it stands for drift apart.
+export const CELLS = Object.values(GRID).flatMap(({ models, cells }) =>
+  models.flatMap((model) => cells.map(([pLevel, oLevel]) => ({
+    model,
+    key: `${model}|${pLevel}-${oLevel}`,
+    label: `${model.replace(/^claude-/, '')} ${pLevel}-${oLevel}`,
+  }))));
 
 export const POINTS = Array.from({ length: 10 }, (_, index) => index + 1);
 const decisionColumn = (point) => `decisao_${point}`;
@@ -34,7 +54,7 @@ export function isClassified(row) {
 }
 
 function cellKey(row) {
-  return `${row.p_level}-${row.o_level}`;
+  return `${row.model}|${row.p_level}-${row.o_level}`;
 }
 
 // Section 2's opening guard: only status = valid rows are sessions, and
@@ -48,7 +68,7 @@ function validT2Rows(rows) {
 }
 
 function groupByCell(rows) {
-  const map = new Map(CELLS.map((cell) => [cell, []]));
+  const map = new Map(CELLS.map((cell) => [cell.key, []]));
   for (const row of rows) {
     const key = cellKey(row);
     if (map.has(key)) map.get(key).push(row);
@@ -114,7 +134,10 @@ export function analyze(allRows) {
   const rows = validT2Rows(allRows);
   const byCell = groupByCell(rows);
 
-  const cellResults = CELLS.map((cell) => ({ cell, resolved: resolveCell(byCell.get(cell)) }));
+  const cellResults = CELLS.map((cell) => ({
+    cell: cell.label,
+    resolved: resolveCell(byCell.get(cell.key)),
+  }));
   const computed = cellResults.filter((entry) => entry.resolved.status === 'ok');
   const refused = cellResults.filter((entry) => entry.resolved.status !== 'ok');
 
@@ -128,9 +151,13 @@ export function analyze(allRows) {
     cellCount: computed.length,
   };
 
-  // Guard 3: the second cut needs all six T2 cells complete, because with
-  // a partial dataset there is no way to know which points are globally
+  // Guard 3: the second cut needs every T2 cell complete, because with a
+  // partial dataset there is no way to know which points are globally
   // inert -- that was the actual mistake behind the 22/09 "3/8" number.
+  // Inertness is a property of the whole dataset, so it is read across all
+  // ten cells, model cells included: a point that only the model cells
+  // ever decide is live, and cutting it would hide exactly the contrast
+  // section 4.2 exists to draw.
   let secondCut = null;
   let missing = [];
   if (computed.length === CELLS.length) {
@@ -168,9 +195,9 @@ function formatFraction(convergence) {
 }
 
 function formatCellTable(entries, header) {
-  const lines = [`célula    ${header}   categorias distintas/ponto`];
+  const lines = [`célula                ${header}   categorias distintas/ponto`];
   for (const { cell, convergence } of entries) {
-    lines.push(`${cell.padEnd(9)} ${formatFraction(convergence).padStart(17)}   ${formatNumber(convergence.avgDistinct).padStart(24)}`);
+    lines.push(`${cell.padEnd(21)} ${formatFraction(convergence).padStart(17)}   ${formatNumber(convergence.avgDistinct).padStart(24)}`);
   }
   return lines;
 }
@@ -197,7 +224,7 @@ export function formatReport(result) {
     lines.push(`pontos inertes no dataset (ausentes em todas as ${result.scope.sessionCount}): ${inertPoints.length > 0 ? inertPoints.join(', ') : '(nenhum)'}`);
     lines.push(...formatCellTable(perCell, `convergência(${livePoints.length} vivos)`));
   } else {
-    lines.push('segundo recorte: recusado — depende das seis células de T2 completas (válidas e classificadas). Falta:');
+    lines.push(`segundo recorte: recusado — depende das ${CELLS.length} células de T2 completas (válidas e classificadas). Falta:`);
     lines.push(...result.missing.map((line) => `  ${line}`));
   }
 
