@@ -480,6 +480,11 @@
   <path class="s-ln-c" marker-end="url(#a2)" d="M722 185 L736 185"/>
 </svg>
 </div>
+<div class="note gate">
+<p><strong>A fronteira entre os passos é instrução, não trava.</strong> Os passos 1 e 2 pedem ao agente que não altere arquivo, e nada o impede de alterar — impedir transformaria a condição em outro experimento, porque a pergunta de O2 é o que o agente faz com a ordem segmentada, não o que ele faz preso a ela. Em uma sessão de Haiku o agente implementou durante a exploração e deixou os passos 2 e 3 vazios: ela está rotulada O2 e executou algo mais perto de O1.</p>
+<p>Isso é medido, não presumido — <code>node tools/analysis/aderencia-o2.mjs</code> conta as alterações por passo e nomeia quem alterou onde não devia. Na coleta deu <strong>1 em 23</strong>. Quem for analisar o fator O deve recalcular sobre o dataset final e tratar as sessões nomeadas com cuidado.</p>
+</div>
+
 <figcaption>O encadeamento usa um identificador de sessão explícito (<code>--session-id</code> na primeira chamada, <code>--resume</code> nas outras três), nunca &#8220;continue a conversa mais recente&#8221;. Uma etapa que não produza transcript interrompe a sessão na hora, em vez de gerar uma sessão faltando um quarto do trabalho e parecendo completa.</figcaption>
 </figure>
 
