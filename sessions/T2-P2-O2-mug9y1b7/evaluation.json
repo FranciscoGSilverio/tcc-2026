@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-mug9y1b7",
+  "evaluatedAt": "2026-09-25T01:29:26.657Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A correção da detecção de conflito fica em repository.ts (findConflict) e service.ts (chamada e lançamento de bookingConflict), não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhum campo de entrada novo nem schema de validação; apenas altera a query de conflito existente."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O serviço continua lançando `bookingConflict(conflict.id)` quando há sobreposição, resultando em resposta 409 tratada pelo error handler."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "Não há introdução de valores fixos (durações, limites, janelas) no diff; a mudança é apenas na condição `startsAt: { lt: endsAt }`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes chamam `book(...)` via HTTP e verificam `response.statusCode` e `response.json().error.code`, comportamento observável da API."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O código modificado continua usando os utilitários existentes `parseInstant` e `bookingConflict` de shared/, sem reimplementar essa lógica."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.023668
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "ausente",
+        "justificativa": "O diff apenas corrige a lógica de detecção de conflito de sobreposição de horários (findConflictAtStart -> findConflict), não cria endpoint novo, não altera listagem existente nem enriquece o erro 409 com sugestões."
+      },
+      "2": {
+        "categoria": "ausente",
+        "justificativa": "Não há introdução de retorno de horários livres/ocupados; a mudança é apenas na query de detecção de conflito no create de reserva."
+      },
+      "3": {
+        "categoria": "ausente",
+        "justificativa": "Não há criação de granularidade de intervalos para consulta de disponibilidade; o diff não trata desse conceito."
+      },
+      "4": {
+        "categoria": "ausente",
+        "justificativa": "Não há parâmetro de janela temporal para consulta; o diff só ajusta a checagem de conflito no POST de reserva existente."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há limite de horário comercial/24h/configurável sendo definido; o diff não introduz tal conceito."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "A função findConflict continua operando sobre um roomId único, mantendo o escopo de uma sala por chamada, como antes."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não menciona ou altera tratamento de fuso horário; apenas usa Date já existente no fluxo."
+      },
+      "8": {
+        "categoria": "ausente",
+        "justificativa": "Não há cenário de 'sala sem reservas' sendo tratado; o foco é a lógica de sobreposição no conflito de criação."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "O diff não trata filtragem ou inclusão de reservas passadas; a mudança é sobre lógica de overlap de intervalos."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O contrato do POST de reserva permanece o mesmo: ainda lança bookingConflict com o id do conflito, sem sugerir alternativas; apenas a detecção interna do conflito foi corrigida para cobrir mais casos de sobreposição."
+      }
+    },
+    "costUsd": 0.011432
+  },
+  "totalCostUsd": 0.0351
+}

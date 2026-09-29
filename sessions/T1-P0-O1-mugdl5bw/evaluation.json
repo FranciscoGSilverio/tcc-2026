@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P0-O1-mugdl5bw",
+  "evaluatedAt": "2026-09-25T03:15:15.905Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "As novas validações (startsAt >= endsAt, checagem de conflito) foram adicionadas em service.ts, dentro de createBooking e updateBooking, não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "A validação de startsAt/endsAt é feita manualmente com `if (startsAt >= endsAt) { throw validationFailed(...) }` no service, não há schema novo no diff para essas regras."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os caminhos inválidos lançam erros explícitos reutilizando `validationFailed` e `bookingConflict`, que carregam status codes definidos (400/409)."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhuma constante nomeada (durações, limites, janelas); a comparação usa apenas `startsAt >= endsAt` diretamente."
+      },
+      "5": {
+        "resposta": "nao",
+        "justificativa": "O diff não contém nenhum arquivo de teste novo ou alterado."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reusa `parseInstant`, `validationFailed` e `bookingConflict` do shared/errors.ts e shared/time.ts em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 3,
+    "costUsd": 0.021086
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.021086
+}

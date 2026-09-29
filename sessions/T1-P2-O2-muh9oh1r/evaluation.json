@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P2-O2-muh9oh1r",
+  "evaluatedAt": "2026-09-25T18:51:53.997Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (assertInterval, assertFuture, assertNoOverlap, chamadas a getRoom/getUser) foi adicionada em src/modules/bookings/service.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não mostra mudanças em schema.ts (validação de payload); a validação nova é feita via checagens imperativas no service (assertInterval/assertFuture), não por schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os erros usam validationFailed/bookingConflict/notFound, que mapeiam para 400/409/404 conforme os testes, ex.: 'expect(response.statusCode).toBe(400)' e 'toBe(409)'."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Limites foram nomeados em constantes: 'const MIN_DURATION_MINUTES = 30;' e 'const MAX_DURATION_MINUTES = 8 * 60;'."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes chamam a API via app.inject e checam apenas statusCode e corpo da resposta, ex.: 'expect(response.statusCode).toBe(409)' sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service novo reusa utilitários existentes como 'durationMinutes, isBefore, parseInstant' de shared/time.js em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.02411
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.02411
+}

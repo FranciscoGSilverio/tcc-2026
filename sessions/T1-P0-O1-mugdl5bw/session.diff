@@ -1,0 +1,72 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..d46ec49 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -24,12 +24,16 @@ export function create(data: BookingData): Promise<Booking> {
+   return prisma.booking.create({ data });
+ }
+ 
+-export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Booking | null> {
++export function findConflict(
++  roomId: string,
++  startsAt: Date,
++  endsAt: Date,
++): Promise<Booking | null> {
+   return prisma.booking.findFirst({
+     where: {
+       roomId,
+       status: BOOKING_ACTIVE,
+-      startsAt: { lte: startsAt },
++      startsAt: { lt: endsAt },
+       endsAt: { gt: startsAt },
+     },
+   });
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..494e4e5 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -1,5 +1,5 @@
+ import type { Booking } from '@prisma/client';
+-import { bookingConflict, notFound } from '../../shared/errors.js';
++import { bookingConflict, notFound, validationFailed } from '../../shared/errors.js';
+ import {
+   normalizeLimit,
+   normalizeOffset,
+@@ -15,7 +15,11 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
+   const startsAt = parseInstant(input.startsAt);
+   const endsAt = parseInstant(input.endsAt);
+ 
+-  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
++  if (startsAt >= endsAt) {
++    throw validationFailed('startsAt must be before endsAt');
++  }
++
++  const conflict = await repository.findConflict(input.roomId, startsAt, endsAt);
+   if (conflict) {
+     throw bookingConflict(conflict.id);
+   }
+@@ -53,7 +57,23 @@ export async function listBookings(query: ListBookingsInput): Promise<Page<Booki
+ }
+ 
+ export async function updateBooking(id: string, input: UpdateBookingInput): Promise<Booking> {
+-  await getBooking(id);
++  const booking = await getBooking(id);
++
++  const startsAt = input.startsAt !== undefined ? parseInstant(input.startsAt) : booking.startsAt;
++  const endsAt = input.endsAt !== undefined ? parseInstant(input.endsAt) : booking.endsAt;
++  const roomId = input.roomId !== undefined ? input.roomId : booking.roomId;
++
++  if (startsAt >= endsAt) {
++    throw validationFailed('startsAt must be before endsAt');
++  }
++
++  if (input.startsAt !== undefined || input.endsAt !== undefined || input.roomId !== undefined) {
++    const conflict = await repository.findConflict(roomId, startsAt, endsAt);
++    if (conflict && conflict.id !== id) {
++      throw bookingConflict(conflict.id);
++    }
++  }
++
+   return repository.update(id, {
+     ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+     ...(input.userId !== undefined ? { userId: input.userId } : {}),

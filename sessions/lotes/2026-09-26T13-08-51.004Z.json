@@ -1,0 +1,96 @@
+{
+  "seed": "cb2938d6",
+  "dataset": "/home/franciscogsilverio/myPrograms/tcc-2026/resultados.csv",
+  "startedAt": "2026-09-26T13:08:51.004Z",
+  "endedAt": "2026-09-26T14:15:44.859Z",
+  "promised": [
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": 2
+    },
+    {
+      "block": "principal",
+      "task": "T1",
+      "pLevel": "P2",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": 2
+    },
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": 3
+    },
+    {
+      "block": "principal",
+      "task": "T1",
+      "pLevel": "P0",
+      "oLevel": "O2",
+      "model": "claude-sonnet-5",
+      "run": 2
+    },
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": 3
+    }
+  ],
+  "executed": [
+    {
+      "sessionId": "T2-P0-O1-muieojn9",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": "2",
+      "costUsd": 4.01822675
+    },
+    {
+      "sessionId": "T1-P2-O1-muifiv02",
+      "task": "T1",
+      "pLevel": "P2",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": "2",
+      "costUsd": 0.42869579999999996
+    },
+    {
+      "sessionId": "T2-P0-O1-muifs0lb",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": "3",
+      "costUsd": 3.15456675
+    },
+    {
+      "sessionId": "T1-P0-O2-muigc6jv",
+      "task": "T1",
+      "pLevel": "P0",
+      "oLevel": "O2",
+      "model": "claude-sonnet-5",
+      "run": "2",
+      "costUsd": 0.3951409
+    },
+    {
+      "sessionId": "T2-P2-O2-muigfrfy",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": "3",
+      "costUsd": 2.58883475
+    }
+  ],
+  "stopped": null
+}

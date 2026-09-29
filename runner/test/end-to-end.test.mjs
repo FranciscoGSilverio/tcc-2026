@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { buildImage } from '../lib/container.mjs';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -13,6 +14,10 @@ const REPO = resolve(import.meta.dirname, '..', '..');
 // `node --test` accumulates fake sessions into it unnoticed. Each test
 // file run gets its own scratch CSV instead.
 const DATASET_PATH = join(mkdtempSync(join(tmpdir(), 'end-to-end-dataset-')), 'resultados.csv');
+
+// run-session.mjs refuses when the session image is missing, so these
+// build it once rather than depending on a side effect of prepare().
+buildImage();
 
 const runFake = (fake) => {
   const result = spawnSync('node', [
@@ -47,4 +52,14 @@ test('a broken application is recorded as data, not discarded', () => {
   assert.equal(row.travou_build, true);
   assert.equal(row.travou, true);
   assert.notEqual(row.invalid_reason, 'runner error');
+});
+
+test('an O2 session is accepted and recorded, no longer refused', () => {
+  const result = spawnSync('node', [
+    resolve(REPO, 'runner', 'run-session.mjs'),
+    '--fake', 'noop', '--o', 'O2', '--dataset', DATASET_PATH,
+  ], { encoding: 'utf8', cwd: REPO });
+  const row = JSON.parse(result.stdout);
+  assert.equal(row.o_level, 'O2');
+  assert.equal(row.status, 'valid');
 });

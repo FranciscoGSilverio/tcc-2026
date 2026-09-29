@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P0-O1-mugcrfmz",
+  "evaluatedAt": "2026-09-25T03:14:04.496Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a nova lógica (assertEndsAfterStart, assertRoomExists, assertUserExists, transação de conflito) foi adicionada em src/modules/bookings/service.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "A validação nova é feita por funções imperativas no service (assertEndsAfterStart, parseInstant, regex ISO_8601 em shared/time.ts), não há alteração em schema.ts para validar os novos campos via schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros específicos são lançados com status implícito nos helpers reutilizados, ex.: `throw validationFailed(...)`, `throw notFound('Room')`, `throw bookingConflict(conflict.id)`."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "O regex de validação foi extraído para uma constante nomeada `const ISO_8601 = /^\\d{4}-\\d{2}-\\d{2}.../` em vez de literal inline, e reutiliza constantes existentes como BOOKING_ACTIVE."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos usam `app.inject` e verificam `response.statusCode` e `response.json().error.code/details`, comportamento observável via HTTP, ex.: 'rejects a booking that starts before an active one and ends inside it'."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O código reusa utilitários existentes como `isBefore`, `parseInstant`, `validationFailed`, `notFound` e `bookingConflict` de shared/time.ts e shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.034778
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.034778
+}

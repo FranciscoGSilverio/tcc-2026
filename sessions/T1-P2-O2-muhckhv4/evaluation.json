@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P2-O2-muhckhv4",
+  "evaluatedAt": "2026-09-25T20:29:35.707Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a nova lógica (validateBookingDomainRules, checagens de existência e conflito) foi adicionada em src/modules/bookings/service.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "As novas regras são checadas imperativamente em `validateBookingDomainRules` com `if` e `throw validationFailed(...)`, não há alteração em schema.ts nem uso de Typebox para essas regras."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros retornam respostas explícitas via `throw validationFailed(...)`, `throw notFound('Room')` e `throw bookingConflict(conflict.id)`, mapeados para 400/404/409 pelo error-handler."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Os limites de duração são nomeados: `const minMinutes = 30;` e `const maxMinutes = 480; // 8 hours`, em vez de literais soltos nas comparações."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos chamam `app.inject` e verificam `response.statusCode` e `response.json().error.code`, comportamento observável via HTTP."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reusa utilitários existentes como `parseInstant`, `durationMinutes`, `isBefore` de shared/time.ts e `validationFailed`, `notFound`, `bookingConflict` de shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.023962
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.023962
+}

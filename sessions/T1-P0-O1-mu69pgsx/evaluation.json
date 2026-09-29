@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P0-O1-mu69pgsx",
+  "evaluatedAt": "2026-09-22T23:25:26.073Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A validação de período (assertValidPeriod) e a checagem de overlap ficam em service.ts/repository.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff só adiciona validação semântica (assertValidPeriod) em service.ts, não mostra alteração em schema.ts para validar as entradas por schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os testes confirmam respostas explícitas 409 e 400, e o service lança bookingConflict/validationFailed que mapeiam para esses status."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "Não há novas constantes nomeadas no diff; usa-se apenas comparações diretas como `endsAt.getTime() <= startsAt.getTime()`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes chamam a API via `app.inject` e checam `response.statusCode`/`response.json().error`, sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reutiliza `bookingConflict` e `validationFailed` de `../../shared/errors.js` em vez de reimplementar erros."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.018674
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.018674
+}

@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P1-O1-muh34wz8",
+  "evaluatedAt": "2026-09-25T16:20:51.620Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A rota apenas delega: `async (request) => service.getRoomAvailability(request.query))`, enquanto toda a lógica de cálculo de slots livres está em `service.ts` na função `getRoomAvailability`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A query da nova rota é validada por `AvailabilityQuery` (schema Typebox com `minLength`, `Type.Integer({minimum, maximum})`), usada em `{ schema: { querystring: AvailabilityQuery, ... } }`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O serviço lança `validationFailed('\"to\" must be after \"from\"')` e chama `getRoom(query.roomId)` (que gera 404), e os testes confirmam `expect(response.statusCode).toBe(400)`/`toBe(404)`."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Limites de duração são nomeados em `schema.ts`: `export const MIN_BOOKING_MINUTES = 30;` e `export const MAX_BOOKING_MINUTES = 8 * 60;`, usados no schema e no serviço em vez de literais soltos."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam `app.inject` e verificam status code e corpo JSON retornado (ex.: `expect(data).toHaveLength(2)`), sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reutiliza utilitários existentes: `import { isBefore, MINUTE_IN_MS, parseInstant } from '../../shared/time.js'` e `validationFailed`/`notFound` de `shared/errors.js`, além de `DateString` de `shared/schema.js` no novo schema."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.026586
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/availability, um schema AvailabilityQuery/AvailabilityResponse e um método de serviço getRoomAvailability, sem alterar o endpoint de listagem existente nem o corpo do erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O serviço calcula os intervalos onde não há reservas ativas e retorna apenas esses gaps como 'data', não retorna os horários ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots retornados são exatamente os intervalos livres entre reservas existentes (calculados a partir de booking.startsAt/endsAt), e não blocos de tamanho fixo pré-definidos; o parâmetro duration apenas filtra o tamanho mínimo do gap."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery define 'from' e 'to' como campos obrigatórios (Type.String sem Optional), exigindo que o cliente informe explicitamente a janela."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem configuração de limite; o cliente pode consultar qualquer intervalo de from/to, incluindo madrugada."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige roomId como string única obrigatória, e o serviço consulta apenas as reservas dessa sala (findActiveByRoomInRange(query.roomId, ...))."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff reutiliza DateString/parseInstant já existentes sem introduzir nenhuma indicação explícita de fuso horário (UTC, local ou campo no contrato) para o novo endpoint."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns the whole window as free when there are no bookings' confirma que, sem reservas, a janela inteira é retornada como um único slot livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma lógica no serviço ou testes que filtre ou trate especificamente instantes/janelas no passado."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O diff não modifica createBooking nem o tratamento do erro bookingConflict/409; a nova funcionalidade é um endpoint de consulta separado, sem alterar o contrato do POST de reserva."
+      }
+    },
+    "costUsd": 0.0274
+  },
+  "totalCostUsd": 0.053986
+}

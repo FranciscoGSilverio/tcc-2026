@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P1-O2-muhcqs8o",
+  "evaluatedAt": "2026-09-25T20:30:03.948Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (assertBookingWindow, listAvailability, validações de conflito) foi adicionada em service.ts, enquanto routes.ts apenas chama service.listAvailability(request.query)."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "O novo endpoint usa schema TypeBox AvailabilityQuery/AvailabilityResponse validado via querystring/response no route, e CreateBookingBody já validava entradas existentes."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros novos usam throw validationFailed(...)/notFound(...)/bookingConflict(...), que mapeiam para 400/404/409 conforme os testes (ex: 'rejects a booking shorter than 30 minutes' espera 400)."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Constantes MIN_DURATION_MINUTES = 30 e MAX_DURATION_MINUTES = 8 * 60 foram nomeadas em vez de usar literais soltos nas validações."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam app.inject e verificam statusCode e corpo da resposta (ex: 'expect(response.statusCode).toBe(409)'), sem acessar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reusa parseInstant, isBefore e durationMinutes de shared/time.ts e validationFailed/bookingConflict/notFound de shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.025962
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/availability, com schema, service e repository próprios, sem alterar a listagem existente (GET /) nem o corpo do erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "A resposta é um array de 'slots' calculados como os intervalos entre 'from' e 'to' que não estão cobertos por reservas ativas — ou seja, os horários livres, não os ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots são calculados a partir das bordas reais das reservas (booking.startsAt/endsAt) dentro da janela, formando um cursor que avança conforme as reservas encontradas, e não em blocos fixos (ex: 30 em 30 min) nem parametrizáveis pelo cliente."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery define 'from' e 'to' como Type.String obrigatórios (sem Type.Optional e sem default), e o service lança erro de validação se 'to' não for depois de 'from', não havendo fallback para dia ou semana."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem configuração de limite; o cálculo de slots simplesmente usa toda a janela [from, to) informada, sem recorte por horário do dia."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige um único 'roomId' string, e o service busca e valida apenas essa sala (assertRoomExists), sem suporte a múltiplas salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff usa parseInstant/DateString já existentes sem introduzir tratamento explícito de fuso horário (UTC, local ou explícito no contrato) para o endpoint de disponibilidade."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'lists the whole window as free when there are no bookings' confirma que, sem reservas ativas na sala, o endpoint retorna um único slot cobrindo toda a janela solicitada."
+      },
+      "9": {
+        "categoria": "incluído",
+        "justificativa": "listAvailability não valida nem filtra que 'from' esteja no presente ou futuro, apenas checa 'to' > 'from'; nada impede consultar/obter slots num intervalo passado, então o passado é tratado como qualquer outro intervalo."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro de conflito continua sendo bookingConflict(conflict.id), sem novos campos sugerindo horários alternativos; a solução foi implementada como endpoint separado de disponibilidade, não como enriquecimento do 409."
+      }
+    },
+    "costUsd": 0.034186
+  },
+  "totalCostUsd": 0.060148
+}

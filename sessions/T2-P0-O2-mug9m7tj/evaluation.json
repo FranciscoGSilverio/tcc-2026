@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O2-mug9m7tj",
+  "evaluatedAt": "2026-09-25T01:29:01.251Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "As rotas em routes.ts apenas chamam service.createBookingsBatch e service.getAvailability, delegando toda a lógica (checagem de conflito, cálculo de slots) ao service.ts."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "Novos schemas TypeBox como AvailabilityQuery e BatchCreateBookingsBody validam roomId, duration (Type.Integer minimum 1) e o array de bookings (minItems/maxItems) em schema.ts."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros específicos são lançados com status apropriado, ex: `throw validationFailed(...)` (400) e `throw bookingBatchConflict(result.conflicts)` (409) em service.ts."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O novo limite de itens do lote é um literal solto, `Type.Array(CreateBookingBody, { minItems: 1, maxItems: 50 })`, sem constante nomeada."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam app.inject e verificam apenas status code e corpo da resposta (ex: `expect(response.statusCode).toBe(409); expect(response.json().error.code).toBe('BOOKING_BATCH_CONFLICT')`)."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reutiliza utilitários existentes como `parseInstant`, `isBefore`, `MINUTE_IN_MS` e `bookingConflict`/`validationFailed` de shared/time.ts e shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.03544
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona duas novas rotas, GET /bookings/availability e POST /bookings/batch, além de corrigir a detecção de conflito existente; a solução central para o problema relatado é a criação desses endpoints novos, não uma alteração da listagem nem um enriquecimento do payload do erro 409 do POST simples."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "AvailabilityResponse retorna `slots`, calculados como os intervalos livres entre reservas ativas (cursor avança sobre endsAt das reservas e só adiciona slot quando o gap é livre), ou seja, representa horários disponíveis, não ocupados."
+      },
+      "3": {
+        "categoria": "parametrizável",
+        "justificativa": "AvailabilityQuery exige `duration` (em minutos) como parâmetro obrigatório, usado para filtrar slots cujo tamanho seja >= duration; a granularidade do slot é definida pelo cliente, não fixa nem derivada apenas das reservas."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery define `from` e `to` como Type.String obrigatórios (sem default), e o service lança validationFailed se `from` não for antes de `to`, indicando que a janela deve ser sempre informada pelo cliente."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição de horário comercial nem limite de 24h nem configuração de limite de expediente no schema ou no service; o intervalo é inteiramente definido por from/to arbitrários."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige `roomId: Type.String` único e o service/repository (`listActiveBetween(roomId, from, to)`) opera sempre sobre uma única sala por chamada."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O código usa `parseInstant` para strings de data sem qualquer menção a timezone, UTC explícito ou conversão para horário local; o diff não toma posição sobre fuso horário."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns the whole window when the room has no bookings' confirma que quando não há reservas, o endpoint retorna um único slot cobrindo toda a janela solicitada (`slots: [{startsAt: from, endsAt: to}]`), não lista vazia nem 404."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há qualquer filtro ou tratamento especial para janelas ou reservas no passado no service de disponibilidade; o cálculo trata `from`/`to` como quaisquer datas, sem checar se já passaram."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "createBooking continua lançando `bookingConflict(conflict.id)` exatamente como antes (só a lógica de detecção de overlap foi corrigida de `findConflictAtStart` para `findOverlapping`); o erro 409 do POST simples não passou a sugerir horários alternativos — isso só ocorre, de forma diferente, no novo endpoint de batch."
+      }
+    },
+    "costUsd": 0.033274
+  },
+  "totalCostUsd": 0.068714
+}

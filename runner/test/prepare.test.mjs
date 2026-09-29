@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { exec, stop } from '../lib/container.mjs';
+import { buildImage, exec, stop } from '../lib/container.mjs';
 import { prepare, applyContext, InfrastructureError } from '../lib/prepare.mjs';
 
 const NAME = 'runner-prepare-test';
@@ -12,10 +12,17 @@ const REPO = resolve(import.meta.dirname, '..', '..');
 
 after(() => stop(NAME));
 
+// prepare() no longer builds the image, so a test that needs a container
+// builds it once here instead of relying on a side effect.
+buildImage();
+
 test('prepares a working copy and reports the reproducibility anchors', async () => {
   const info = await prepare({ name: NAME, outDir, hostPort: 3520, env: {}, pLevel: 'P0', repoRoot: REPO });
   assert.match(info.imageId, /^sha256:/);
   assert.match(info.cliVersion, /^\d+\./);
+  // The sha measure() diffs against. Without it a session cannot be
+  // measured at all, so it belongs with the other anchors.
+  assert.match(info.baselineCommit, /^[0-9a-f]{40}$/);
 });
 
 test('the working copy history holds exactly one neutral commit', () => {
@@ -50,6 +57,22 @@ test('applyContext copies the P1 context file into the working copy', () => {
   assert.equal(calls.length, 1);
   assert.match(calls[0][1], /contexts\/P1\/CLAUDE\.md$/);
   assert.equal(calls[0][2], '/app/CLAUDE.md');
+});
+
+test('applyContext copies the file for P1 and file plus plugin for P2', () => {
+  const p1Calls = [];
+  applyContext({ name: 'x', pLevel: 'P1', repoRoot: REPO, copy: (...a) => p1Calls.push(a) });
+  assert.equal(p1Calls.length, 1);
+  assert.equal(p1Calls[0][2], '/app/CLAUDE.md');
+
+  const p2Calls = [];
+  applyContext({ name: 'x', pLevel: 'P2', repoRoot: REPO, copy: (...a) => p2Calls.push(a) });
+  assert.equal(p2Calls.length, 2);
+  assert.equal(p2Calls[0][2], '/app/CLAUDE.md');
+  // The plugin must land outside the working copy, or it shows up in the
+  // session diff and contaminates the convention script and the evaluator.
+  assert.equal(p2Calls[1][2], '/opt/plugin');
+  assert.doesNotMatch(p2Calls[1][2], /^\/app/);
 });
 
 test('prepare refuses a session whose context level was not stated', async () => {

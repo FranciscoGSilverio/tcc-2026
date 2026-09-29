@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P2-O2-muh46s2t",
+  "evaluatedAt": "2026-09-25T16:22:07.921Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "As funções assertValidInterval, assertRoomExists, assertUserExists e assertNoOverlap foram adicionadas em src/modules/bookings/service.ts e chamadas em createBooking/updateBooking, não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não altera schema.ts nem adiciona validação por schema Typebox; as checagens novas são feitas manualmente em service.ts (assertValidInterval etc.), não há trecho no diff mostrando validação de schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros específicos são lançados via validationFailed, notFound e bookingConflict, que mapeiam para 400/404/409, como em 'throw notFound(\"Room\")' e 'throw validationFailed(...)'."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Foram criadas constantes nomeadas MIN_DURATION_MINUTES e MAX_DURATION_MINUTES em vez de literais soltos: 'const MIN_DURATION_MINUTES = 30;' e 'const MAX_DURATION_MINUTES = 8 * 60;'."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos em tests/bookings.test.ts verificam apenas statusCode e corpo da resposta HTTP, ex.: 'expect(response.statusCode).toBe(409); expect(response.json().error.code).toBe(\"BOOKING_CONFLICT\")'."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reusa utilitários existentes de shared/time.ts e shared/errors.ts, como em 'import { MINUTE_IN_MS, durationMinutes, isBefore, parseInstant } from \"../../shared/time.js\"' e 'validationFailed' de shared/errors.ts."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.023106
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.023106
+}

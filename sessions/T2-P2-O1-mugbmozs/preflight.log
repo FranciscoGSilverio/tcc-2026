@@ -1,0 +1,10 @@
+
+> meeting-rooms-api@1.0.0 build
+> tsc -p tsconfig.json
+
+
+> meeting-rooms-api@1.0.0 start
+> node dist/server.js
+
+{"level":30,"time":1790302079463,"pid":342,"hostname":"76fb52c4af9b","msg":"Server listening at http://127.0.0.1:3000"}
+{"level":30,"time":1790302079463,"pid":342,"hostname":"76fb52c4af9b","msg":"Server listening at http://172.17.0.2:3000"}

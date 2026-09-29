@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-muh5udw3",
+  "evaluatedAt": "2026-09-25T16:25:11.187Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "routes.ts apenas chama `service.getAvailability(request.query)`, e toda a lógica (cálculo de janelas livres/ocupadas, validações) está em service.ts."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "Novo endpoint usa `AvailabilityQuery = Type.Object({ roomId: Type.String(...), from: Type.String(...), to: Type.String(...) })` como schema de querystring."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros lançam `validationFailed(...)`, `notFound` (via getRoom/getUser) e `bookingConflict(conflict.id)`, que carregam códigos de status 400/404/409 conforme `shared/errors.ts`."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Limites de duração são nomeados: `const MIN_DURATION_MINUTES = 30;` e `const MAX_DURATION_MINUTES = 8 * 60;`, usados em `assertValidDuration`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Testes usam `app.inject` e verificam `response.statusCode` e `response.json()` (ex.: `expect(response.json().busy).toHaveLength(1)`), sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "Service importa e usa `parseInstant`, `isBefore`, `durationMinutes` de `shared/time.js` e `bookingConflict`/`notFound`/`validationFailed` de `shared/errors.js` em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.030214
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/availability, com schema, service e repository próprios, em vez de alterar a listagem existente ou enriquecer o erro 409."
+      },
+      "2": {
+        "categoria": "ambos",
+        "justificativa": "O AvailabilityResponse retorna tanto 'busy' (intervalos ocupados, derivados das reservas) quanto 'free' (lacunas livres calculadas a partir deles)."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os intervalos livres/ocupados são calculados diretamente a partir dos horários de início/fim das reservas existentes (cursor que avança conforme startsAt/endsAt), sem qualquer granularidade fixa (ex.: slots de 30min) nem parâmetro de granularidade."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige explicitamente 'from' e 'to' como strings obrigatórias (minLength: 1), sem valor padrão de dia ou semana."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem a 24 horas, nem parâmetro de configuração de limite de horário no endpoint de disponibilidade; o intervalo é apenas o que o cliente informar em from/to."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige um único 'roomId' obrigatório, e o service consulta apenas essa sala, sem suporte a lista de salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não introduz nenhuma indicação explícita de fuso horário no contrato (usa DateString/parseInstant já existentes), sem menção a UTC, local ou especificação explícita no schema novo."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports a room as fully free when it has no bookings' confirma que, sem reservas, busy fica vazio e free contém um único intervalo cobrindo todo o range solicitado."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há lógica no getAvailability que filtre ou trate especialmente horários passados dentro do intervalo from/to; o cálculo dos gaps ocorre igualmente independente de estarem no passado ou futuro."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro de conflito continua sendo lançado via bookingConflict(conflict.id) da mesma forma que antes; não há alteração no corpo do erro 409 para sugerir horários alternativos."
+      }
+    },
+    "costUsd": 0.029288
+  },
+  "totalCostUsd": 0.059502
+}

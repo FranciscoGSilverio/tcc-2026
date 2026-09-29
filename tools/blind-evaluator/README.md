@@ -90,3 +90,15 @@ classificação humana (spec D3) depende de diffs reais de T2, que ainda não
 existem em número suficiente. É o próximo passo depois desta ferramenta,
 não parte dela — fica para quando a primeira leva real de sessões de T2
 for coletada.
+
+## Rodando os testes
+
+Use concorrência 1 quando a suíte servir de portão antes de gastar API:
+
+```bash
+node --test --test-concurrency=1 tools/blind-evaluator/test/*.test.mjs tools/convention-check/test/*.test.mjs runner/test/*.test.mjs
+```
+
+Dois motivos. O `node --test` roda **arquivos em paralelo** por padrão, e três arquivos do runner (`end-to-end`, `measure`, `prepare`) sobem contêiner Docker — em paralelo eles disputam recursos, e já foi observada uma falha intermitente em que uma sessão falsa terminou com `status: invalid` numa execução e `valid` na seguinte, com o mesmo comando. Isolados, os três passam de forma consistente. E `node --test <diretório>` não funciona no Node 24 desta máquina: passe glob, não diretório.
+
+Isso não ameaça a coleta real, que é serial por protocolo (seção 3.4) — uma sessão por vez, numa máquina só. E quando acontece, o runner marca a linha como inválida com motivo registrado, que é o comportamento desenhado para falha de infraestrutura: a sessão é re-executada, não aproveitada pela metade.

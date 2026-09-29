@@ -1,0 +1,82 @@
+{
+  "row": {
+    "session_id": "T1-P2-O2-muh9oh1r",
+    "task": "T1",
+    "model": "claude-opus-5",
+    "model_version": "claude-opus-5",
+    "p_level": "P2",
+    "o_level": "O2",
+    "run_number": "2",
+    "started_at": "2026-09-25T18:01:03.569Z",
+    "ended_at": "2026-09-25T18:22:30.328Z",
+    "image_digest": "sha256:842789bf94b8d8b8c7a536552ea0248e324f737dc3f16f31873dba909a4c0bf6",
+    "cli_version": "2.1.272",
+    "status": "valid",
+    "invalid_reason": "",
+    "taxa_aceitacao": 1,
+    "regressoes": 0,
+    "violacoes": 0,
+    "qualidade": "",
+    "custo_usd": 2.082016,
+    "duracao_s": 1266,
+    "n_tool_calls": 30,
+    "travou": false,
+    "decisao_1": "",
+    "decisao_2": "",
+    "decisao_3": "",
+    "decisao_4": "",
+    "decisao_5": "",
+    "decisao_6": "",
+    "decisao_7": "",
+    "decisao_8": "",
+    "decisao_9": "",
+    "decisao_10": "",
+    "n_turns": 39,
+    "travou_turnos": false,
+    "travou_sem_diff": false,
+    "travou_build": false,
+    "tokens_input": 54,
+    "tokens_output": 25478,
+    "tokens_cache_create": 68025,
+    "tokens_cache_read": 1523161,
+    "diff_path": "sessions/T1-P2-O2-muh9oh1r/session.diff",
+    "transcript_path": "sessions/T1-P2-O2-muh9oh1r/transcript.jsonl"
+  },
+  "hidden": {
+    "task": "T1",
+    "total": 26,
+    "passed": 26,
+    "rate": 1,
+    "byRule": {
+      "1": {
+        "passed": 10,
+        "total": 10
+      },
+      "2": {
+        "passed": 2,
+        "total": 2
+      },
+      "3": {
+        "passed": 3,
+        "total": 3
+      },
+      "4": {
+        "passed": 4,
+        "total": 4
+      },
+      "5": {
+        "passed": 2,
+        "total": 2
+      },
+      "6": {
+        "passed": 3,
+        "total": 3
+      },
+      "7": {
+        "passed": 2,
+        "total": 2
+      }
+    },
+    "failures": []
+  }
+}

@@ -1,0 +1,237 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..27a7c4e 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -24,12 +24,12 @@ export function create(data: BookingData): Promise<Booking> {
+   return prisma.booking.create({ data });
+ }
+ 
+-export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Booking | null> {
++export function findConflict(roomId: string, startsAt: Date, endsAt: Date): Promise<Booking | null> {
+   return prisma.booking.findFirst({
+     where: {
+       roomId,
+       status: BOOKING_ACTIVE,
+-      startsAt: { lte: startsAt },
++      startsAt: { lt: endsAt },
+       endsAt: { gt: startsAt },
+     },
+   });
+@@ -69,3 +69,19 @@ export function updateStatus(id: string, status: string): Promise<Booking> {
+ export function remove(id: string): Promise<Booking> {
+   return prisma.booking.delete({ where: { id } });
+ }
++
++export async function findConflictsInRange(
++  roomId: string,
++  from: Date,
++  to: Date,
++): Promise<Booking[]> {
++  return prisma.booking.findMany({
++    where: {
++      roomId,
++      status: BOOKING_ACTIVE,
++      startsAt: { lt: to },
++      endsAt: { gt: from },
++    },
++    orderBy: { startsAt: 'asc' },
++  });
++}
+diff --git a/src/modules/bookings/routes.ts b/src/modules/bookings/routes.ts
+index 82aa79c..c264634 100644
+--- a/src/modules/bookings/routes.ts
++++ b/src/modules/bookings/routes.ts
+@@ -1,5 +1,7 @@
+ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
+ import {
++  AvailableSlotsQuery,
++  AvailableSlotsResponse,
+   BookingIdParams,
+   BookingPage,
+   BookingResponse,
+@@ -7,6 +9,7 @@ import {
+   ListBookingsQuery,
+   UpdateBookingBody,
+ } from './schema.js';
++import { parseInstant } from '../../shared/time.js';
+ import * as service from './service.js';
+ 
+ export const bookingsRoutes: FastifyPluginAsyncTypebox = async (app) => {
+@@ -16,6 +19,13 @@ export const bookingsRoutes: FastifyPluginAsyncTypebox = async (app) => {
+   app.get('/', { schema: { querystring: ListBookingsQuery, response: { 200: BookingPage } } },
+     async (request) => service.listBookings(request.query));
+ 
++  app.get('/available-slots', { schema: { querystring: AvailableSlotsQuery, response: { 200: AvailableSlotsResponse } } },
++    async (request) => {
++      const from = parseInstant(request.query.from);
++      const to = parseInstant(request.query.to);
++      return service.getAvailableSlots(request.query.roomId, from, to);
++    });
++
+   app.get('/:id', { schema: { params: BookingIdParams, response: { 200: BookingResponse } } },
+     async (request) => service.getBooking(request.params.id));
+ 
+diff --git a/src/modules/bookings/schema.ts b/src/modules/bookings/schema.ts
+index 9069332..0845018 100644
+--- a/src/modules/bookings/schema.ts
++++ b/src/modules/bookings/schema.ts
+@@ -41,6 +41,22 @@ export const ListBookingsQuery = Type.Object({
+   offset: Type.Optional(Type.Integer({ minimum: 0 })),
+ });
+ 
++export const AvailableSlotsQuery = Type.Object({
++  roomId: Type.String({ minLength: 1 }),
++  from: Type.String({ minLength: 1 }),
++  to: Type.String({ minLength: 1 }),
++});
++
++export const TimeSlot = Type.Object({
++  startsAt: DateString,
++  endsAt: DateString,
++});
++
++export const AvailableSlotsResponse = Type.Object({
++  roomId: Type.String(),
++  slots: Type.Array(TimeSlot),
++});
++
+ export const BookingPage = Type.Object({
+   data: Type.Array(BookingResponse),
+   pagination: Type.Object({
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..e67c660 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -15,7 +15,7 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking>
+   const startsAt = parseInstant(input.startsAt);
+   const endsAt = parseInstant(input.endsAt);
+ 
+-  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
++  const conflict = await repository.findConflict(input.roomId, startsAt, endsAt);
+   if (conflict) {
+     throw bookingConflict(conflict.id);
+   }
+@@ -75,3 +75,49 @@ export async function deleteBooking(id: string): Promise<void> {
+   await getBooking(id);
+   await repository.remove(id);
+ }
++
++export interface TimeSlot {
++  startsAt: Date;
++  endsAt: Date;
++}
++
++export interface AvailableSlotsResponse {
++  roomId: string;
++  slots: TimeSlot[];
++}
++
++export async function getAvailableSlots(
++  roomId: string,
++  from: Date,
++  to: Date,
++): Promise<AvailableSlotsResponse> {
++  const bookings = await repository.findConflictsInRange(roomId, from, to);
++
++  const slots: TimeSlot[] = [];
++  let currentStart = from;
++
++  for (const booking of bookings) {
++    if (currentStart < booking.startsAt) {
++      slots.push({
++        startsAt: currentStart,
++        endsAt: booking.startsAt,
++      });
++    }
++    currentStart = booking.endsAt;
++  }
++
++  if (currentStart < to) {
++    slots.push({
++      startsAt: currentStart,
++      endsAt: to,
++    });
++  }
++
++  return {
++    roomId,
++    slots: slots.map((slot) => ({
++      startsAt: slot.startsAt.toISOString(),
++      endsAt: slot.endsAt.toISOString(),
++    })) as any,
++  };
++}
+diff --git a/tests/bookings.test.ts b/tests/bookings.test.ts
+index 7b4db38..3fbc767 100644
+--- a/tests/bookings.test.ts
++++ b/tests/bookings.test.ts
+@@ -180,4 +180,69 @@ describe('bookings', () => {
+     const response = await book(24.5, 25.5, 'Overlap');
+     expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+   });
++
++  it('rejects a booking whose end falls inside an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23.5, 24.5, 'Overlap at end');
++    expect(response.statusCode).toBe(409);
++  });
++
++  it('rejects a booking that completely contains an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23.5, 25.5, 'Contains');
++    expect(response.statusCode).toBe(409);
++  });
++
++  it('returns available slots with no bookings', async () => {
++    const from = inHours(20);
++    const to = inHours(30);
++    const response = await app.inject({
++      method: 'GET',
++      url: `/bookings/available-slots?roomId=${roomId}&from=${from}&to=${to}`,
++    });
++    expect(response.statusCode).toBe(200);
++    const slots = response.json().slots;
++    expect(slots).toHaveLength(1);
++    expect(new Date(slots[0].startsAt).getTime()).toBeCloseTo(new Date(from).getTime(), -2);
++    expect(new Date(slots[0].endsAt).getTime()).toBeCloseTo(new Date(to).getTime(), -2);
++  });
++
++  it('returns available slots between bookings', async () => {
++    const from = inHours(20);
++    const to = inHours(30);
++    await book(21, 23);
++    await book(25, 27);
++    const response = await app.inject({
++      method: 'GET',
++      url: `/bookings/available-slots?roomId=${roomId}&from=${from}&to=${to}`,
++    });
++    expect(response.statusCode).toBe(200);
++    const slots = response.json().slots;
++    expect(slots).toHaveLength(3);
++    expect(new Date(slots[0].startsAt).getTime()).toBeCloseTo(new Date(inHours(20)).getTime(), -2);
++    expect(new Date(slots[0].endsAt).getTime()).toBeCloseTo(new Date(inHours(21)).getTime(), -2);
++    expect(new Date(slots[1].startsAt).getTime()).toBeCloseTo(new Date(inHours(23)).getTime(), -2);
++    expect(new Date(slots[1].endsAt).getTime()).toBeCloseTo(new Date(inHours(25)).getTime(), -2);
++    expect(new Date(slots[2].startsAt).getTime()).toBeCloseTo(new Date(inHours(27)).getTime(), -2);
++    expect(new Date(slots[2].endsAt).getTime()).toBeCloseTo(new Date(inHours(30)).getTime(), -2);
++  });
++
++  it('excludes cancelled bookings from slot calculations', async () => {
++    const from = inHours(20);
++    const to = inHours(30);
++    const booking = await book(21, 25);
++    await app.inject({
++      method: 'POST',
++      url: `/bookings/${booking.json().id}/cancel`,
++    });
++    const response = await app.inject({
++      method: 'GET',
++      url: `/bookings/available-slots?roomId=${roomId}&from=${from}&to=${to}`,
++    });
++    expect(response.statusCode).toBe(200);
++    const slots = response.json().slots;
++    expect(slots).toHaveLength(1);
++    expect(new Date(slots[0].startsAt).getTime()).toBeCloseTo(new Date(from).getTime(), -2);
++    expect(new Date(slots[0].endsAt).getTime()).toBeCloseTo(new Date(to).getTime(), -2);
++  });
+ });

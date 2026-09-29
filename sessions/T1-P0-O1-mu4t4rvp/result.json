@@ -1,0 +1,82 @@
+{
+  "row": {
+    "session_id": "T1-P0-O1-mu4t4rvp",
+    "task": "T1",
+    "model": "claude-sonnet-5",
+    "model_version": "claude-haiku-4-5-20251001",
+    "p_level": "P0",
+    "o_level": "O1",
+    "run_number": "1",
+    "started_at": "2026-09-17T00:44:36.518Z",
+    "ended_at": "2026-09-17T00:47:40.039Z",
+    "image_digest": "sha256:a62a4565fb7473a99aa55679315e223dcd8293f8f56c54d9d0df46a919571622",
+    "cli_version": "2.1.272",
+    "status": "valid",
+    "invalid_reason": "",
+    "taxa_aceitacao": 1,
+    "regressoes": 0,
+    "violacoes": "",
+    "qualidade": "",
+    "custo_usd": 0.4209743000000001,
+    "duracao_s": 164,
+    "n_tool_calls": 29,
+    "travou": false,
+    "decisao_1": "",
+    "decisao_2": "",
+    "decisao_3": "",
+    "decisao_4": "",
+    "decisao_5": "",
+    "decisao_6": "",
+    "decisao_7": "",
+    "decisao_8": "",
+    "decisao_9": "",
+    "decisao_10": "",
+    "n_turns": 30,
+    "travou_turnos": false,
+    "travou_sem_diff": false,
+    "travou_build": false,
+    "tokens_input": 34,
+    "tokens_output": 14813,
+    "tokens_cache_create": 43345,
+    "tokens_cache_read": 815344,
+    "diff_path": "sessions/T1-P0-O1-mu4t4rvp/session.diff",
+    "transcript_path": "sessions/T1-P0-O1-mu4t4rvp/transcript.jsonl"
+  },
+  "hidden": {
+    "task": "T1",
+    "total": 26,
+    "passed": 26,
+    "rate": 1,
+    "byRule": {
+      "1": {
+        "passed": 10,
+        "total": 10
+      },
+      "2": {
+        "passed": 2,
+        "total": 2
+      },
+      "3": {
+        "passed": 3,
+        "total": 3
+      },
+      "4": {
+        "passed": 4,
+        "total": 4
+      },
+      "5": {
+        "passed": 2,
+        "total": 2
+      },
+      "6": {
+        "passed": 3,
+        "total": 3
+      },
+      "7": {
+        "passed": 2,
+        "total": 2
+      }
+    },
+    "failures": []
+  }
+}

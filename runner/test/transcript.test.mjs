@@ -91,3 +91,89 @@ test('falls back to the requested model when no usage is reported', () => {
 
   assert.equal(readTranscript(text).model, 'claude-opus-5');
 });
+
+test('sums turns, cost, tokens and tool calls across four result events', () => {
+  const step = (turns, cost, out) => JSON.stringify({
+    type: 'result', num_turns: turns, total_cost_usd: cost, stop_reason: 'end_turn',
+    usage: { input_tokens: 10, output_tokens: out, cache_creation_input_tokens: 1, cache_read_input_tokens: 2 },
+    modelUsage: { 'claude-sonnet-5': { outputTokens: out, costUSD: cost } },
+  });
+  const assistantWithTool = JSON.stringify({
+    type: 'assistant',
+    message: { content: [{ type: 'tool_use', name: 'Read', input: {} }] },
+  });
+  const text = [
+    JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-sonnet-5', claude_code_version: '2.1.272' }),
+    assistantWithTool, step(3, 0.10, 100),
+    assistantWithTool, step(5, 0.20, 200),
+    assistantWithTool, step(7, 0.30, 300),
+    assistantWithTool, step(9, 0.40, 400),
+  ].join('\n');
+
+  const parsed = readTranscript(text);
+  assert.equal(parsed.numTurns, 24);
+  assert.equal(Math.round(parsed.costUsd * 100) / 100, 1.0);
+  assert.equal(parsed.tokens.output, 1000);
+  assert.equal(parsed.tokens.input, 40);
+  assert.equal(parsed.toolCalls, 4);
+});
+
+test('stop reason and error flag come from the last step, not the first', () => {
+  const text = [
+    JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-sonnet-5' }),
+    JSON.stringify({ type: 'result', num_turns: 1, stop_reason: 'end_turn', is_error: false }),
+    JSON.stringify({ type: 'result', num_turns: 1, stop_reason: 'max_turns', is_error: true }),
+  ].join('\n');
+
+  const parsed = readTranscript(text);
+  assert.equal(parsed.stopReason, 'max_turns');
+  assert.equal(parsed.isError, true);
+});
+
+test('a single result event still behaves exactly as before', () => {
+  const text = [
+    JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-sonnet-5' }),
+    JSON.stringify({
+      type: 'result', num_turns: 31, total_cost_usd: 0.42, stop_reason: 'end_turn',
+      usage: { input_tokens: 44, output_tokens: 12503 },
+      modelUsage: { 'claude-sonnet-5': { outputTokens: 12503 } },
+    }),
+  ].join('\n');
+
+  const parsed = readTranscript(text);
+  assert.equal(parsed.numTurns, 31);
+  assert.equal(parsed.model, 'claude-sonnet-5');
+  assert.equal(parsed.stopReason, 'end_turn');
+});
+
+// travou_turnos reads this, and it has to read the CLI's own subtype
+// rather than compare num_turns against the ceiling: the two are not on
+// the same scale. Measured 25/09/2026, sessions that finished on their
+// own reported 42, 43 and 48 turns under a ceiling of 40, while the two
+// that were actually cut reported 41.
+test('reports the turn ceiling from the CLI subtype, not from a turn count', () => {
+  const cut = readTranscript([
+    JSON.stringify({ type: 'result', subtype: 'error_max_turns', is_error: true,
+      stop_reason: 'tool_use', num_turns: 41 }),
+  ].join('\n'));
+  assert.equal(cut.maxTurnsReached, true);
+
+  const finished = readTranscript([
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false,
+      stop_reason: 'end_turn', num_turns: 48 }),
+  ].join('\n'));
+  assert.equal(finished.maxTurnsReached, false);
+});
+
+// An O2 chain takes its stop reason from the last of four calls, so a
+// middle step cut at the ceiling used to leave travou_turnos false.
+test('a chained session reports the ceiling from any of its steps', () => {
+  const parsed = readTranscript([
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false, num_turns: 10 }),
+    JSON.stringify({ type: 'result', subtype: 'error_max_turns', is_error: true, num_turns: 41 }),
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false, num_turns: 8 }),
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false, stop_reason: 'end_turn', num_turns: 5 }),
+  ].join('\n'));
+  assert.equal(parsed.maxTurnsReached, true);
+  assert.equal(parsed.stopReason, 'end_turn');
+});

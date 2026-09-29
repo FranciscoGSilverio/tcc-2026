@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P0-O1-muhe618n",
+  "evaluatedAt": "2026-09-25T20:32:33.934Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a nova lógica de validação (checagem de startsAt/endsAt, existência de room/user, conflito) foi adicionada em src/modules/bookings/service.ts, não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não altera nenhum arquivo de schema (ex.: bookings/schema.ts); a validação nova é feita via checagens imperativas no service (`if (startsAt >= endsAt) throw validationFailed(...)`), não por schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Cada caminho de erro lança um AppError específico com status apropriado, ex.: `throw validationFailed(...)` (400), `throw notFound('Room')` (404) e `throw bookingConflict(conflict.id)` (409)."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz constantes nomeadas para os novos valores/regra; a comparação é feita inline (`if (startsAt >= endsAt)`) sem extrair nome para o critério."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam `app.inject` para chamar as rotas HTTP e verificam apenas `statusCode` e corpo da resposta (ex.: `expect(response.statusCode).toBe(409)`), sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service reaproveita utilitários existentes como `parseInstant` de shared/time.js e `validationFailed`, `notFound`, `bookingConflict` de shared/errors.js em vez de reimplementar essas checagens."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.029774000000000002
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.029774000000000002
+}

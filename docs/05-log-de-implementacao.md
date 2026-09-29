@@ -1,6 +1,6 @@
 # Log de Implementação
 
-**Atualizado em:** 22/09/2026 (quarta revisão)
+**Atualizado em:** 23/09/2026 (quinta revisão)
 
 ## Para que serve este documento
 
@@ -21,17 +21,18 @@ Se você está retomando o projeto, leia este primeiro para saber o estado, e co
 | Auditoria da semente | Pronta | `tools/seed-audit/` | Nada |
 | Enunciado de T1 | **Reescrito em 17/09** (versão 2, seção 4 da spec de reavaliação) | `tasks/T1-validacao-de-reservas.md` | Congelamento em M3 |
 | Enunciado de T2 | Versionado, inalterado | `tasks/T2-res-142.md` | Congelamento em M3 |
-| Pontos de decisão de T2 | Escritos, nunca testados | `docs/02`, seção 2.4 | Validar contra saídas reais |
+| Pontos de decisão de T2 | **Validados contra três saídas reais em 22/09.** Oito dos dez são vivos; os pontos 5 (limite de horário) e 7 (fuso) voltaram `ausente` nas três | `docs/02`, seção 2.4 | Decisão sobre como reportar os dois pontos inertes — proposta é relato duplo, sem cortá-los |
 | Testes ocultos de T1 | **Prontos, sem alteração.** 26 asserções, linha de base 13/26 | `hidden-tests/T1/run.mjs` | Nada |
 | Implementação de referência de T1 | **Pronta, sem alteração.** 26/26, zero regressões | `reference/T1/` | Nada |
 | **Script de convenções** | **Construído.** Oito regras da seção 2.6; zero violações contra a referência, dispara nas cinco regras esperadas contra uma cópia deliberadamente violadora | `tools/convention-check/` | Nada |
-| **Avaliador cego** | **Construído.** Checklist de qualidade (6 perguntas) e pontos de decisão de T2 (10 pontos), uma passagem por instrumento, cego à condição | `tools/blind-evaluator/` | Conjunto rotulado à mão para medir concordância com humano (D3) — depende de diffs reais de T2, ainda não coletados |
-| Runner mínimo | **Construído, provado por sessões falsas e por uma sessão real (P0).** Agora também aplica contexto (`applyContext`) e grava `violacoes` | `runner/` | Rodar a primeira sessão P1 real (Tarefa 8, fora do escopo desta rodada) |
+| **Avaliador cego** | **Construído e rodado contra as cinco sessões coletadas.** Checklist (6 perguntas) e pontos de decisão (10), uma passagem por instrumento, cego à condição | `tools/blind-evaluator/` | Conjunto rotulado à mão para medir concordância com humano (D3) — os diffs de T2 agora existem, então deixou de estar bloqueado |
+| Runner | **Construído e provado em sete sessões reais**, cobrindo quatro das seis células. Aplica contexto e plugin, encadeia O2, grava `violacoes`, recusa combinação não implementada, e invalida sessão P2 cujo plugin não tenha carregado | `runner/` | Nada bloqueante |
 | Runner completo | Não existe, sem spec | — | Fica para depois das sessões P0/P1 de T1 |
 | **Configuração P1** | **Construída.** Política de domínio de reservas + as oito regras de convenção em linguagem natural + arquitetura, nomenclatura e comandos | `contexts/P1/CLAUDE.md` | Nada para esta rodada |
-| Configuração P2 | Não existe | — | Obrigatória antes da coleta que compara P0/P1/P2 |
+| **Configuração P2** | **Construída e verificada em sessão real.** Mesmo `CLAUDE.md` de P1 (byte a byte) mais plugin `meeting-rooms-conventions` com três skills | `contexts/P2/` | Nada |
+| **Sequência O2** | **Construída e verificada em sessão real.** Quatro chamadas encadeadas por `--session-id`/`--resume` | `orders/O2/`, `runner/run-session.mjs` | Nada |
 
-**Resumo em uma linha:** semente, instrumento de T1, script de convenções, contexto de P1, runner mínimo até a coluna `violacoes`, e agora o avaliador cego (checklist e pontos de decisão) prontos e provados; as duas primeiras sessões reais de T1 sob o enunciado novo (P0 e P1) já coletadas, com `--dry-run` conferido contra as duas antes de rodar a avaliação de verdade; falta o plugin de P2, a sequência O2, e o conjunto rotulado à mão para medir a confiabilidade do avaliador cego contra classificação humana.
+**Resumo em uma linha:** toda a infraestrutura de coleta está construída e provada em sessão real — semente, instrumentos das duas tarefas, script de convenções, avaliador cego, runner, e os três níveis de contexto e dois de ordem; as seis células da grade existem e quatro já produziram dado. Falta coletar as 23 sessões restantes da grade principal, decidir o relato dos dois pontos de decisão inertes, e fechar o portão de M3.
 
 ## Por que o enunciado de T1 mudou
 
@@ -49,13 +50,38 @@ A sessão piloto, por ter medido o enunciado antigo, não é comparável com as 
 
 **Sobre a coluna `model_version`:** ela guarda exatamente o que o CLI do agente reporta no evento `system/init`, sem transformação. Para modelos identificados por um apelido como `claude-sonnet-5`, o CLI não expõe a versão datada correspondente (do tipo `claude-sonnet-5-20260115`) em nenhum campo do transcript — isso é limitação da fonte de dados, não campo mal preenchido pelo runner. A coluna separada `model` guarda o apelido pedido na chamada, que é sempre conhecido.
 
-## Custo por sessão, e por que precisa de decisão
+## Custo por sessão, medido para as duas tarefas e as duas ordens
 
-A única medição real disponível é a sessão piloto: US$ 0,4209743 para uma sessão T1/P0. Extrapolado para as 55 sessões da grade principal (seção 4.2 do protocolo) ao mesmo custo por sessão, o total fica em torno de **US$ 23,15** contra **US$ 20** comprados — já insuficiente sem contar as vinte sessões adicionais de células de modelo da seção 4.4, nem T2, cujo custo por sessão ainda não foi medido (mais turnos esperados por não ter testes automáticos como critério de parada). Este ponto já estava em aberto antes desta rodada e continua em aberto: precisa de decisão sobre reforço de orçamento, redução de réplicas ou algum outro corte, antes de a coleta da grade principal começar.
+Sete sessões reais coletadas:
+
+| Recorte | Sessões | Custo médio |
+|---|---|---|
+| T1 | 4 | **US$ 0,46** |
+| T2 | 3 | **US$ 0,67** |
+| O1 | 6 | US$ 0,56 |
+| O2 | 1 | **US$ 0,47** |
+
+**O2 não é mais cara que O1**, contrariando a expectativa de que quatro chamadas encadeadas custariam mais. O motivo aparece no detalhe da sessão `T1-P0-O2-mue3ic8e`: os turnos por passo foram 19, 1, 13 e 3, e o passo de planejamento custou cinco centavos por não usar ferramenta alguma — o protocolo proíbe gravar o plano em arquivo, então ele sai direto na resposta. A segmentação redistribui o esforço em vez de multiplicá-lo.
+
+**Projeção para as 23 sessões que faltam:** 8 de T1 a US$ 0,46 e 15 de T2 a US$ 0,67 dão cerca de **US$ 14**, com a ressalva de que T2 sob O2 nunca foi medida. Tempo de parede estimado em algo entre uma hora e meia e duas horas, serial.
+
+Acumulado até 23/09: **US$ 3,86** em sessões, **US$ 0,27** em avaliação cega, **US$ 0,06** na sonda de turnos.
+
+O orçamento deixou de ser teto rígido por decisão do orientando em 22/09 — vinte dólares é referência de custo-efetividade, e mais crédito é comprado se o protocolo justificar.
 
 ## Descoberta: `temperature` é rejeitada por Sonnet 5
 
 Registrada em 21/09/2026, ao planejar o avaliador cego. Uma chamada real à API `POST /v1/messages` com `claude-sonnet-5` devolve **erro 400** para `temperature`, `top_p` e `top_k` — mensagem de erro no formato "`<parâmetro>` is deprecated for this model", reconfirmada empiricamente em 22/09/2026 antes de escrever `tools/blind-evaluator/lib/client.mjs`. A spec do avaliador cego previa originalmente `temperature: 0` como a peça que tornaria a reexecução do instrumento estável (decisão D2); isso foi descartado, e a justificativa de não usar votação por maioria (D1) passou a repousar inteiramente em D3 — confiabilidade medida contra classificação humana, não contra si mesmo. Não existe hoje alavanca de determinismo de amostragem disponível via API para este modelo.
+
+## Descoberta: o limite de turnos nunca foi um teto efetivo
+
+Registrada em 22/09/2026, ao planejar O2. `--max-turns N` **não limita `num_turns` a N** — as duas grandezas não contam a mesma unidade. Sonda direta: `--max-turns 3` devolveu `num_turns = 6`, `stop_reason = end_turn`, `subtype = success`, ou seja terminou sozinha sem ser cortada. Nas cinco sessões reais coletadas sob `--max-turns 40`, os turnos foram 30, 31, 34, 37 e 43 — uma delas acima do suposto teto, nenhuma interrompida.
+
+`num_turns` conta idas e voltas da conversa: em todas as sessões conferidas ele bate com o número de mensagens de usuário mais um, e cada resultado de ferramenta volta como mensagem de usuário.
+
+A decisão, tomada pelo orientando na mesma data: **o limite sempre foi rede de segurança contra laço infinito, nunca medida de qualidade ou de esforço do agente.** Corrigiu-se a redação do protocolo em quatro lugares — seção 3.4 (o limite sai da lista de constantes), seção 5.1 (`travou`), passo 3 da seção 6, e a linha de orçamento computacional desigual da seção 8. Nada no desenho mudou: `n_turns` já era dado observado e a comparação de esforço entre O1 e O2 já estava ancorada em custo.
+
+Em O2, cada uma das quatro chamadas recebe a mesma rede de 40 e `n_turns` da sessão é a soma das quatro.
 
 ## Próximos passos, em ordem
 
@@ -70,7 +96,7 @@ A ordem não é arbitrária. Cada item depende do anterior ou reduz risco de ret
 7. ~~**Script de convenções**, oito regras, sobre o diff.~~ Feito em 17/09.
 8. ~~**Configuração P1.**~~ Feita em 17/09, com a política de domínio e as oito regras em linguagem natural.
 9. ~~**Rodar uma sessão P0 e uma sessão P1 de T1 sob o enunciado novo**~~, para confirmar que o gradiente declarado na spec de reavaliação aparece de fato. Rodado em 18/09 (`T1-P0-O1-mu69pgsx`, `T1-P1-O1-mu69tn5j`), registrado em `resultados.csv`.
-10. **Duas soluções de sondagem para T2**, deliberadamente diferentes, para testar se os dez pontos de decisão são classificáveis e calibrar o prompt do classificador.
+10. ~~**Duas soluções de sondagem para T2**, deliberadamente diferentes, para testar se os dez pontos de decisão são classificáveis.~~ **Substituído por três sessões reais de T2** em 22/09, por decisão registrada: sondagens escritas conhecendo as dez categorias as contemplariam por construção, e o buraco que existe — pontos 5 e 7 inertes — ficaria invisível. Resultado em `docs/superpowers/2026-09-22-execucao-t2-piloto.md`: convergência 5/10 sobre os pontos congelados e 3/8 sobre os vivos; verificação 9 do portão passa, verificação 8 falha por dois pontos.
 11. ~~**Prompts do avaliador cego**, checklist e classificador.~~ Feito em 22/09: `tools/blind-evaluator/`, checklist de seis perguntas e os dez pontos de decisão, chamada direta à API sem parâmetro de amostragem.
 12. **Configuração P2** (plugin), com o mesmo conteúdo de domínio de P1.
 13. **Sequência O2** (pipeline segmentado de quatro chamadas).

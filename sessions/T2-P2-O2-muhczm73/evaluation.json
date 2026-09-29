@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-muhczm73",
+  "evaluatedAt": "2026-09-25T20:30:26.195Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A nova lógica de detecção de conflito (findConflict) e a checagem em updateBooking foram implementadas em repository.ts e service.ts, não em rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não adiciona nenhum novo schema de validação para os campos usados (ex.: input.roomId, startsAt, endsAt em updateBooking são apenas lidos, sem alteração em arquivos de schema)."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os conflitos continuam lançando `throw bookingConflict({...})`, que gera AppError com status 409 já existente no shared/errors.ts."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "Não há introdução de constantes nomeadas para durações/limites no diff; as mudanças usam apenas comparações de datas (`startsAt: { lt: endsAt }`) sem novos literais nomeados."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Novos testes como `rejects an update that moves booking into conflict` verificam apenas statusCode e corpo da resposta (`expect(response.statusCode).toBe(409)`), sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reutiliza `bookingConflict` e `parseInstant` do shared/errors.ts e shared/time.ts em vez de reimplementar validação de datas ou construção de erro."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.025146
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "enriquece o erro 409",
+        "justificativa": "O diff não cria endpoint novo nem altera listagem; ele modifica a função bookingConflict e a lógica de detecção de conflito, adicionando dados do conflito ao erro 409 existente."
+      },
+      "2": {
+        "categoria": "ausente",
+        "justificativa": "Não há retorno de horários livres ou ocupados como listagem; apenas o conflito específico é retornado dentro do erro."
+      },
+      "3": {
+        "categoria": "ausente",
+        "justificativa": "Não há conceito de intervalos/granularidade sendo introduzido; a mudança é sobre detecção de sobreposição, não sobre slots."
+      },
+      "4": {
+        "categoria": "ausente",
+        "justificativa": "Não há janela temporal padrão nem parâmetro de consulta por período; a mudança atua sobre a criação/atualização de uma reserva específica."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há limite de horário comercial, 24h ou configurável sendo definido no diff."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "findConflict continua operando sobre roomId único, tanto na criação quanto na atualização, sem suporte a múltiplas salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff usa toISOString() mas não há decisão explícita sobre fuso horário no contrato; apenas serialização padrão de Date."
+      },
+      "8": {
+        "categoria": "ausente",
+        "justificativa": "Não há endpoint de consulta por sala sem reservas; o cenário não é tratado."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "O diff não trata explicitamente reservas passadas; a lógica de conflito é temporal mas não filtra ou inclui explicitamente o passado."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "O erro 409 agora inclui conflictingStartsAt e conflictingEndsAt, dando ao cliente informação para tentar outro horário, embora não sugira alternativas concretas de slots livres."
+      }
+    },
+    "costUsd": 0.0161
+  },
+  "totalCostUsd": 0.041246000000000005
+}

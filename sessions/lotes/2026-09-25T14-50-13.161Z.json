@@ -1,0 +1,181 @@
+{
+  "seed": "6b55e8bc",
+  "dataset": "/home/franciscogsilverio/myPrograms/tcc-2026/resultados.csv",
+  "startedAt": "2026-09-25T14:50:13.161Z",
+  "endedAt": "2026-09-25T16:25:11.198Z",
+  "promised": [
+    {
+      "block": "principal",
+      "task": "T2",
+      "pLevel": "P1",
+      "oLevel": "O2",
+      "model": "claude-sonnet-5",
+      "run": 1
+    },
+    {
+      "block": "principal",
+      "task": "T2",
+      "pLevel": "P1",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": 1
+    },
+    {
+      "block": "principal",
+      "task": "T2",
+      "pLevel": "P1",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": 2
+    },
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": 2
+    },
+    {
+      "block": "modelo",
+      "task": "T1",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": 1
+    },
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": 1
+    },
+    {
+      "block": "modelo",
+      "task": "T1",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-haiku-4-5",
+      "run": 1
+    },
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": 2
+    },
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-haiku-4-5",
+      "run": 3
+    },
+    {
+      "block": "principal",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-sonnet-5",
+      "run": 2
+    }
+  ],
+  "executed": [
+    {
+      "sessionId": "T2-P1-O2-muh2v1yp",
+      "task": "T2",
+      "pLevel": "P1",
+      "oLevel": "O2",
+      "model": "claude-sonnet-5",
+      "run": "1",
+      "costUsd": 0.9510856
+    },
+    {
+      "sessionId": "T2-P1-O1-muh34wz8",
+      "task": "T2",
+      "pLevel": "P1",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": "1",
+      "costUsd": 0.6973775999999998
+    },
+    {
+      "sessionId": "T2-P1-O1-muh3dinh",
+      "task": "T2",
+      "pLevel": "P1",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": "2",
+      "costUsd": 0.6799780000000001
+    },
+    {
+      "sessionId": "T2-P2-O2-muh3mfug",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": "2",
+      "costUsd": 2.1829749999999994
+    },
+    {
+      "sessionId": "T1-P2-O2-muh46s2t",
+      "task": "T1",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": "1",
+      "costUsd": 1.79775375
+    },
+    {
+      "sessionId": "T2-P0-O1-muh4imoi",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": "1",
+      "costUsd": 3.1467039999999993
+    },
+    {
+      "sessionId": "T1-P2-O2-muh55045",
+      "task": "T1",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-haiku-4-5",
+      "run": "1",
+      "costUsd": 0.30442765000000005
+    },
+    {
+      "sessionId": "T2-P0-O1-muh5bjkf",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": "2",
+      "costUsd": 3.332529749999999
+    },
+    {
+      "sessionId": "T2-P0-O1-muh5rlra",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-haiku-4-5",
+      "run": "3",
+      "costUsd": 0.16337109999999996
+    },
+    {
+      "sessionId": "T2-P2-O2-muh5udw3",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-sonnet-5",
+      "run": "2",
+      "costUsd": 0.8195019
+    }
+  ],
+  "stopped": null
+}

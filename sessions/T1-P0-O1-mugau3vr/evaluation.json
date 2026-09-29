@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P0-O1-mugau3vr",
+  "evaluatedAt": "2026-09-25T01:55:12.079Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (assertEndsAfterStart, assertNotInThePast, assertRoomExists, verificação de overlap na transação) foi adicionada em src/modules/bookings/service.ts, não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não altera src/modules/bookings/schema.ts nem adiciona validação de schema para os novos campos/regras; a validação é feita via funções assert* no service, não por schema."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Os erros lançados usam validationFailed (400), notFound (404) e bookingConflict (409), ex.: 'throw notFound(\"Room\")' e 'throw bookingConflict(conflict.id)'."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "A tolerância de passado foi nomeada: 'const PAST_TOLERANCE_MS = MINUTE_IN_MS;' em vez de um literal solto."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam app.inject e verificam statusCode/response.json() (comportamento HTTP observável), como em 'rejects a booking that swallows an active one'."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O código reusa parseInstant, isBefore e MINUTE_IN_MS de shared/time.ts e bookingConflict/notFound/validationFailed de shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.026364
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.026364
+}

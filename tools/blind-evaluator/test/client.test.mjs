@@ -6,7 +6,7 @@ test('sends no sampling parameters at all', async () => {
   let captured;
   const fetchImpl = async (url, options) => {
     captured = JSON.parse(options.body);
-    return { ok: true, json: async () => ({ content: [{ text: 'ok' }], usage: { input_tokens: 1, output_tokens: 1 } }) };
+    return { ok: true, json: async () => ({ content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1, output_tokens: 1 } }) };
   };
   await callModel({ apiKey: 'x', prompt: 'hello', fetchImpl });
   assert.equal('temperature' in captured, false);
@@ -18,7 +18,7 @@ test('sends no sampling parameters at all', async () => {
 test('computes cost from usage at Sonnet 5 list price', async () => {
   const fetchImpl = async () => ({
     ok: true,
-    json: async () => ({ content: [{ text: 'ok' }], usage: { input_tokens: 1_000_000, output_tokens: 1_000_000 } }),
+    json: async () => ({ content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 1_000_000, output_tokens: 1_000_000 } }),
   });
   const result = await callModel({ apiKey: 'x', prompt: 'hello', fetchImpl });
   // $2.00 input + $10.00 output per 1M tokens.
@@ -28,7 +28,7 @@ test('computes cost from usage at Sonnet 5 list price', async () => {
 test('returns the response text', async () => {
   const fetchImpl = async () => ({
     ok: true,
-    json: async () => ({ content: [{ text: 'the answer' }], usage: { input_tokens: 1, output_tokens: 1 } }),
+    json: async () => ({ content: [{ type: 'text', text: 'the answer' }], usage: { input_tokens: 1, output_tokens: 1 } }),
   });
   const result = await callModel({ apiKey: 'x', prompt: 'hello', fetchImpl });
   assert.equal(result.text, 'the answer');
@@ -45,4 +45,64 @@ test('throws with the API error message when the call fails', async () => {
     () => callModel({ apiKey: 'x', prompt: 'hello', fetchImpl }),
     /something specific went wrong/,
   );
+});
+
+// Regression: Sonnet 5 runs adaptive thinking and decides per request
+// whether to think, so the response is sometimes [text] and sometimes
+// [thinking, text]. Reading content[0] worked on one real session and
+// failed on the very next one.
+test('finds the text block even when a thinking block comes first', async () => {
+  const fetchImpl = async () => ({
+    ok: true,
+    json: async () => ({
+      content: [
+        { type: 'thinking', thinking: 'deliberating about the diff' },
+        { type: 'text', text: '{"1": {"resposta": "sim"}}' },
+      ],
+      usage: { input_tokens: 1, output_tokens: 1 },
+    }),
+  });
+  const result = await callModel({ apiKey: 'x', prompt: 'hello', fetchImpl });
+  assert.equal(result.text, '{"1": {"resposta": "sim"}}');
+});
+
+test('still finds the text block when it is the only one', async () => {
+  const fetchImpl = async () => ({
+    ok: true,
+    json: async () => ({
+      content: [{ type: 'text', text: 'plain answer' }],
+      usage: { input_tokens: 1, output_tokens: 1 },
+    }),
+  });
+  const result = await callModel({ apiKey: 'x', prompt: 'hello', fetchImpl });
+  assert.equal(result.text, 'plain answer');
+});
+
+// Measured on 25/09/2026: a decision-points call spent 1365 of its 2048
+// tokens on thinking and was cut mid-sentence, so the truncated text
+// reached JSON.parse and failed as "Unterminated string in JSON at
+// position 2348". The cause has to be named where it happens.
+test('throws when the response was cut off at max_tokens', async () => {
+  const fetchImpl = async () => ({
+    ok: true,
+    json: async () => ({
+      stop_reason: 'max_tokens',
+      content: [{ type: 'text', text: '{"1": {"categoria": "endpoint no' }],
+      usage: { input_tokens: 6764, output_tokens: 2048, output_tokens_details: { thinking_tokens: 1365 } },
+    }),
+  });
+  await assert.rejects(
+    () => callModel({ apiKey: 'k', prompt: 'p', fetchImpl }),
+    /truncated at max_tokens.*2048.*1365/s,
+  );
+});
+
+test('the default ceiling leaves room for thinking and the answer together', async () => {
+  let sent;
+  const fetchImpl = async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return { ok: true, json: async () => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }], usage: {} }) };
+  };
+  await callModel({ apiKey: 'k', prompt: 'p', fetchImpl });
+  assert.ok(sent.max_tokens >= 8192, `max_tokens is ${sent.max_tokens}`);
 });

@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O1-mugbng1s",
+  "evaluatedAt": "2026-09-25T03:12:25.122Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A função getAvailability com toda a lógica de cálculo de slots livres está em service.ts; routes.ts apenas chama `service.getAvailability(request.query)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "AvailabilityQuery define roomId com minLength, from/to como string e duration como Type.Integer com minimum/maximum, usado no schema da rota `querystring: AvailabilityQuery`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O service lança `validationFailed('`to` must be after `from`'...)` (400) e `notFound('Room')` (404), tratados pelo error handler e verificados nos testes com `expect(response.statusCode).toBe(404)`/`.toBe(400)`."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Foram adicionadas constantes nomeadas `MIN_BOOKING_DURATION_MINUTES = 30` e `MAX_BOOKING_DURATION_MINUTES = 8 * 60` em vez de literais soltos."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e checam `response.statusCode`/`response.json().slots`, comportamento observável via HTTP, sem acessar internals do service ou repository."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service reutiliza `parseInstant`, `isBefore`, `durationMinutes` de `shared/time.ts` e `notFound`/`validationFailed` de `shared/errors.ts`, além de `DateString` de `shared/schema.ts` no schema novo."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.025953999999999998
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/availability, sem alterar o comportamento da listagem existente nem enriquecer o erro 409 do POST."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O serviço getAvailability calcula e retorna 'slots' correspondentes aos intervalos livres entre reservas ativas, não os ocupados."
+      },
+      "3": {
+        "categoria": "parametrizável",
+        "justificativa": "Existe um parâmetro opcional 'duration' na query que filtra os slots por duração mínima, com valores min/max definidos em MIN/MAX_BOOKING_DURATION_MINUTES."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige 'from' e 'to' como strings obrigatórias (minLength:1), sem valor default de dia ou semana."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há nenhuma restrição de horário comercial nem configuração de limite de horário; a janela é definida livremente por 'from'/'to' informados pelo cliente."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige um único 'roomId' obrigatório, e a lógica busca reservas apenas para essa sala."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não define explicitamente fuso horário; usa parseInstant e DateString genéricos sem menção a UTC ou local no contrato."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window as free when there are no bookings' confirma que, sem reservas, todo o intervalo from-to é retornado como um único slot livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há qualquer filtro ou menção explícita a datas passadas; o endpoint apenas calcula disponibilidade dentro do intervalo from/to fornecido, sem tratar especialmente o passado."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "Não há mudanças no schema ou serviço de criação de reserva (createBooking) relacionadas ao erro 409; o diff apenas adiciona o novo endpoint de disponibilidade."
+      }
+    },
+    "costUsd": 0.019248
+  },
+  "totalCostUsd": 0.045202
+}

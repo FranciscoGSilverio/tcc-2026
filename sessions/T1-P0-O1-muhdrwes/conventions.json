@@ -1,0 +1,37 @@
+{
+  "violacoes": 0,
+  "rules": {
+    "1": {
+      "violated": false,
+      "detail": ""
+    },
+    "2": {
+      "violated": false,
+      "detail": ""
+    },
+    "3": {
+      "violated": false,
+      "detail": ""
+    },
+    "4": {
+      "violated": false,
+      "detail": ""
+    },
+    "5": {
+      "violated": false,
+      "detail": ""
+    },
+    "6": {
+      "violated": false,
+      "detail": ""
+    },
+    "7": {
+      "violated": false,
+      "detail": ""
+    },
+    "8": {
+      "violated": false,
+      "detail": ""
+    }
+  }
+}

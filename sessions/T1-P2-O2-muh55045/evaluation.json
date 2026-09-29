@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P2-O2-muh55045",
+  "evaluatedAt": "2026-09-25T16:23:13.668Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "As novas regras (validateBookingRules, checagem de conflito) foram adicionadas em src/modules/bookings/service.ts, não em routes."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "As novas regras (duração mínima/máxima, data futura, existência de sala/usuário) são checadas manualmente em validateBookingRules dentro do service, não via schema typebox."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Cada caso inválido lança AppError específico, ex.: 'throw validationFailed(...)', 'throw notFound(\"Room\")', 'throw bookingConflict(conflict.id)', cada um com status HTTP definido."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Os limites de duração foram nomeados: 'const MIN_DURATION_MINUTES = 30;' e 'const MAX_DURATION_MINUTES = 480; // 8 hours'."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam app.inject e verificam apenas statusCode e corpo da resposta (ex.: 'expect(response.statusCode).toBe(409); expect(response.json().error.code).toBe(\"BOOKING_CONFLICT\")')."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O service reutiliza utilitários existentes como 'durationMinutes', 'isBefore', 'parseInstant' de shared/time.ts e 'validationFailed', 'notFound', 'bookingConflict' de shared/errors.ts."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.027516
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.027516
+}

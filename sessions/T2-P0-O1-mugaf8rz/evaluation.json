@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-mugaf8rz",
+  "evaluatedAt": "2026-09-25T01:37:11.563Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "nao",
+        "justificativa": "O algoritmo de cálculo dos slots disponíveis (loop de busca, janela de busca, verificação de conflito) foi implementado em `repository.ts` (`findAvailableSlots`), não em `service.ts`, que apenas chama esse método."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "Não há novo schema definido para o parâmetro `count` ou para os novos dados de sugestão de slots; o valor `3` é passado como literal em `repository.findAvailableSlots(input.roomId, startsAt, slotDuration, 3)`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O conflito continua lançando `bookingConflict(...)`, um `AppError` com status 409 já tratado pelo error handler, agora apenas com `details` enriquecidos."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "Valores como o multiplicador da janela de busca e a contagem de sugestões aparecem como literais soltos, ex: `slotDuration * count * 2` e `findAvailableSlots(input.roomId, startsAt, slotDuration, 3)`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes novos fazem requisições HTTP via `app.inject` e verificam a resposta JSON (`details.conflictingBooking`, `details.suggestedSlots`, e que reservar um slot sugerido retorna 201), sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "nao",
+        "justificativa": "O cálculo de duração usa `endsAt.getTime() - startsAt.getTime()` diretamente em vez de reusar `durationMinutes`/`MINUTE_IN_MS` de `shared/time.ts`."
+      }
+    },
+    "qualidade": 2,
+    "costUsd": 0.025176
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "enriquece o erro 409",
+        "justificativa": "O diff modifica apenas a função bookingConflict e o service para adicionar detalhes (conflictingBooking e suggestedSlots) ao erro 409 existente, sem criar rota nova nem alterar endpoints de listagem."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "findAvailableSlots retorna slots sem conflito (hasConflict === false), ou seja, horários livres para nova reserva, não os ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "slotDuration é calculado a partir de endsAt - startsAt da própria tentativa de reserva que gerou o conflito, não é um valor fixo nem um parâmetro exposto na API."
+      },
+      "4": {
+        "categoria": "ausente",
+        "justificativa": "Não há conceito de janela padrão (dia/semana) nem parâmetro obrigatório de janela; a busca usa um searchWindow calculado internamente a partir de slotDuration*count*2, sem relação com dia/semana/parâmetro explícito."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "O algoritmo não aplica nenhum limite de horário comercial, 24h ou configurável; apenas incrementa currentStart até atingir 'count' slots livres."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "findAvailableSlots recebe um único roomId e a consulta ao Prisma filtra por esse roomId específico."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O código não trata fuso horário explicitamente; usa objetos Date diretamente sem conversão ou menção a UTC/local no contrato."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "Se não houver bookings para a sala, o array 'bookings' fica vazio, hasConflict nunca é true, e o loop preenche 'slots' considerando todos os horários como livres."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma lógica que filtre ou trate explicitamente horários no passado; a busca parte de startTime fornecido sem validação temporal adicional."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "O service.ts agora inclui 'suggestedSlots' e 'conflictingBooking' no corpo do erro 409 lançado por createBooking, alterando o contrato de resposta do POST /bookings em caso de conflito."
+      }
+    },
+    "costUsd": 0.02293
+  },
+  "totalCostUsd": 0.048105999999999996
+}

@@ -1,17 +1,30 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { copyIn, exec, stop } from './lib/container.mjs';
+import { SESSION_IMAGE, copyIn, exec, imageId, stop } from './lib/container.mjs';
 import { InfrastructureError, prepare } from './lib/prepare.mjs';
 import { measure } from './lib/measure.mjs';
 import { readTranscript, toMarkdown } from './lib/transcript.mjs';
-import { appendRow, emptyRow } from './lib/dataset.mjs';
+import { appendRow, emptyRow, readRows } from './lib/dataset.mjs';
 import { FAKES } from './lib/fakes.mjs';
 import { UnsupportedSessionError, resolveSession } from './lib/capabilities.mjs';
 
 const REPO = resolve(import.meta.dirname, '..');
 const TIMEOUT_MS = 30 * 60 * 1000;
+
+// The safety stop against an infinite loop, never a measure of quality or
+// performance. Raised from 40 to 100 on 25/09/2026: at 40 it was binding
+// for opus and for nothing else -- two of the three sessions of the
+// T2-P0-O1 opus cell were cut at the ceiling -- which right-censors
+// n_turns, custo_usd, duracao_s and n_tool_calls for exactly the model
+// expected to spend the most, and the analysis reads those columns. The
+// ceiling is not visible to the agent (verified across every archived
+// transcript: it appears only in the CLI's own closing event), so a
+// session that finished on its own is unaffected by the change, and only
+// the two censored sessions were re-collected.
+const MAX_TURNS = 100;
 
 const argument = (flag, fallback) => {
   const index = process.argv.indexOf(flag);
@@ -35,21 +48,72 @@ function deliverStatement(name, statementPath) {
   copyIn(name, staged, '/tmp/statement.txt');
 }
 
-function runAgent({ name, model }) {
-  // The steps must be chained with && and the redirections kept at the end
-  // of the line. Joining with plain spaces (the earlier bug) produced the
-  // single command `cd /app claude -p "..." ...`: `cd` reads only its
-  // first argument as the target directory, so `claude` and everything
-  // after it were just extra arguments to `cd`, which fails before the
-  // agent ever runs. The redirections still get set up regardless (a
-  // shell wires up redirections before it even resolves the command),
-  // which is why the failure left an empty transcript.jsonl and an empty
-  // agent.log rather than an error message anywhere obvious.
-  const command = [
-    'cd /app',
-    `claude -p "$(cat /tmp/statement.txt)" --output-format stream-json --verbose --max-turns 40 --model ${model} --dangerously-skip-permissions`,
-  ].join(' && ');
-  return exec(name, ['sh', '-c', `${command} > /out/transcript.jsonl 2>/out/agent.log`]);
+function deliverPrompt(name, text, containerPath) {
+  const staging = mkdtempSync(join(tmpdir(), 'prompt-'));
+  const staged = join(staging, 'prompt.txt');
+  writeFileSync(staged, text);
+  copyIn(name, staged, containerPath);
+}
+
+// One call for O1, four chained for O2. Chaining goes through an explicit
+// session id rather than --continue: --continue resumes "the most recent
+// conversation", which is implicit state of exactly the kind that has
+// already produced three defects here (modelUsage[0], content[0], and a
+// flag recorded but not honoured).
+//
+// Each call is chained with && and the redirections kept at the end of
+// the line. Joining with plain spaces (an earlier bug) produced the
+// single command `cd /app claude -p "..." ...`: `cd` reads only its
+// first argument as the target directory, so `claude` and everything
+// after it were just extra arguments to `cd`, which fails before the
+// agent ever runs. The redirections still get set up regardless (a
+// shell wires up redirections before it even resolves the command),
+// which is why the failure left an empty transcript.jsonl and an empty
+// agent.log rather than an error message anywhere obvious.
+function runAgent({ name, model, plan, repoRoot, outDir }) {
+  const pluginFlag = plan.context?.pluginDir ? '--plugin-dir /opt/plugin' : '';
+  const call = (promptPath, sessionFlag, outFile) => {
+    const command = [
+      'cd /app',
+      `claude -p "$(cat ${promptPath})" --output-format stream-json --verbose ` +
+      `--max-turns ${MAX_TURNS} --model ${model} ${pluginFlag} ${sessionFlag} --dangerously-skip-permissions`,
+    ].join(' && ');
+    return exec(name, ['sh', '-c', `${command} > /out/${outFile} 2>>/out/agent.log`]);
+  };
+
+  if (!plan.steps) {
+    call('/tmp/statement.txt', '', 'transcript.jsonl');
+    return;
+  }
+
+  const statement = readFileSync(resolve(repoRoot, plan.statement), 'utf8');
+  const uuid = randomUUID();
+
+  plan.steps.forEach((step, index) => {
+    const template = readFileSync(resolve(repoRoot, step), 'utf8');
+    const prompt = template.replace('{{ENUNCIADO}}', statement);
+    const promptPath = `/tmp/step-${index + 1}.txt`;
+    deliverPrompt(name, prompt, promptPath);
+    const sessionFlag = index === 0 ? `--session-id ${uuid}` : `--resume ${uuid}`;
+    call(promptPath, sessionFlag, `transcript-${index + 1}.jsonl`);
+
+    // A step that produced nothing means the chain broke. Carrying on to
+    // the next step would produce a session missing a quarter of its work
+    // and looking complete, so it fails here instead.
+    const produced = join(outDir, `transcript-${index + 1}.jsonl`);
+    if (!existsSync(produced) || !readFileSync(produced, 'utf8').trim()) {
+      const log = existsSync(join(outDir, 'agent.log'))
+        ? readFileSync(join(outDir, 'agent.log'), 'utf8').trim() : '';
+      throw new InfrastructureError(
+        `O2 step ${index + 1} produced no transcript; agent.log: ${log || '(empty)'}`,
+      );
+    }
+  });
+
+  const joined = plan.steps
+    .map((_, index) => readFileSync(join(outDir, `transcript-${index + 1}.jsonl`), 'utf8').trim())
+    .join('\n');
+  writeFileSync(join(outDir, 'transcript.jsonl'), `${joined}\n`);
 }
 
 // The fourth face of the same defect: --model states the M factor, and
@@ -69,6 +133,62 @@ function assertModelMatches(requested, parsed) {
   }
 }
 
+// A P2 session whose init reports no plugin ran as P1 with extra steps:
+// the label would say P2 and the condition would not be P2. The init
+// event lists what actually loaded, so this is checkable rather than
+// hopeful -- every session collected so far reported `plugins: []`.
+function assertPluginLoaded(parsed, pluginName) {
+  const init = parsed.events.find((e) => e.type === 'system' && e.subtype === 'init');
+  const loaded = init?.plugins ?? [];
+  const names = loaded.map((p) => (typeof p === 'string' ? p : p?.name)).filter(Boolean);
+  if (!names.some((name) => name === pluginName || String(name).includes(pluginName))) {
+    throw new InfrastructureError(
+      `the session was labelled with a plugin context but init reported plugins: ${JSON.stringify(loaded)}`,
+    );
+  }
+}
+
+// The container image is a declared constant of the experiment (protocol
+// section 3.4), and it used not to be one: prepare() rebuilt before every
+// session, and the first eight sessions recorded eight different digests
+// because the build context is runner/ and that directory changed all
+// through development. The column meant to evidence the constant
+// contradicted it.
+//
+// Building is now its own deliberate step, and this refuses a session
+// whose image is missing or whose digest has drifted from what the
+// dataset already holds. Without the second half, "build once" would be
+// an intention rather than a property: one stray rebuild mid-collection
+// and half the grid runs on a different image, silently.
+function assertImageReady(datasetPath, allowChange) {
+  let digest;
+  try {
+    digest = imageId(SESSION_IMAGE);
+  } catch {
+    throw new UnsupportedSessionError(
+      `the session image ${SESSION_IMAGE} does not exist. Build it once with ` +
+      '`node runner/build-image.mjs` before collecting, and do not rebuild mid-collection.',
+    );
+  }
+
+  const recorded = readRows(datasetPath)
+    .map((row) => row.image_digest)
+    .filter(Boolean);
+  const baseline = recorded[recorded.length - 1];
+
+  if (baseline && baseline !== digest && !allowChange) {
+    throw new UnsupportedSessionError(
+      `the session image changed mid-collection: the dataset was built with ${baseline} ` +
+      `and the image on this machine is now ${digest}. Sessions either side of this point ` +
+      'would not share the environment the protocol holds constant. Re-run with ' +
+      '--allow-image-change if the new image is deliberate; the digest difference then ' +
+      'stays visible in the data.',
+    );
+  }
+
+  return digest;
+}
+
 async function main() {
   const task = argument('--task', 'T1');
   const pLevel = argument('--p', 'P0');
@@ -86,9 +206,17 @@ async function main() {
   // Before anything is created or spent: refuse a session that cannot be
   // run exactly as it will be labelled.
   const plan = resolveSession({ task, pLevel, oLevel });
+  const imageDigest = assertImageReady(datasetPath, process.argv.includes('--allow-image-change'));
 
   const sessionId = `${task}-${pLevel}-${oLevel}-${Date.now().toString(36)}`;
-  const outDir = join(REPO, 'sessions', sessionId);
+  // A fake session is not data: it never reaches the real dataset, so its
+  // artefacts must not land in sessions/ either. They used to, and by the
+  // time sessions/ was versioned on 23/09 there were 76 leftover fake
+  // directories against 8 real ones -- enough to bury the archive and to
+  // dirty `git status`, which this project uses as a gate everywhere.
+  const outDir = fake
+    ? mkdtempSync(join(tmpdir(), `fake-session-${sessionId}-`))
+    : join(REPO, 'sessions', sessionId);
   mkdirSync(outDir, { recursive: true });
 
   const name = `session-${sessionId}`;
@@ -101,7 +229,7 @@ async function main() {
       name, outDir, hostPort, pLevel, repoRoot: REPO,
       env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? '' },
     });
-    row.image_digest = anchors.imageId;
+    row.image_digest = imageDigest;
     row.cli_version = anchors.cliVersion;
 
     deliverStatement(name, resolve(REPO, plan.statement));
@@ -113,7 +241,7 @@ async function main() {
       transcriptText = FAKES[fake].run(name, REPO);
       writeFileSync(join(outDir, 'transcript.jsonl'), transcriptText);
     } else {
-      runAgent({ name, model });
+      runAgent({ name, model, plan, repoRoot: REPO, outDir });
       const transcriptPath = join(outDir, 'transcript.jsonl');
       transcriptText = existsSync(transcriptPath) ? readFileSync(transcriptPath, 'utf8') : '';
       // An empty transcript means the agent never ran (or never finished a
@@ -138,13 +266,19 @@ async function main() {
     }
     // Fakes report a synthetic model on purpose, so they are exempt.
     if (!fake) assertModelMatches(model, parsed);
+    if (!fake && plan.context?.pluginName) assertPluginLoaded(parsed, plan.context.pluginName);
     writeFileSync(join(outDir, 'transcript.md'), toMarkdown(parsed));
 
     const measured = await measure({
       name, outDir, hostPort, repoRoot: REPO, hiddenSuite: plan.hiddenSuite,
+      baselineCommit: anchors.baselineCommit,
     });
 
-    const hitTurnLimit = parsed.stopReason !== 'end_turn' && parsed.numTurns >= 40;
+    // The CLI's own subtype, not a turn count compared against the
+    // ceiling: `num_turns` counts more than --max-turns limits, so the old
+    // `numTurns >= 40` clause compared two different scales and would have
+    // become meaningless the moment the ceiling moved.
+    const hitTurnLimit = parsed.maxTurnsReached;
     row.ended_at = new Date().toISOString();
     row.status = 'valid';
     row.model_version = parsed.model;

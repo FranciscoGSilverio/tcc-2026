@@ -1,0 +1,96 @@
+{
+  "seed": "2749e188",
+  "dataset": "/home/franciscogsilverio/myPrograms/tcc-2026/resultados.csv",
+  "startedAt": "2026-09-25T18:01:03.417Z",
+  "endedAt": "2026-09-25T18:53:49.948Z",
+  "promised": [
+    {
+      "block": "modelo",
+      "task": "T1",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": 2
+    },
+    {
+      "block": "principal",
+      "task": "T2",
+      "pLevel": "P1",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": 3
+    },
+    {
+      "block": "principal",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": 2
+    },
+    {
+      "block": "principal",
+      "task": "T1",
+      "pLevel": "P1",
+      "oLevel": "O2",
+      "model": "claude-sonnet-5",
+      "run": 2
+    },
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": 1
+    }
+  ],
+  "executed": [
+    {
+      "sessionId": "T1-P2-O2-muh9oh1r",
+      "task": "T1",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": "2",
+      "costUsd": 2.082016
+    },
+    {
+      "sessionId": "T2-P1-O1-muhag2fi",
+      "task": "T2",
+      "pLevel": "P1",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": "3",
+      "costUsd": 0.7532165
+    },
+    {
+      "sessionId": "T2-P2-O1-muhamomm",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O1",
+      "model": "claude-sonnet-5",
+      "run": "2",
+      "costUsd": 0.6760250999999999
+    },
+    {
+      "sessionId": "T1-P1-O2-muhawah5",
+      "task": "T1",
+      "pLevel": "P1",
+      "oLevel": "O2",
+      "model": "claude-sonnet-5",
+      "run": "2",
+      "costUsd": 0.41810050000000004
+    },
+    {
+      "sessionId": "T2-P0-O1-muhb0kux",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-opus-5",
+      "run": "1",
+      "costUsd": 2.8677295000000007
+    }
+  ],
+  "stopped": null
+}

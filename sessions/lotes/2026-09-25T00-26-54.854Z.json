@@ -1,0 +1,45 @@
+{
+  "seed": "db9e9755",
+  "dataset": "/home/franciscogsilverio/myPrograms/tcc-2026/resultados.csv",
+  "startedAt": "2026-09-25T00:26:54.854Z",
+  "endedAt": "2026-09-25T00:42:55.616Z",
+  "promised": [
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": 1
+    },
+    {
+      "block": "modelo",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-haiku-4-5",
+      "run": 1
+    }
+  ],
+  "executed": [
+    {
+      "sessionId": "T2-P2-O2-mug80u5e",
+      "task": "T2",
+      "pLevel": "P2",
+      "oLevel": "O2",
+      "model": "claude-opus-5",
+      "run": "1",
+      "costUsd": 2.3975252499999997
+    },
+    {
+      "sessionId": "T2-P0-O1-mug8g8uw",
+      "task": "T2",
+      "pLevel": "P0",
+      "oLevel": "O1",
+      "model": "claude-haiku-4-5",
+      "run": "1",
+      "costUsd": 0.1460135
+    }
+  ],
+  "stopped": null
+}

@@ -1,0 +1,349 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..fd20e83 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -1,4 +1,4 @@
+-import type { Booking, Prisma } from '@prisma/client';
++import type { Booking, Prisma, Room } from '@prisma/client';
+ import { prisma } from '../../db/client.js';
+ import { BOOKING_ACTIVE } from './schema.js';
+ 
+@@ -24,17 +24,39 @@ export function create(data: BookingData): Promise<Booking> {
+   return prisma.booking.create({ data });
+ }
+ 
+-export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Booking | null> {
++export function findOverlap(
++  roomId: string,
++  startsAt: Date,
++  endsAt: Date,
++  excludeId?: string,
++): Promise<Booking | null> {
+   return prisma.booking.findFirst({
+     where: {
+       roomId,
+       status: BOOKING_ACTIVE,
+-      startsAt: { lte: startsAt },
++      startsAt: { lt: endsAt },
+       endsAt: { gt: startsAt },
++      ...(excludeId ? { id: { not: excludeId } } : {}),
+     },
+   });
+ }
+ 
++export function listActiveOverlapping(roomId: string, from: Date, to: Date): Promise<Booking[]> {
++  return prisma.booking.findMany({
++    where: {
++      roomId,
++      status: BOOKING_ACTIVE,
++      startsAt: { lt: to },
++      endsAt: { gt: from },
++    },
++    orderBy: { startsAt: 'asc' },
++  });
++}
++
++export function findRoomById(id: string): Promise<Room | null> {
++  return prisma.room.findUnique({ where: { id } });
++}
++
+ export function findById(id: string): Promise<Booking | null> {
+   return prisma.booking.findUnique({ where: { id } });
+ }
+diff --git a/src/modules/bookings/routes.ts b/src/modules/bookings/routes.ts
+index 82aa79c..faf245e 100644
+--- a/src/modules/bookings/routes.ts
++++ b/src/modules/bookings/routes.ts
+@@ -1,5 +1,7 @@
+ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
+ import {
++  AvailableSlotsQuery,
++  AvailableSlotsResponse,
+   BookingIdParams,
+   BookingPage,
+   BookingResponse,
+@@ -16,6 +18,10 @@ export const bookingsRoutes: FastifyPluginAsyncTypebox = async (app) => {
+   app.get('/', { schema: { querystring: ListBookingsQuery, response: { 200: BookingPage } } },
+     async (request) => service.listBookings(request.query));
+ 
++  app.get('/available-slots',
++    { schema: { querystring: AvailableSlotsQuery, response: { 200: AvailableSlotsResponse } } },
++    async (request) => service.listAvailableSlots(request.query));
++
+   app.get('/:id', { schema: { params: BookingIdParams, response: { 200: BookingResponse } } },
+     async (request) => service.getBooking(request.params.id));
+ 
+diff --git a/src/modules/bookings/schema.ts b/src/modules/bookings/schema.ts
+index 9069332..ee0b8b4 100644
+--- a/src/modules/bookings/schema.ts
++++ b/src/modules/bookings/schema.ts
+@@ -50,6 +50,23 @@ export const BookingPage = Type.Object({
+   }),
+ });
+ 
++export const AvailableSlotsQuery = Type.Object({
++  roomId: Type.String({ minLength: 1 }),
++  from: Type.String({ minLength: 1 }),
++  to: Type.String({ minLength: 1 }),
++  duration: Type.Integer({ minimum: 1 }),
++});
++
++export const AvailableSlot = Type.Object({
++  startsAt: DateString,
++  endsAt: DateString,
++});
++
++export const AvailableSlotsResponse = Type.Object({
++  data: Type.Array(AvailableSlot),
++});
++
+ export type CreateBookingInput = Static<typeof CreateBookingBody>;
+ export type UpdateBookingInput = Static<typeof UpdateBookingBody>;
+ export type ListBookingsInput = Static<typeof ListBookingsQuery>;
++export type AvailableSlotsInput = Static<typeof AvailableSlotsQuery>;
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..2178184 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -1,21 +1,34 @@
+ import type { Booking } from '@prisma/client';
+-import { bookingConflict, notFound } from '../../shared/errors.js';
++import { bookingConflict, notFound, validationFailed } from '../../shared/errors.js';
+ import {
+   normalizeLimit,
+   normalizeOffset,
+   paginated,
+   type Page,
+ } from '../../shared/pagination.js';
+-import { parseInstant } from '../../shared/time.js';
++import { isBefore, MINUTE_IN_MS, parseInstant } from '../../shared/time.js';
+ import * as repository from './repository.js';
+ import { BOOKING_CANCELLED } from './schema.js';
+-import type { CreateBookingInput, ListBookingsInput, UpdateBookingInput } from './schema.js';
++import type {
++  AvailableSlotsInput,
++  CreateBookingInput,
++  ListBookingsInput,
++  UpdateBookingInput,
++} from './schema.js';
++
++const MIN_DURATION_MINUTES = 30;
++const MAX_DURATION_MINUTES = 8 * 60;
++
++export interface AvailableSlot {
++  startsAt: Date;
++  endsAt: Date;
++}
+ 
+ export async function createBooking(input: CreateBookingInput): Promise<Booking> {
+   const startsAt = parseInstant(input.startsAt);
+   const endsAt = parseInstant(input.endsAt);
+ 
+-  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
++  const conflict = await repository.findOverlap(input.roomId, startsAt, endsAt);
+   if (conflict) {
+     throw bookingConflict(conflict.id);
+   }
+@@ -53,13 +66,25 @@ export async function listBookings(query: ListBookingsInput): Promise<Page<Booki
+ }
+ 
+ export async function updateBooking(id: string, input: UpdateBookingInput): Promise<Booking> {
+-  await getBooking(id);
++  const existing = await getBooking(id);
++
++  const roomId = input.roomId ?? existing.roomId;
++  const startsAt = input.startsAt !== undefined ? parseInstant(input.startsAt) : existing.startsAt;
++  const endsAt = input.endsAt !== undefined ? parseInstant(input.endsAt) : existing.endsAt;
++
++  if (input.roomId !== undefined || input.startsAt !== undefined || input.endsAt !== undefined) {
++    const conflict = await repository.findOverlap(roomId, startsAt, endsAt, id);
++    if (conflict) {
++      throw bookingConflict(conflict.id);
++    }
++  }
++
+   return repository.update(id, {
+     ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+     ...(input.userId !== undefined ? { userId: input.userId } : {}),
+     ...(input.title !== undefined ? { title: input.title } : {}),
+-    ...(input.startsAt !== undefined ? { startsAt: parseInstant(input.startsAt) } : {}),
+-    ...(input.endsAt !== undefined ? { endsAt: parseInstant(input.endsAt) } : {}),
++    ...(input.startsAt !== undefined ? { startsAt } : {}),
++    ...(input.endsAt !== undefined ? { endsAt } : {}),
+   });
+ }
+ 
+@@ -75,3 +100,42 @@ export async function deleteBooking(id: string): Promise<void> {
+   await getBooking(id);
+   await repository.remove(id);
+ }
++
++export async function listAvailableSlots(query: AvailableSlotsInput): Promise<{ data: AvailableSlot[] }> {
++  const room = await repository.findRoomById(query.roomId);
++  if (!room) {
++    throw notFound('Room');
++  }
++
++  const from = parseInstant(query.from);
++  const to = parseInstant(query.to);
++  if (!isBefore(from, to)) {
++    throw validationFailed('"from" must be before "to"');
++  }
++
++  if (query.duration < MIN_DURATION_MINUTES || query.duration > MAX_DURATION_MINUTES) {
++    throw validationFailed(
++      `Duration must be between ${MIN_DURATION_MINUTES} and ${MAX_DURATION_MINUTES} minutes`,
++      { minMinutes: MIN_DURATION_MINUTES, maxMinutes: MAX_DURATION_MINUTES },
++    );
++  }
++
++  const durationMs = query.duration * MINUTE_IN_MS;
++  const bookings = await repository.listActiveOverlapping(query.roomId, from, to);
++
++  const slots: AvailableSlot[] = [];
++  let cursor = from;
++  for (const booking of bookings) {
++    if (booking.startsAt.getTime() - cursor.getTime() >= durationMs) {
++      slots.push({ startsAt: cursor, endsAt: booking.startsAt });
++    }
++    if (booking.endsAt.getTime() > cursor.getTime()) {
++      cursor = booking.endsAt;
++    }
++  }
++  if (to.getTime() - cursor.getTime() >= durationMs) {
++    slots.push({ startsAt: cursor, endsAt: to });
++  }
++
++  return { data: slots };
++}
+diff --git a/tests/bookings.test.ts b/tests/bookings.test.ts
+index 7b4db38..d9fa5e8 100644
+--- a/tests/bookings.test.ts
++++ b/tests/bookings.test.ts
+@@ -180,4 +180,126 @@ describe('bookings', () => {
+     const response = await book(24.5, 25.5, 'Overlap');
+     expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+   });
++
++  it('rejects a booking that starts before and ends inside an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23.5, 24.5, 'Straddles start');
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('rejects updating a booking into a time that overlaps another active booking', async () => {
++    await book(24, 25);
++    const second = await book(26, 27, 'Movable');
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { startsAt: inHours(24.5), endsAt: inHours(25.5) },
++    });
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('allows updating a booking to a time that does not overlap any other booking', async () => {
++    const created = await book(24, 25);
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${created.json().id}`,
++      payload: { startsAt: inHours(30), endsAt: inHours(31) },
++    });
++    expect(response.statusCode).toBe(200);
++  });
++
++  describe('available slots', () => {
++    // All offsets in this block are computed from a single fixed `base` per test so that
++    // exact-boundary comparisons (e.g. a gap of precisely 60 minutes) aren't flaky due to
++    // drift between successive Date.now() calls.
++    function isoAt(base: number, hours: number): string {
++      return new Date(base + hours * HOUR).toISOString();
++    }
++
++    async function bookAt(base: number, startHours: number, endHours: number, title = 'Sync') {
++      return app.inject({
++        method: 'POST',
++        url: '/bookings',
++        payload: {
++          roomId,
++          userId,
++          title,
++          startsAt: isoAt(base, startHours),
++          endsAt: isoAt(base, endHours),
++        },
++      });
++    }
++
++    async function availableSlotsAt(base: number, fromHours: number, toHours: number, duration: number) {
++      return app.inject({
++        method: 'GET',
++        url:
++          `/bookings/available-slots?roomId=${roomId}` +
++          `&from=${isoAt(base, fromHours)}&to=${isoAt(base, toHours)}&duration=${duration}`,
++      });
++    }
++
++    it('returns the whole window as one slot when there are no bookings', async () => {
++      const base = Date.now();
++      const response = await availableSlotsAt(base, 24, 28, 60);
++      expect(response.statusCode).toBe(200);
++      expect(response.json().data).toEqual([
++        { startsAt: isoAt(base, 24), endsAt: isoAt(base, 28) },
++      ]);
++    });
++
++    it('splits the window around an existing booking', async () => {
++      const base = Date.now();
++      await bookAt(base, 25, 26);
++      const response = await availableSlotsAt(base, 24, 28, 60);
++      expect(response.json().data).toEqual([
++        { startsAt: isoAt(base, 24), endsAt: isoAt(base, 25) },
++        { startsAt: isoAt(base, 26), endsAt: isoAt(base, 28) },
++      ]);
++    });
++
++    it('returns no slots when a booking covers the whole window', async () => {
++      const base = Date.now();
++      await bookAt(base, 24, 28);
++      const response = await availableSlotsAt(base, 24, 28, 30);
++      expect(response.json().data).toHaveLength(0);
++    });
++
++    it('excludes gaps shorter than the requested duration', async () => {
++      const base = Date.now();
++      await bookAt(base, 24.5, 25);
++      await bookAt(base, 25.25, 26, 'Second');
++      const response = await availableSlotsAt(base, 24, 28, 60);
++      const gapStarts = response.json().data.map((slot: { startsAt: string }) => slot.startsAt);
++      expect(gapStarts).not.toContain(isoAt(base, 25));
++    });
++
++    it('answers 404 when the room does not exist', async () => {
++      const base = Date.now();
++      const response = await app.inject({
++        method: 'GET',
++        url:
++          `/bookings/available-slots?roomId=missing` +
++          `&from=${isoAt(base, 24)}&to=${isoAt(base, 28)}&duration=30`,
++      });
++      expect(response.statusCode).toBe(404);
++    });
++
++    it('rejects a window where "from" is not before "to"', async () => {
++      const base = Date.now();
++      const response = await availableSlotsAt(base, 28, 24, 30);
++      expect(response.statusCode).toBe(400);
++      expect(response.json().error.code).toBe('VALIDATION_ERROR');
++    });
++
++    it('rejects a duration outside the bookable range', async () => {
++      const base = Date.now();
++      const tooShort = await availableSlotsAt(base, 24, 28, 10);
++      expect(tooShort.statusCode).toBe(400);
++      const tooLong = await availableSlotsAt(base, 24, 28, 600);
++      expect(tooLong.statusCode).toBe(400);
++    });
++  });
+ });

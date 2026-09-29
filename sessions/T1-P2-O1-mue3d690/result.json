@@ -1,0 +1,82 @@
+{
+  "row": {
+    "session_id": "T1-P2-O1-mue3d690",
+    "task": "T1",
+    "model": "claude-sonnet-5",
+    "model_version": "claude-sonnet-5",
+    "p_level": "P2",
+    "o_level": "O1",
+    "run_number": "1",
+    "started_at": "2026-09-23T12:41:00.132Z",
+    "ended_at": "2026-09-23T12:44:27.035Z",
+    "image_digest": "sha256:bfbe28f8ce327cc9da420755d0698548daa963352626c19f4aab15592232c60f",
+    "cli_version": "2.1.272",
+    "status": "valid",
+    "invalid_reason": "",
+    "taxa_aceitacao": 1,
+    "regressoes": 0,
+    "violacoes": 0,
+    "qualidade": "",
+    "custo_usd": 0.5057434,
+    "duracao_s": 186,
+    "n_tool_calls": 29,
+    "travou": false,
+    "decisao_1": "",
+    "decisao_2": "",
+    "decisao_3": "",
+    "decisao_4": "",
+    "decisao_5": "",
+    "decisao_6": "",
+    "decisao_7": "",
+    "decisao_8": "",
+    "decisao_9": "",
+    "decisao_10": "",
+    "n_turns": 33,
+    "travou_turnos": false,
+    "travou_sem_diff": false,
+    "travou_build": false,
+    "tokens_input": 42,
+    "tokens_output": 17096,
+    "tokens_cache_create": 48612,
+    "tokens_cache_read": 1060372,
+    "diff_path": "sessions/T1-P2-O1-mue3d690/session.diff",
+    "transcript_path": "sessions/T1-P2-O1-mue3d690/transcript.jsonl"
+  },
+  "hidden": {
+    "task": "T1",
+    "total": 26,
+    "passed": 26,
+    "rate": 1,
+    "byRule": {
+      "1": {
+        "passed": 10,
+        "total": 10
+      },
+      "2": {
+        "passed": 2,
+        "total": 2
+      },
+      "3": {
+        "passed": 3,
+        "total": 3
+      },
+      "4": {
+        "passed": 4,
+        "total": 4
+      },
+      "5": {
+        "passed": 2,
+        "total": 2
+      },
+      "6": {
+        "passed": 3,
+        "total": 3
+      },
+      "7": {
+        "passed": 2,
+        "total": 2
+      }
+    },
+    "failures": []
+  }
+}

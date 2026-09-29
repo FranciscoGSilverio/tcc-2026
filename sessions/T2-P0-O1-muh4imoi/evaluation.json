@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-muh4imoi",
+  "evaluatedAt": "2026-09-25T16:23:02.542Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "routes.ts apenas chama `service.roomAvailability`, `service.searchAvailability`, `service.createBookings` etc.; toda a lógica (parsing, validação, conflito, sugestões) está em service.ts, ex.: `async function assertFree(...)` e `export async function createBookings(...)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "Novos schemas Typebox validam entradas, ex.: `CreateBookingsBody = Type.Object({ bookings: Type.Array(CreateBookingBody, { minItems: 1, maxItems: MAX_BATCH_SIZE }) })` e `AvailabilityQuery`/`SearchAvailabilityQuery`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros novos retornam status explícitos via AppError, ex.: `throw notFound('Room')` (404), `throw validationFailed('endsAt must be after startsAt', ...)` (400) e `throw bookingConflict(conflict.id, {...})` (409)."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Valores fixos foram nomeados em constantes, ex.: `export const MAX_BATCH_SIZE = 50;`, `DEFAULT_WINDOW_MS`, `MAX_WINDOW_MS`, `MAX_SLOTS_PER_ROOM`, `MAX_SUGGESTIONS` e `SUGGESTION_LOOKAHEAD_MS`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam `app.inject` e checam respostas HTTP observáveis, ex.: `expect(response.statusCode).toBe(409); expect(response.json().error.code).toBe('BOOKING_CONFLICT')`, sem inspecionar detalhes internos de implementação."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O código novo reusa utilitários existentes como `parseInstant`, `isBefore`, `MINUTE_IN_MS` de shared/time.ts, `normalizeLimit`/`normalizeOffset`/`paginated` de shared/pagination.ts e `DateString` de shared/schema.ts, além de estender `bookingConflict`/`notFound`/`validationFailed` de shared/errors.ts."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.07525799999999999
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "combinação",
+        "justificativa": "O diff cria dois endpoints novos (`GET /rooms/:roomId/availability` e `GET /availability`), enriquece o erro 409 com `conflictingPeriod`, `requestedPeriod` e `suggestions`, e ainda adiciona um endpoint de criação em lote (`POST /bookings/batch`). Não é uma única forma de solução, mas várias combinadas."
+      },
+      "2": {
+        "categoria": "ambos",
+        "justificativa": "A resposta de `GET /rooms/:roomId/availability` traz tanto `slots` (os intervalos livres) quanto `busy` (as reservas que ocupam o período), como mostram o schema `RoomAvailabilityResponse` e os testes que verificam ambos os campos."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "O README explicita que 'slots são os gaps livres, não candidatos de tamanho fixo: um gap de 120 minutos pode conter qualquer reunião de 60 minutos dentro dele'. A função `freeGaps` calcula os intervalos livres a partir das reservas existentes, sem fatiar em blocos fixos."
+      },
+      "4": {
+        "categoria": "semana",
+        "justificativa": "`DEFAULT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000` e o teste 'defaults to a week starting now' confirmam que, na ausência de `to`, a janela padrão é de uma semana a partir de `from`."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há nenhuma restrição a horário comercial no código; a busca de gaps considera o dia inteiro (`freeGaps` opera sobre qualquer janela de tempo, sem cortes de expediente), e os testes usam janelas de 24h a 32h sem qualquer filtro de horário comercial."
+      },
+      "6": {
+        "categoria": "todas",
+        "justificativa": "O endpoint `GET /availability` busca em `prisma.room.findMany` todas as salas (opcionalmente filtradas por `capacity`), não recebendo uma lista específica de IDs de salas como parâmetro — é uma varredura global, complementada pelo endpoint de uma sala específica via `roomId` na rota."
+      },
+      "7": {
+        "categoria": "UTC",
+        "justificativa": "Todos os timestamps retornados usam `DateString` no formato ISO com sufixo `Z` (ex.: `2030-03-01T08:00:00.000Z`), tanto nos exemplos do README quanto nos testes, indicando representação em UTC."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window free for an empty room' mostra que, sem nenhuma reserva, `slots` retorna a janela inteira como um único intervalo livre, e não uma lista vazia ou 404."
+      },
+      "9": {
+        "categoria": "filtrado",
+        "justificativa": "`resolveQuery` usa `now` como valor padrão de `from` quando não informado, o que efetivamente exclui o passado da janela padrão de busca por disponibilidade; não há qualquer inclusão deliberada de horários passados no fluxo padrão."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "O `bookingConflict` agora recebe `conflictingPeriod`, `requestedPeriod` e `suggestions` (via `suggestAlternatives`), e o README/testes confirmam que o 409 de `POST /bookings` passou a oferecer até três horários alternativos que podem ser reenviados diretamente."
+      }
+    },
+    "costUsd": 0.09335199999999999
+  },
+  "totalCostUsd": 0.16860999999999998
+}

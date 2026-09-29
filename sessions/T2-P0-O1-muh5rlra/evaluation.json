@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-muh5rlra",
+  "evaluatedAt": "2026-09-25T16:24:44.477Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A checagem de conflito na atualização foi colocada em service.ts (`const conflict = await repository.findConflict(roomId, startsAt, endsAt, id); if (conflict) { throw bookingConflict(conflict.id); }`), não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhum schema novo para os campos manipulados; apenas reusa `parseInstant` sobre os mesmos inputs já existentes, sem validação de schema adicional visível."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O caminho de erro lança `throw bookingConflict(conflict.id)` tanto na criação quanto na atualização, gerando resposta 409 com código `BOOKING_CONFLICT`."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhuma constante nomeada nova para durações/limites/janelas; a lógica de conflito usa apenas comparações diretas (`startsAt: { lt: endsAt }`)."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes fazem requisições HTTP via `app.inject` e verificam `response.statusCode` e corpo JSON, ex: `expect(response.statusCode).toBe(409); expect(response.json().error.code).toBe('BOOKING_CONFLICT');`."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "A nova lógica de conflito continua usando `parseInstant` (shared/time.ts) e `bookingConflict` (shared/errors.ts) em vez de reimplementar parsing de datas ou geração de erro."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.021986
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "ausente",
+        "justificativa": "O diff não cria endpoint novo, não altera uma listagem existente para expor disponibilidade, nem enriquece o payload do erro 409 com sugestões — apenas corrige a lógica de detecção de conflito (overlap) usada tanto na criação quanto na atualização de reservas."
+      },
+      "2": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma rota ou função que retorne horários livres, ocupados ou ambos; o diff se limita à checagem de conflito ao criar/atualizar."
+      },
+      "3": {
+        "categoria": "ausente",
+        "justificativa": "Não existe conceito de intervalos/granularidade no diff, já que não há endpoint de disponibilidade."
+      },
+      "4": {
+        "categoria": "ausente",
+        "justificativa": "Não há parâmetro de janela temporal para consulta; o diff trata apenas startsAt/endsAt de uma reserva individual."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há limite de horário comercial/24h/configurável implementado; o diff não introduz essa lógica."
+      },
+      "6": {
+        "categoria": "ausente",
+        "justificativa": "Não há escopo de consulta por sala(s); a mudança afeta apenas a query de conflito para a sala da própria reserva sendo criada/atualizada."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não menciona nem trata fuso horário; usa parseInstant já existente sem alteração de contrato relacionado a timezone."
+      },
+      "8": {
+        "categoria": "ausente",
+        "justificativa": "Não há resposta para 'sala sem reservas' pois não existe endpoint de consulta de disponibilidade."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há filtragem ou inclusão de reservas passadas; a lógica de conflito não distingue passado/futuro, apenas overlap de intervalos."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro de conflito continua sendo lançado da mesma forma (bookingConflict com conflictingBookingId), sem adicionar sugestões de horários alternativos; o diff apenas corrige quando esse erro é disparado e passa a validá-lo também no update."
+      }
+    },
+    "costUsd": 0.02185
+  },
+  "totalCostUsd": 0.043836
+}

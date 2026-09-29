@@ -30,17 +30,34 @@ export const TASKS = {
   T2: { statement: 'tasks/T2-res-142.md', hiddenSuite: false, decisionPoints: true },
 };
 
-// P2 is the plugin, which does not exist yet: it is absent here on
-// purpose, so asking for it fails instead of quietly running P0.
+// P0 gets nothing. P1 gets the context file. P2 gets the same file plus
+// a plugin directory, loaded with --plugin-dir. The plugin is copied
+// outside /app on purpose -- inside, it would appear in the session diff.
 export const CONTEXTS = {
   P0: null,
-  P1: 'contexts/P1/CLAUDE.md',
+  P1: { file: 'contexts/P1/CLAUDE.md' },
+  P2: {
+    file: 'contexts/P2/CLAUDE.md',
+    pluginDir: 'contexts/P2/plugin',
+    pluginName: 'meeting-rooms-conventions',
+  },
 };
 
-// O2 chains four calls, each receiving the previous one's history, and
-// is not built: same reasoning as P2.
+// O1 is one call with the statement. O2 is the four chained calls of
+// protocol section 3.3, frozen in files so the sequence that runs and the
+// sequence that gets published come from the same place. Only step 1
+// carries the statement.
 export const ORDERS = {
-  O1: { calls: 1 },
+  O1: { calls: 1, steps: null },
+  O2: {
+    calls: 4,
+    steps: [
+      'orders/O2/1-explorar.md',
+      'orders/O2/2-planejar.md',
+      'orders/O2/3-implementar.md',
+      'orders/O2/4-verificar.md',
+    ],
+  },
 };
 
 export function resolveSession({ task, pLevel, oLevel }) {
@@ -64,7 +81,8 @@ export function resolveSession({ task, pLevel, oLevel }) {
     statement: TASKS[task].statement,
     hiddenSuite: TASKS[task].hiddenSuite,
     decisionPoints: TASKS[task].decisionPoints,
-    contextFile: CONTEXTS[pLevel],
+    context: CONTEXTS[pLevel],
     calls: ORDERS[oLevel].calls,
+    steps: ORDERS[oLevel].steps,
   };
 }

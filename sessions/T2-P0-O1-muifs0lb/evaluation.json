@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-muifs0lb",
+  "evaluatedAt": "2026-09-26T14:14:59.396Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "As rotas apenas delegam para o serviço, ex.: `async (request, reply) => reply.code(201).send({ data: await service.createBookingsBatch(request.body) }))`, sem lógica de conflito/validação nas rotas."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "Novas entradas ganham schemas typebox, ex.: `export const CreateBookingsBatchBody = Type.Object({ bookings: Type.Array(CreateBookingBody, { minItems: 1, maxItems: MAX_BATCH_SIZE }) }, ...)` e `AvailabilityQuery`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros retornam status e corpo explícitos, ex.: `throw notFound(missing)` (404), `throw validationFailed(...)` (400) e `new AppError('BOOKING_CONFLICT', 409, message, { failures: ordered })`."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Limites e janelas são constantes nomeadas, ex.: `const SUGGESTION_LOOKAHEAD_DAYS = 7;`, `const MAX_SUGGESTIONS = 3;`, `const MAX_AVAILABILITY_WINDOW_DAYS = 90;` e `export const MAX_BATCH_SIZE = 25;`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam `app.inject` e checam status/JSON de resposta, ex.: `expect(response.statusCode).toBe(409); expect(response.json().error.code).toBe('BOOKING_CONFLICT')`, sem inspecionar estado interno."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reaproveita utilitários existentes em vez de reimplementar, ex.: `import { normalizeLimit, ... } from '../../shared/pagination.js'` e `import { ..., parseInstant, ... } from '../../shared/time.js'`, além de `bookingConflict`/`notFound` de `shared/errors.ts`."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.072892
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "combinação",
+        "justificativa": "O diff cria um endpoint novo (`GET /rooms/:roomId/availability`), enriquece o erro 409 do POST/PATCH de reservas com `conflictingBooking` e `suggestions`, e ainda adiciona `POST /bookings/batch` — não é uma única forma isolada."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O endpoint de disponibilidade retorna `slots`, calculados por `freeSlots`, que são as janelas em que a sala não tem reserva ativa; não há listagem de horários ocupados no contrato de resposta."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "`freeSlots`/`mergeIntervals` calculam os gaps a partir das reservas existentes (`listBusyIntervals`), sem qualquer grade fixa de tempo nem parâmetro de granularidade; o único parâmetro é `durationMinutes` para filtrar slots pelo tamanho mínimo."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "`AvailabilityQuery` define `from` e `to` como `Type.String({ minLength: 1 })` sem default, e o teste `requires both ends of the window` confirma que a ausência de um dos dois retorna 400."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "O diff só limita a largura da janela a 90 dias (`MAX_AVAILABILITY_WINDOW_DAYS`), mas não restringe o horário do dia consultado nem oferece configuração de horário comercial; qualquer hora dentro da janela é aceita."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "A rota é `GET /rooms/:roomId/availability`, parametrizada por um único `roomId` via `RoomIdParams`, sem suporte a múltiplas salas ou 'todas' na mesma chamada."
+      },
+      "7": {
+        "categoria": "UTC",
+        "justificativa": "Todos os exemplos de `from`, `to` e `slots` no README/testes usam sufixo `Z` (ex.: `2030-01-01T09:00:00.000Z`) e `toIso`/`toISOString()` sempre produzem UTC, sem parâmetro de fuso no contrato."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste `reports the whole window as free for an empty room` mostra que, sem reservas, `slots` retorna a janela inteira como um único slot livre, e não 404 nem lista vazia."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Nenhum trecho do diff filtra ou trata de forma diferenciada janelas/reservas no passado; `parseInterval`/`getRoomAvailability` aceitam qualquer `from`/`to` sem checagem relativa ao momento atual."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "`bookingConflict` agora recebe `extraDetails` e `conflictFor`/`suggestAlternatives` populam `conflictingBooking` e `suggestions` no corpo do 409 tanto em `POST /bookings` quanto em `PATCH /bookings/:id`."
+      }
+    },
+    "costUsd": 0.07650599999999999
+  },
+  "totalCostUsd": 0.14939799999999998
+}

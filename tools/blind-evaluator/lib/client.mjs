@@ -18,7 +18,15 @@ function estimateCostUsd(usage) {
   return inputCost + outputCost;
 }
 
-export async function callModel({ apiKey, prompt, fetchImpl = fetch, maxTokens = 2048 }) {
+// 2048 was the original ceiling, chosen before anyone here knew that
+// thinking tokens are billed against max_tokens too. Measured on
+// 25/09/2026, a decision-points call spent 1365 of 2048 on thinking and
+// had ~680 left for a JSON object carrying ten categories and ten
+// justifications: it was cut mid-sentence, and two sessions of that
+// batch could not be evaluated. The ceiling buys nothing when unused --
+// output tokens are billed as produced -- so it is set high enough that
+// thinking and answer fit together with room to spare.
+export async function callModel({ apiKey, prompt, fetchImpl = fetch, maxTokens = 8192 }) {
   const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -38,8 +46,30 @@ export async function callModel({ apiKey, prompt, fetchImpl = fetch, maxTokens =
     throw new Error(`evaluator call failed: ${body.error?.message ?? response.statusText}`);
   }
 
+  // A truncated response is a failed measurement, not a cheap one. Without
+  // this the cut-off text reached JSON.parse and surfaced as "Unterminated
+  // string in JSON at position 2348" -- a message that names the symptom
+  // and hides the cause. Nothing downstream ever recorded a wrong answer,
+  // because parse.mjs requires every checklist question and every decision
+  // point to be present and inside its closed list, so a response that
+  // parses is necessarily complete. This only makes the failure legible.
+  if (body.stop_reason === 'max_tokens') {
+    throw new Error(
+      `evaluator response was truncated at max_tokens (${body.usage?.output_tokens} output tokens, `
+      + `${body.usage?.output_tokens_details?.thinking_tokens ?? 0} of them thinking)`,
+    );
+  }
+
   return {
-    text: body.content?.[0]?.text ?? '',
+    // The text block by type, never by position. Sonnet 5 runs adaptive
+    // thinking by default and decides per request whether to think, so a
+    // response is sometimes [text] and sometimes [thinking, text]. Taking
+    // content[0] returned the thinking block -- which has no `text` field
+    // -- and the empty string then died in JSON.parse as "Unexpected end
+    // of JSON input". It failed on one of the first two real sessions and
+    // not the other, which is the shape this defect always takes: fine
+    // until the model happens to think.
+    text: body.content?.find((block) => block.type === 'text')?.text ?? '',
     costUsd: estimateCostUsd(body.usage),
     usage: body.usage,
   };

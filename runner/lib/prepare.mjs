@@ -1,6 +1,6 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SESSION_IMAGE, buildImage, copyIn, exec, execDetached, imageId, start } from './container.mjs';
+import { SESSION_IMAGE, copyIn, exec, execDetached, imageId, start } from './container.mjs';
 // The context levels live in capabilities.mjs, not here. A second list
 // of levels in a second file is how the dataset label and the actual
 // behaviour drifted apart in the first place, so this module reads the
@@ -16,22 +16,28 @@ export class InfrastructureError extends Error {
   }
 }
 
-// Copies the P1 context file into the working copy before the agent ever
-// sees it. `copy` defaults to copyIn (docker cp) but is injectable so this
-// is testable without a container. Two ordering requirements come from
-// prepare(), not from this function: it must run before initHistory, or
-// the context file would show up in the session's own diff as if the
-// agent had authored it, and before assertNoArtefacts, so that check also
-// sweeps the context file for the forbidden study terms.
+// Copies the context file into the working copy before the agent ever
+// sees it, and for P2 also copies the plugin directory to /opt/plugin,
+// outside the working copy. `copy` defaults to copyIn (docker cp) but is
+// injectable so this is testable without a container. Two ordering
+// requirements come from prepare(), not from this function: it must run
+// before initHistory, or the context file would show up in the session's
+// own diff as if the agent had authored it, and before assertNoArtefacts,
+// so that check also sweeps the context file for the forbidden study
+// terms. assertNoArtefacts only scans /app, so it never sees the plugin
+// at /opt/plugin -- the plugin's own content is checked separately, by
+// runner/test/contexts.test.mjs.
 export function applyContext({ name, pLevel, repoRoot, copy = copyIn }) {
   if (!(pLevel in CONTEXTS)) {
     throw new InfrastructureError(`unknown context level: ${pLevel}`);
   }
-  const relativePath = CONTEXTS[pLevel];
-  if (!relativePath) return;
+  const context = CONTEXTS[pLevel];
+  if (!context) return;
 
-  const hostPath = resolve(repoRoot, relativePath);
-  copy(name, hostPath, '/app/CLAUDE.md');
+  copy(name, resolve(repoRoot, context.file), '/app/CLAUDE.md');
+  if (context.pluginDir) {
+    copy(name, resolve(repoRoot, context.pluginDir), '/opt/plugin');
+  }
 }
 
 const FORBIDDEN_PATHS = ['hidden-tests', 'reference', 'tasks', 'docs', 'tools'];
@@ -52,6 +58,17 @@ function assertNoArtefacts(name) {
   }
 }
 
+// Returns the sha of the initial commit. measure() diffs against this sha
+// rather than against the index, because an agent that commits its own
+// work empties the index: `git diff --cached` then reports nothing while
+// the working copy holds a full implementation. That happened for real in
+// session T2-P0-O1-mug8g8uw (25/09), which recorded an empty session.diff,
+// travou_sem_diff = true and qualidade = 0 for an agent that had written
+// four production files and a test, then committed them.
+//
+// The sha is carried on the host rather than marked inside the container
+// (a tag would do the same job) so the working copy keeps no trace of the
+// harness for the agent to find.
 function initHistory(name) {
   const script = [
     'cd /app',
@@ -61,11 +78,17 @@ function initHistory(name) {
     'git config user.name Developer',
     'git add -A',
     'git commit -q -m "Initial commit"',
+    'git rev-parse HEAD',
   ].join(' && ');
   const result = exec(name, ['sh', '-c', script]);
   if (result.status !== 0) {
     throw new InfrastructureError(`could not initialise the working copy history: ${result.stderr}`);
   }
+  const sha = result.stdout.trim().split('\n').pop() ?? '';
+  if (!/^[0-9a-f]{40}$/.test(sha)) {
+    throw new InfrastructureError(`could not read the baseline commit of the working copy: got "${sha}"`);
+  }
+  return sha;
 }
 
 // Neither pkill nor plain job-control kill reliably stops `make start`
@@ -110,8 +133,13 @@ async function assertServesBeforeHandover(name, hostPort) {
 export async function prepare({
   name, outDir, hostPort, env, skipStart = false, pLevel, repoRoot = DEFAULT_REPO_ROOT,
 }) {
+  // prepare() no longer builds the image. The protocol holds the image
+  // identical across sessions (section 3.4) and building here recorded a
+  // different digest for every one of the first eight. The image is now
+  // built once, deliberately, by runner/build-image.mjs, and
+  // run-session.mjs refuses to run when it is missing or when its digest
+  // stops matching the dataset.
   if (!skipStart) {
-    buildImage();
     start({ name, outDir, hostPort, env });
   }
 
@@ -122,12 +150,13 @@ export async function prepare({
   applyContext({ name, pLevel, repoRoot });
 
   assertNoArtefacts(name);
-  initHistory(name);
+  const baselineCommit = initHistory(name);
   await assertServesBeforeHandover(name, hostPort);
 
   const version = exec(name, ['claude', '--version']);
   return {
     imageId: imageId(SESSION_IMAGE),
     cliVersion: version.stdout.trim().split(' ')[0],
+    baselineCommit,
   };
 }

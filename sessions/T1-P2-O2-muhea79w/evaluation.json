@@ -1,0 +1,37 @@
+{
+  "sessionId": "T1-P2-O2-muhea79w",
+  "evaluatedAt": "2026-09-25T20:32:48.177Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a nova lógica (assertValidPeriod, checagens de existência de sala/usuário e de conflito) foi adicionada em src/modules/bookings/service.ts, não nas rotas."
+      },
+      "2": {
+        "resposta": "nao",
+        "justificativa": "As novas regras (duração mínima/máxima, período no passado, existência de sala/usuário) são validadas manualmente em `assertValidPeriod` e checagens `if (!(await findRoom...)))` no service, não via schema; o diff não mostra alterações em schema.ts."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros novos lançam AppError explícitos com código apropriado, ex.: `throw notFound('Room');`, `throw bookingConflict(conflict.id);` e `throw validationFailed('endsAt must be after startsAt');`."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Os limites de duração foram nomeados: `const MIN_DURATION_MINUTES = 30;` e `const MAX_DURATION_MINUTES = 8 * 60;` em vez de literais soltos nas comparações."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam `app.inject` e verificam `response.statusCode` e corpo JSON (ex.: `expect(response.statusCode).toBe(409);`), sem inspecionar implementação interna."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reutiliza utilitários existentes como `durationMinutes`, `isBefore`, `parseInstant` de shared/time.ts e `validationFailed`, `notFound`, `bookingConflict` de shared/errors.ts em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 5,
+    "costUsd": 0.02545
+  },
+  "decisionPoints": null,
+  "totalCostUsd": 0.02545
+}

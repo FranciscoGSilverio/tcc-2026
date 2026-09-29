@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Handoff da coleta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<style>
+  :root{
+    --bg:#F4F5F4; --surface:#FFFFFF; --ink:#1B2429; --soft:#5F6E75; --line:#B9C3C1;
+    --frozen:#5C7480; --cond:#5A4B93; --instr:#0E6F66; --gate:#8F2027;
+    --frozen-wash:#EDF1F3; --cond-wash:#F0EDF8; --instr-wash:#E7F2F0; --gate-wash:#FBF0F1;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+    --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14191C; --surface:#1B2227; --ink:#E6EBEA; --soft:#93A2A8; --line:#313D42;
+      --frozen:#8EA9B6; --cond:#A793E0; --instr:#3DB3A6; --gate:#D97B82;
+      --frozen-wash:#1E262B; --cond-wash:#221E2E; --instr-wash:#16262A; --gate-wash:#2A1E21;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14191C; --surface:#1B2227; --ink:#E6EBEA; --soft:#93A2A8; --line:#313D42;
+    --frozen:#8EA9B6; --cond:#A793E0; --instr:#3DB3A6; --gate:#D97B82;
+    --frozen-wash:#1E262B; --cond-wash:#221E2E; --instr-wash:#16262A; --gate-wash:#2A1E21;
+  }
+
+  *{ box-sizing:border-box }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans); font-size:15px; line-height:1.62;
+    padding-inline:16px; padding-block:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{ max-width:1000px; margin:0 auto }
+
+  .kicker{ font-size:.68rem; letter-spacing:.18em; text-transform:uppercase; color:var(--soft); font-weight:650; margin:0 0 .45rem }
+  h1{ font-family:var(--serif); font-weight:600; font-size:clamp(1.7rem,4.2vw,2.5rem); line-height:1.15; letter-spacing:-.015em; margin:0 0 .5rem; text-wrap:balance }
+  h2{ font-family:var(--serif); font-weight:600; font-size:clamp(1.25rem,2.6vw,1.6rem); line-height:1.2; margin:2.6rem 0 .7rem; text-wrap:balance }
+  h2:first-of-type{ margin-top:1.6rem }
+  h3{ font-size:.95rem; font-weight:650; margin:1.9rem 0 .5rem; letter-spacing:-.005em }
+  p{ margin:0 0 .9rem; max-width:66ch }
+  ul,ol{ margin:0 0 .9rem; padding-left:1.15rem; max-width:66ch }
+  li{ margin-bottom:.32rem }
+  code{ font-family:var(--mono); font-size:.855em; background:var(--frozen-wash); border:1px solid var(--line); border-radius:3px; padding:.05em .34em; overflow-wrap:anywhere }
+  a{ color:var(--instr) }
+
+  header.masthead{ padding-block:clamp(1.75rem,5vw,3rem) 1.25rem; border-bottom:1px solid var(--line) }
+  .lede{ font-size:1.02rem; color:var(--soft); max-width:60ch; margin:0 }
+
+  /* --- tabs --- */
+  .tabs{
+    position:sticky; top:env(safe-area-inset-top, 0px); z-index:20;
+    background:var(--bg); border-bottom:1px solid var(--line);
+    display:flex; gap:.15rem; overflow-x:auto; scrollbar-width:thin;
+    margin-inline:-16px; padding-inline:16px;
+  }
+  .tabs button{
+    appearance:none; background:none; border:0; border-bottom:2px solid transparent;
+    font:inherit; font-size:.86rem; font-weight:550; color:var(--soft);
+    padding:.85rem .7rem .7rem; cursor:pointer; white-space:nowrap; flex:none;
+  }
+  .tabs button:hover{ color:var(--ink) }
+  .tabs button[aria-selected="true"]{ color:var(--ink); border-bottom-color:var(--gate) }
+  .tabs button:focus-visible{ outline:2px solid var(--instr); outline-offset:-4px; border-radius:3px }
+  .panel{ padding-block:.5rem 4rem; animation:fade .18s ease-out }
+  @keyframes fade{ from{ opacity:.55 } to{ opacity:1 } }
+  @media (prefers-reduced-motion: reduce){ .panel{ animation:none } }
+
+  /* --- boards & figures --- */
+  .board{ background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:clamp(.7rem,2vw,1.2rem); margin:1.2rem 0 }
+  .board svg{ display:block; width:100%; height:auto }
+  figcaption{ font-size:.79rem; color:var(--soft); margin-top:.6rem; max-width:70ch }
+  figure{ margin:1.2rem 0 }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:.35rem 1.2rem; margin-top:.9rem; font-size:.76rem; color:var(--soft) }
+  .legend span{ display:flex; align-items:center; gap:.4rem }
+  .sw{ width:10px; height:10px; border-radius:2px; flex:none; display:inline-block }
+
+  /* --- callouts --- */
+  .note{ border-left:3px solid var(--frozen); background:var(--frozen-wash); padding:.75rem .9rem; margin:1.1rem 0; border-radius:0 4px 4px 0; max-width:68ch }
+  .note.gate{ border-left-color:var(--gate); background:var(--gate-wash) }
+  .note.instr{ border-left-color:var(--instr); background:var(--instr-wash) }
+  .note.cond{ border-left-color:var(--cond); background:var(--cond-wash) }
+  .note p:last-child{ margin-bottom:0 }
+  .note strong{ font-weight:650 }
+
+  /* --- statement cards --- */
+  .statement{ background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--cond); border-radius:0 5px 5px 0; padding:1rem 1.1rem; margin:1rem 0; max-width:64ch }
+  .statement .meta{ font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--soft); font-weight:650; margin:0 0 .5rem }
+  .statement p{ margin-bottom:.7rem }
+  .statement p:last-child{ margin-bottom:0 }
+  .statement em{ color:var(--soft) }
+
+  /* --- tables --- */
+  .tw{ overflow-x:auto; margin:1.1rem 0; border:1px solid var(--line); border-radius:5px; background:var(--surface) }
+  table{ border-collapse:collapse; width:100%; font-size:.845rem; min-width:460px }
+  th,td{ text-align:left; padding:.55rem .75rem; border-bottom:1px solid var(--line); vertical-align:top }
+  thead th{ font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--soft); font-weight:650; white-space:nowrap }
+  tbody tr:last-child td{ border-bottom:0 }
+  td code{ background:none; border:0; padding:0 }
+  .num{ font-variant-numeric:tabular-nums }
+
+  /* --- command blocks --- */
+  pre{ font-family:var(--mono); font-size:.82rem; line-height:1.6; background:var(--surface); border:1px solid var(--line); border-radius:5px; padding:.8rem .9rem; overflow-x:auto; margin:.7rem 0 1rem }
+  pre .c{ color:var(--soft) }
+  pre b{ font-weight:600; color:var(--gate) }
+
+  /* --- file tree --- */
+  .tree{ font-family:var(--mono); font-size:.82rem; line-height:1.75; background:var(--surface); border:1px solid var(--line); border-radius:5px; padding:.85rem 1rem; overflow-x:auto; margin:1rem 0 }
+  .tree i{ font-style:normal; color:var(--soft) }
+  .tree b{ font-weight:600 }
+
+  /* --- step list --- */
+  ol.steps{ counter-reset:s; list-style:none; padding:0; max-width:68ch }
+  ol.steps>li{ counter-increment:s; position:relative; padding-left:2.1rem; margin-bottom:1.1rem }
+  ol.steps>li::before{
+    content:counter(s); position:absolute; left:0; top:.08rem;
+    width:1.5rem; height:1.5rem; border-radius:50%; border:1px solid var(--line);
+    display:grid; place-items:center; font-size:.75rem; font-weight:650; color:var(--soft); background:var(--surface);
+  }
+  ol.steps>li>strong{ display:block; font-weight:650; margin-bottom:.15rem }
+
+  /* SVG text/link classes live here, not inside each <svg>: a <style> inside
+     inline SVG is document-scoped, so six diagrams were redefining the same
+     class names on each other and the last one won. */
+  svg text{ font-family:var(--sans) }
+  .s-ttl{ font-size:13px; font-weight:650 }
+  .s-hd{ font-size:12.5px; font-weight:650 }
+  .s-cell{ font-size:13px; font-weight:650 }
+  .s-sm{ font-size:11px }
+  .s-cap{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:650 }
+  .s-mono{ font-family:var(--mono); font-size:11px; font-weight:600 }
+  .s-big{ font-size:22px; font-weight:650; font-variant-numeric:tabular-nums }
+  .s-ln{ stroke:var(--soft); stroke-width:1.5; fill:none }
+  .s-ln-c{ stroke:var(--cond); stroke-width:1.5; fill:none }
+  .s-ln-i{ stroke:var(--instr); stroke-width:1.4; fill:none; stroke-dasharray:5 3 }
+
+  footer{ border-top:1px solid var(--line); padding-block:1.4rem 2.5rem; font-size:.8rem; color:var(--soft) }
+  footer p{ max-width:70ch }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="masthead">
+  <p class="kicker">TCC · Engenharia de Software · INATEL</p>
+  <h1>Handoff da coleta</h1>
+  <p class="lede">O que este experimento mede, o que muda de uma sessão para a outra, quem confere cada coisa, e o que sai do outro lado. Leitura para quem não participou da construção do instrumento.</p>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Seções do handoff">
+  <button role="tab" id="t-visao"   aria-controls="p-visao"   aria-selected="true">Visão geral</button>
+  <button role="tab" id="t-tarefas" aria-controls="p-tarefas" aria-selected="false">As tarefas</button>
+  <button role="tab" id="t-varia"   aria-controls="p-varia"   aria-selected="false">O que varia</button>
+  <button role="tab" id="t-runner"  aria-controls="p-runner"  aria-selected="false">O runner</button>
+  <button role="tab" id="t-instr"   aria-controls="p-instr"   aria-selected="false">Os instrumentos</button>
+  <button role="tab" id="t-artef"   aria-controls="p-artef"   aria-selected="false">Os artefatos</button>
+  <button role="tab" id="t-rodar"   aria-controls="p-rodar"   aria-selected="false">Como rodar</button>
+  <button role="tab" id="t-leituras" aria-controls="p-leituras" aria-selected="false">Leituras possíveis</button>
+</nav>
+
+<!-- ══════════════════════════ VISÃO GERAL ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-visao" aria-labelledby="t-visao">
+
+<h2>A pergunta</h2>
+<p>Um agente de IA recebe uma tarefa de programação num repositório real. <strong>O que muda no resultado se você mexer no modelo, no contexto que o agente recebe, ou na ordem em que você pede as coisas?</strong></p>
+<p>O experimento responde isso medindo sessões. Uma sessão é: um contêiner limpo com uma cópia idêntica de uma API de reservas de salas, um agente soltos nela com um enunciado, e um conjunto de medidas aplicadas depois que ele para.</p>
+
+<div class="note">
+<p><strong>Este documento cobre só a parte prática</strong> — o instrumento, a execução e os artefatos. A análise estatística dos dados não está aqui.</p>
+</div>
+
+<h2>Os três fatores</h2>
+<p>Tudo o mais é constante. Só três coisas mudam de uma sessão para a outra:</p>
+
+<figure>
+<div class="board">
+<svg viewBox="0 0 980 300" role="img" aria-label="Os três fatores do experimento: M (modelo, três níveis), P (contexto, três níveis) e O (ordem, dois níveis).">
+<!-- M -->
+  <rect x="20" y="20" width="290" height="260" rx="6" fill="var(--cond-wash)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-cap" x="40" y="46" fill="var(--cond)">Fator M · modelo</text>
+  <text class="s-ttl" x="40" y="74" fill="var(--ink)">Quem escreve o código</text>
+  <rect x="40" y="92"  width="250" height="42" rx="4" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-mono" x="56" y="110" fill="var(--ink)">Haiku 4.5</text>
+  <text class="s-sm"   x="56" y="126" fill="var(--soft)">o mais barato</text>
+  <rect x="40" y="142" width="250" height="42" rx="4" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-mono" x="56" y="160" fill="var(--ink)">Sonnet 5</text>
+  <text class="s-sm"   x="56" y="176" fill="var(--soft)">o modelo da grade principal</text>
+  <rect x="40" y="192" width="250" height="42" rx="4" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-mono" x="56" y="210" fill="var(--ink)">Opus 5</text>
+  <text class="s-sm"   x="56" y="226" fill="var(--soft)">o mais capaz</text>
+
+  <!-- P -->
+  <rect x="330" y="20" width="290" height="260" rx="6" fill="var(--cond-wash)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-cap" x="350" y="46" fill="var(--cond)">Fator P · contexto</text>
+  <text class="s-ttl" x="350" y="74" fill="var(--ink)">O que o agente já sabe</text>
+  <rect x="350" y="92"  width="250" height="42" rx="4" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-mono" x="366" y="110" fill="var(--ink)">P0</text>
+  <text class="s-sm"   x="366" y="126" fill="var(--soft)">nada além do repositório</text>
+  <rect x="350" y="142" width="250" height="42" rx="4" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-mono" x="366" y="160" fill="var(--ink)">P1</text>
+  <text class="s-sm"   x="366" y="176" fill="var(--soft)">+ um CLAUDE.md com as convenções</text>
+  <rect x="350" y="192" width="250" height="42" rx="4" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-mono" x="366" y="210" fill="var(--ink)">P2</text>
+  <text class="s-sm"   x="366" y="226" fill="var(--soft)">+ o mesmo arquivo e um plugin</text>
+
+  <!-- O -->
+  <rect x="640" y="20" width="320" height="260" rx="6" fill="var(--cond-wash)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-cap" x="660" y="46" fill="var(--cond)">Fator O · ordem</text>
+  <text class="s-ttl" x="660" y="74" fill="var(--ink)">Como o pedido é feito</text>
+  <rect x="660" y="92"  width="280" height="42" rx="4" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-mono" x="676" y="110" fill="var(--ink)">O1</text>
+  <text class="s-sm"   x="676" y="126" fill="var(--soft)">uma chamada: &#8220;faça isto&#8221;</text>
+  <rect x="660" y="142" width="280" height="92" rx="4" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-mono" x="676" y="160" fill="var(--ink)">O2</text>
+  <text class="s-sm"   x="676" y="176" fill="var(--soft)">quatro chamadas encadeadas:</text>
+  <text class="s-sm"   x="676" y="194" fill="var(--soft)">explorar &#8594; planejar &#8594;</text>
+  <text class="s-sm"   x="676" y="212" fill="var(--soft)">implementar &#8594; verificar</text>
+</svg>
+</div>
+<figcaption>Roxo marca o que varia. Todo o resto do ambiente — imagem do contêiner, versão do CLI, semente do repositório, enunciados — é constante e verificado a cada sessão.</figcaption>
+</figure>
+
+<h2>A grade</h2>
+<p>Cruzando P e O dá seis células. Cada célula roda <strong>cinco sessões</strong>: duas de T1 e três de T2 — porque os dois tipos de tarefa são medidos de maneiras diferentes, e uma delas precisa de três execuções para existir.</p>
+
+<figure>
+<div class="board">
+<svg viewBox="0 0 980 430" role="img" aria-label="Grade principal de seis células em Sonnet, com cinco sessões cada, mais quatro células de modelo em Haiku e Opus.">
+<text class="s-cap" x="20" y="22" fill="var(--soft)">Grade principal · Sonnet 5 · 30 sessões</text>
+
+  <text class="s-hd" x="150" y="58" fill="var(--soft)" text-anchor="middle">P0 · sem contexto</text>
+  <text class="s-hd" x="400" y="58" fill="var(--soft)" text-anchor="middle">P1 · CLAUDE.md</text>
+  <text class="s-hd" x="650" y="58" fill="var(--soft)" text-anchor="middle">P2 · + plugin</text>
+  <text class="s-hd" x="40"  y="112" fill="var(--soft)">O1</text>
+  <text class="s-hd" x="40"  y="242" fill="var(--soft)">O2</text>
+
+  <g>
+    <rect x="70"  y="70"  width="160" height="110" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+    <rect x="320" y="70"  width="160" height="110" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+    <rect x="570" y="70"  width="160" height="110" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+    <rect x="70"  y="200" width="160" height="110" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+    <rect x="320" y="200" width="160" height="110" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+    <rect x="570" y="200" width="160" height="110" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+  </g>
+  <g class="t">
+    <text class="s-cell" x="150" y="100" text-anchor="middle" fill="var(--ink)">T1 &#215; 2</text>
+    <text class="s-cell" x="150" y="128" text-anchor="middle" fill="var(--ink)">T2 &#215; 3</text>
+    <text class="s-sm"    x="150" y="158" text-anchor="middle" fill="var(--soft)">5 sessões</text>
+    <text class="s-cell" x="400" y="100" text-anchor="middle" fill="var(--ink)">T1 &#215; 2</text>
+    <text class="s-cell" x="400" y="128" text-anchor="middle" fill="var(--ink)">T2 &#215; 3</text>
+    <text class="s-sm"    x="400" y="158" text-anchor="middle" fill="var(--soft)">5 sessões</text>
+    <text class="s-cell" x="650" y="100" text-anchor="middle" fill="var(--ink)">T1 &#215; 2</text>
+    <text class="s-cell" x="650" y="128" text-anchor="middle" fill="var(--ink)">T2 &#215; 3</text>
+    <text class="s-sm"    x="650" y="158" text-anchor="middle" fill="var(--soft)">5 sessões</text>
+    <text class="s-cell" x="150" y="230" text-anchor="middle" fill="var(--ink)">T1 &#215; 2</text>
+    <text class="s-cell" x="150" y="258" text-anchor="middle" fill="var(--ink)">T2 &#215; 3</text>
+    <text class="s-sm"    x="150" y="288" text-anchor="middle" fill="var(--soft)">5 sessões</text>
+    <text class="s-cell" x="400" y="230" text-anchor="middle" fill="var(--ink)">T1 &#215; 2</text>
+    <text class="s-cell" x="400" y="258" text-anchor="middle" fill="var(--ink)">T2 &#215; 3</text>
+    <text class="s-sm"    x="400" y="288" text-anchor="middle" fill="var(--soft)">5 sessões</text>
+    <text class="s-cell" x="650" y="230" text-anchor="middle" fill="var(--ink)">T1 &#215; 2</text>
+    <text class="s-cell" x="650" y="258" text-anchor="middle" fill="var(--ink)">T2 &#215; 3</text>
+    <text class="s-sm"    x="650" y="288" text-anchor="middle" fill="var(--soft)">5 sessões</text>
+  </g>
+
+  <line x1="770" y1="60" x2="770" y2="320" stroke="var(--line)" stroke-dasharray="4 4"/>
+  <text class="s-cap" x="800" y="22" fill="var(--soft)">Células de modelo</text>
+  <rect x="800" y="70" width="160" height="110" rx="5" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-cell" x="880" y="98"  text-anchor="middle" fill="var(--ink)">Haiku 4.5</text>
+  <text class="s-sm"    x="880" y="122" text-anchor="middle" fill="var(--soft)">P0-O1 e P2-O2</text>
+  <text class="s-sm"    x="880" y="142" text-anchor="middle" fill="var(--soft)">10 sessões</text>
+  <rect x="800" y="200" width="160" height="110" rx="5" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-cell" x="880" y="228" text-anchor="middle" fill="var(--ink)">Opus 5</text>
+  <text class="s-sm"    x="880" y="252" text-anchor="middle" fill="var(--soft)">P0-O1 e P2-O2</text>
+  <text class="s-sm"    x="880" y="272" text-anchor="middle" fill="var(--soft)">10 sessões</text>
+
+  <line x1="20" y1="350" x2="960" y2="350" stroke="var(--line)"/>
+  <text class="s-big" x="20"  y="392" fill="var(--ink)">50</text>
+  <text class="s-sm"  x="20"  y="412" fill="var(--soft)">sessões no total</text>
+  <text class="s-big" x="180" y="392" fill="var(--instr)">50</text>
+  <text class="s-sm"  x="180" y="412" fill="var(--soft)">coletadas</text>
+  <text class="s-big" x="330" y="392" fill="var(--instr)">0</text>
+  <text class="s-sm"  x="330" y="412" fill="var(--soft)">faltando</text>
+  <text class="s-sm"  x="470" y="384" fill="var(--soft)">coleta encerrada em 26/09/2026</text>
+  <text class="s-sm"  x="470" y="402" fill="var(--soft)">auditor: 8 de 8 verificações passam</text>
+  <text class="s-sm"  x="470" y="420" fill="var(--soft)">4 linhas inválidas, cada uma com substituta e motivo</text>
+</svg>
+</div>
+<figcaption>As células de modelo só repetem as duas configurações extremas — sem contexto e ordem simples, contra contexto máximo e ordem segmentada — para ver se o efeito do contexto e da ordem depende do modelo.</figcaption>
+</figure>
+
+<div class="note cond">
+<p><strong>Por que cada célula roda mais de uma vez.</strong> Um agente não é determinístico: a mesma pergunta duas vezes dá respostas diferentes. Repetir é a única forma de separar &#8220;esta condição é melhor&#8221; de &#8220;esta sessão deu sorte&#8221;. Em T1 duas repetições estimam o ruído em torno de uma nota. Em T2 as três repetições <em>são</em> a medida: a resposta é o quanto elas convergem entre si.</p>
+</div>
+
+<h2>O que acontece numa sessão</h2>
+
+<figure>
+<div class="board">
+<svg viewBox="0 0 980 240" role="img" aria-label="Ciclo de uma sessão: preparar, provar que a aplicação sobe, entregar ao agente, medir, gravar.">
+<defs>
+  <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,1 L9,5 L0,9 z" fill="var(--soft)"/>
+  </marker>
+</defs>
+<rect x="14"  y="60" width="150" height="76" rx="5" fill="var(--surface)" stroke="var(--frozen)" stroke-width="1.5"/>
+  <text class="s-ttl" x="89" y="88"  text-anchor="middle" fill="var(--ink)">Preparar</text>
+  <text class="s-sm"  x="89" y="106" text-anchor="middle" fill="var(--soft)">contêiner limpo,</text>
+  <text class="s-sm"  x="89" y="121" text-anchor="middle" fill="var(--soft)">semente, contexto P</text>
+
+  <rect x="196" y="60" width="150" height="76" rx="5" fill="var(--surface)" stroke="var(--gate)" stroke-width="2"/>
+  <text class="s-ttl" x="271" y="88"  text-anchor="middle" fill="var(--gate)">Provar que sobe</text>
+  <text class="s-sm"  x="271" y="106" text-anchor="middle" fill="var(--soft)">build + /health</text>
+  <text class="s-sm"  x="271" y="121" text-anchor="middle" fill="var(--soft)">antes de entregar</text>
+
+  <rect x="378" y="60" width="150" height="76" rx="5" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-ttl" x="453" y="88"  text-anchor="middle" fill="var(--ink)">Sessão do agente</text>
+  <text class="s-sm"  x="453" y="106" text-anchor="middle" fill="var(--soft)">1 ou 4 chamadas,</text>
+  <text class="s-sm"  x="453" y="121" text-anchor="middle" fill="var(--soft)">sem supervisão</text>
+
+  <rect x="560" y="60" width="150" height="76" rx="5" fill="var(--surface)" stroke="var(--instr)" stroke-width="1.5"/>
+  <text class="s-ttl" x="635" y="88"  text-anchor="middle" fill="var(--ink)">Medir</text>
+  <text class="s-sm"  x="635" y="106" text-anchor="middle" fill="var(--soft)">quatro instrumentos</text>
+  <text class="s-sm"  x="635" y="121" text-anchor="middle" fill="var(--soft)">independentes</text>
+
+  <rect x="742" y="60" width="224" height="76" rx="5" fill="var(--surface)" stroke="var(--frozen)" stroke-width="1.5"/>
+  <text class="s-ttl" x="854" y="88"  text-anchor="middle" fill="var(--ink)">Gravar</text>
+  <text class="s-sm"  x="854" y="106" text-anchor="middle" fill="var(--soft)">uma linha no dataset +</text>
+  <text class="s-sm"  x="854" y="121" text-anchor="middle" fill="var(--soft)">uma pasta de artefatos</text>
+
+  <path class="s-ln" marker-end="url(#a1)" d="M166 98 L192 98"/>
+  <path class="s-ln" marker-end="url(#a1)" d="M348 98 L374 98"/>
+  <path class="s-ln" marker-end="url(#a1)" d="M530 98 L556 98"/>
+  <path class="s-ln" marker-end="url(#a1)" d="M712 98 L738 98"/>
+
+  <line x1="362" y1="30" x2="362" y2="180" stroke="var(--gate)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text class="s-cap" x="372" y="30" fill="var(--gate)">Fronteira</text>
+  <text class="s-sm"  x="372" y="170" fill="var(--soft)">daqui para a frente, qualquer falha é do agente — e é dado, não lixo</text>
+  <text class="s-sm"  x="14"  y="170" fill="var(--soft)">falha aqui é do instrumento:</text>
+  <text class="s-sm"  x="14"  y="185" fill="var(--soft)">a sessão é marcada inválida e refeita</text>
+</svg>
+</div>
+<figcaption>A fronteira é a peça que impede o experimento de mentir para si mesmo. Antes dela, o runner prova que a aplicação compila e responde <code>/health</code>; se não provar, a culpa é da infraestrutura e a sessão não vira dado. Depois dela, se o agente quebrou a aplicação, isso <em>é</em> o resultado — vai para o dataset com nota zero, nunca descartado.</figcaption>
+</figure>
+
+<h2>Quem confere o quê</h2>
+<div class="tw">
+<table>
+<thead><tr><th>Peça</th><th>O que faz</th><th>Quando</th></tr></thead>
+<tbody>
+<tr><td><strong>Runner</strong><br><code>runner/run-session.mjs</code></td><td>Roda uma sessão de ponta a ponta e aplica os quatro instrumentos. Recusa rodar se a sessão não puder ser executada exatamente como será rotulada.</td><td>Uma vez por sessão</td></tr>
+<tr><td><strong>Driver</strong><br><code>tools/collect/run-grid.mjs</code></td><td>Descobre o que falta na grade, embaralha, e chama o runner em sequência. Retomável.</td><td>Uma vez por lote</td></tr>
+<tr><td><strong>Avaliador cego</strong><br><code>tools/blind-evaluator/</code></td><td>Lê o diff sem saber de que condição veio e responde o checklist e os pontos de decisão.</td><td>No fim de cada lote</td></tr>
+<tr><td><strong>Auditor</strong><br><code>tools/collect/check-dataset.mjs</code></td><td>Oito verificações de integridade sobre o dataset e os transcripts. Não julga resultado, só integridade.</td><td>Entre lotes, quantas vezes quiser</td></tr>
+<tr><td><strong>Skill</strong><br><code>/verificar-lote</code></td><td>Roda o auditor, confere que o lote entregou o que prometeu, lê um transcript com atenção, responde <em>all clear</em> ou <em>parar</em>.</td><td>Entre lotes</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="legend">
+  <span><i class="sw" style="background:var(--frozen)"></i>artefatos congelados</span>
+  <span><i class="sw" style="background:var(--cond)"></i>condições que variam</span>
+  <span><i class="sw" style="background:var(--instr)"></i>instrumentos de medida</span>
+  <span><i class="sw" style="background:var(--gate)"></i>portões e fronteiras</span>
+</div>
+
+</section>
+
+<!-- ══════════════════════════ AS TAREFAS ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-tarefas" aria-labelledby="t-tarefas" hidden>
+
+<h2>Duas tarefas, de propósito</h2>
+<p>As duas rodam sobre o mesmo repositório-semente: uma API HTTP de reserva de salas de reunião, em TypeScript sobre Fastify e Prisma, com módulos <code>rooms</code>, <code>users</code>, <code>bookings</code> e <code>amenities</code>. O agente recebe o enunciado como texto — nunca como arquivo dentro da cópia de trabalho, para que ele não descubra que existe mais de uma tarefa.</p>
+
+<p><strong>T1 é bem especificada.</strong> Existe uma resposta certa, e dá para verificar por asserção. <strong>T2 é ambígua de propósito.</strong> Não existe resposta certa, e por isso ela não é medida por asserção nenhuma.</p>
+
+<h3>T1 — Regras de validação de reservas</h3>
+<div class="statement">
+<p class="meta">Enunciado entregue ao agente, literal</p>
+<p><strong>T1 — Regras de validação de reservas</strong></p>
+<p>A API de reservas está aceitando pedidos que não deveria aceitar. A reclamação concreta é que duas pessoas conseguem reservar a mesma sala no mesmo horário. Há suspeita de que outros pedidos inválidos também estejam passando.</p>
+<p>Faça a API de reservas recusar os pedidos inválidos.</p>
+<p><em>Não há canal para dúvidas nesta execução. Decida e implemente.</em></p>
+</div>
+
+<p>Repare no que o enunciado <em>não</em> diz: não lista as regras. Ele dá um sintoma concreto (sobreposição de horário) e avisa que há mais. As regras de domínio — duração mínima e máxima, reserva no passado, reserva cancelada liberando horário, recurso inexistente — estão escritas no <strong>CLAUDE.md de P1 e P2</strong>, e em lugar nenhum para P0. É exatamente aí que o fator de contexto morde: em P0 o agente precisa deduzir as regras da base de código; em P1 e P2 elas estão escritas.</p>
+
+<div class="note gate">
+<p><strong>Isto é uma correção deliberada de 17/09.</strong> A primeira versão do enunciado listava as regras, e o resultado foi efeito de teto — todo mundo acertava tudo, e o experimento não conseguia distinguir condição nenhuma. Mover a política de domínio do enunciado para o contexto recriou a diferença: a mesma tarefa passou a dar 18/26 sem contexto e 26/26 com contexto.</p>
+</div>
+
+<h3>T2 — RES-142, um ticket de suporte</h3>
+<div class="statement">
+<p class="meta">Enunciado entregue ao agente, literal</p>
+<p><strong>RES-142 — Usuários esbarrando em conflito ao reservar</strong><br><em>Reportado por: Suporte · Prioridade: Alta</em></p>
+<p>O suporte vem recebendo reclamações recorrentes de usuários que tentam criar uma reserva e recebem erro de conflito. Pelo relato, as pessoas ficam tentando horários diferentes até acertar um que esteja livre, e isso está gerando insatisfação — principalmente entre quem precisa organizar várias reservas de uma vez.</p>
+<p>Produto quer que a API resolva isso.</p>
+<p><em>Não há canal para dúvidas nesta execução. Decida e implemente.</em></p>
+</div>
+
+<p>O ticket descreve uma dor, não uma solução. Construir um endpoint de disponibilidade, devolver horários livres junto com o erro 409, aceitar reserva em lote, ou simplesmente melhorar a mensagem de erro são leituras todas defensáveis do mesmo texto.</p>
+
+<div class="note instr">
+<p><strong>Por que T2 não tem suíte de testes ocultos, e por que isso não é uma lacuna.</strong> Uma suíte que afirmasse uma dessas leituras estaria afirmando uma preferência, não um contrato — e mediria se o agente adivinhou a opinião de quem escreveu o teste. T2 é medida por <strong>convergência</strong>: as três repetições da mesma célula tomaram as mesmas decisões de projeto? Escrever uma suíte para T2 a transformaria numa segunda tarefa bem especificada e custaria ao trabalho metade da sua pergunta de pesquisa.</p>
+</div>
+
+<h3>O que o agente encontra na cópia de trabalho</h3>
+<p>Uma cópia idêntica da semente a cada sessão, com histórico git zerado e um único commit inicial — para que o diff da sessão contenha exatamente o que o agente fez, e nada mais. Antes de entregar, o runner varre a cópia e <strong>recusa a sessão</strong> se encontrar qualquer vestígio do estudo: os diretórios <code>hidden-tests/</code>, <code>reference/</code>, <code>tasks/</code>, <code>docs/</code> ou <code>tools/</code>, ou as palavras <em>TCC</em>, <em>INATEL</em>, <em>harness</em>, <em>semente</em>, <em>experimento</em>, <em>Claude</em> ou <em>Anthropic</em> em qualquer arquivo.</p>
+
+</section>
+
+<!-- ══════════════════════════ O QUE VARIA ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-varia" aria-labelledby="t-varia" hidden>
+
+<h2>Fator P — o contexto estático</h2>
+<p>Os três níveis são cumulativos: cada um acrescenta ao anterior.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>Nível</th><th>O que o contêiner recebe</th><th>Como chega ao agente</th></tr></thead>
+<tbody>
+<tr><td><code>P0</code></td><td>Nada. Só o repositório-semente.</td><td>—</td></tr>
+<tr><td><code>P1</code></td><td><code>contexts/P1/CLAUDE.md</code> copiado para a raiz da cópia de trabalho.</td><td>O CLI lê o arquivo sozinho, como faria num projeto real.</td></tr>
+<tr><td><code>P2</code></td><td>O mesmo <code>CLAUDE.md</code>, mais um plugin em <code>/opt/plugin</code>, <strong>fora</strong> da cópia de trabalho.</td><td>Flag <code>--plugin-dir</code>. Fora de <code>/app</code> para não aparecer no diff da sessão.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>O que tem dentro do CLAUDE.md</h3>
+<p>Quatro blocos: a <strong>arquitetura</strong> (onde vive cada camada de cada módulo), as <strong>convenções de nome e de erro</strong>, os <strong>comandos</strong> do Makefile, e as <strong>oito convenções observadas na base</strong> — as mesmas oito que o script de convenções mede depois. Em P1 e P2 há ainda um quinto bloco: as <strong>regras de domínio de reservas</strong>, que é a política que saiu do enunciado de T1.</p>
+
+<h3>O que o plugin acrescenta em P2</h3>
+<p>Três skills procedimentais, que o agente invoca quando julga apropriado — em vez de um documento que ele lê de uma vez:</p>
+<ul>
+<li><code>convencoes-do-projeto</code> — checklist antes de dar uma mudança por pronta.</li>
+<li><code>escrever-testes</code> — onde o arquivo de teste vive, como a aplicação sobe no teste, o que afirmar sobre a resposta HTTP.</li>
+<li><code>estender-modulo</code> — onde entra rota nova, regra nova, consulta nova.</li>
+</ul>
+<p>A diferença entre P1 e P2 não é <em>quantidade</em> de informação — o conteúdo se sobrepõe muito. É a <strong>forma</strong>: documento passivo contra procedimento invocável sob demanda.</p>
+
+<h2>Fator O — a ordem de execução</h2>
+
+<figure>
+<div class="board">
+<svg viewBox="0 0 980 250" role="img" aria-label="O1 é uma chamada única; O2 são quatro chamadas encadeadas que compartilham a mesma conversa.">
+<defs>
+  <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,1 L9,5 L0,9 z" fill="var(--cond)"/>
+  </marker>
+</defs>
+<text class="s-cap" x="14" y="24" fill="var(--soft)">O1 · uma chamada</text>
+  <rect x="14" y="38" width="300" height="60" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-ttl" x="164" y="64" text-anchor="middle" fill="var(--ink)">Enunciado completo</text>
+  <text class="s-sm"  x="164" y="82" text-anchor="middle" fill="var(--soft)">o agente decide sozinho como conduzir</text>
+  <text class="s-sm"  x="330" y="72" fill="var(--soft)">&#8594; um transcript, um evento de resultado</text>
+
+  <text class="s-cap" x="14" y="140" fill="var(--soft)">O2 · quatro chamadas encadeadas, mesma conversa</text>
+  <rect x="14"  y="154" width="222" height="62" rx="5" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-ttl"  x="125" y="176" text-anchor="middle" fill="var(--ink)">1 · Explorar</text>
+  <text class="s-sm"   x="125" y="194" text-anchor="middle" fill="var(--soft)">leva o enunciado</text>
+  <text class="s-mono" x="125" y="209" text-anchor="middle" fill="var(--soft)">não altera arquivo</text>
+
+  <rect x="256" y="154" width="222" height="62" rx="5" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-ttl"  x="367" y="176" text-anchor="middle" fill="var(--ink)">2 · Planejar</text>
+  <text class="s-sm"   x="367" y="194" text-anchor="middle" fill="var(--soft)">plano na resposta</text>
+  <text class="s-mono" x="367" y="209" text-anchor="middle" fill="var(--soft)">não altera arquivo</text>
+
+  <rect x="498" y="154" width="222" height="62" rx="5" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-ttl"  x="609" y="176" text-anchor="middle" fill="var(--ink)">3 · Implementar</text>
+  <text class="s-sm"   x="609" y="197" text-anchor="middle" fill="var(--soft)">executa o plano</text>
+
+  <rect x="740" y="154" width="226" height="62" rx="5" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-ttl"  x="853" y="176" text-anchor="middle" fill="var(--ink)">4 · Verificar</text>
+  <text class="s-sm"   x="853" y="197" text-anchor="middle" fill="var(--soft)">testes e tipos, corrige</text>
+
+  <path class="s-ln-c" marker-end="url(#a2)" d="M238 185 L252 185"/>
+  <path class="s-ln-c" marker-end="url(#a2)" d="M480 185 L494 185"/>
+  <path class="s-ln-c" marker-end="url(#a2)" d="M722 185 L736 185"/>
+</svg>
+</div>
+<div class="note gate">
+<p><strong>A fronteira entre os passos é instrução, não trava.</strong> Os passos 1 e 2 pedem ao agente que não altere arquivo, e nada o impede de alterar — impedir transformaria a condição em outro experimento, porque a pergunta de O2 é o que o agente faz com a ordem segmentada, não o que ele faz preso a ela. Em uma sessão de Haiku o agente implementou durante a exploração e deixou os passos 2 e 3 vazios: ela está rotulada O2 e executou algo mais perto de O1.</p>
+<p>Isso é medido, não presumido — <code>node tools/analysis/aderencia-o2.mjs</code> conta as alterações por passo e nomeia quem alterou onde não devia. Na coleta deu <strong>1 em 23</strong>. Quem for analisar o fator O deve recalcular sobre o dataset final e tratar as sessões nomeadas com cuidado.</p>
+</div>
+
+<figcaption>O encadeamento usa um identificador de sessão explícito (<code>--session-id</code> na primeira chamada, <code>--resume</code> nas outras três), nunca &#8220;continue a conversa mais recente&#8221;. Uma etapa que não produza transcript interrompe a sessão na hora, em vez de gerar uma sessão faltando um quarto do trabalho e parecendo completa.</figcaption>
+</figure>
+
+<h2>Fator M — o modelo</h2>
+<p>A grade principal inteira roda em <strong>Sonnet 5</strong>. Haiku 4.5 e Opus 5 rodam só nas duas configurações extremas (P0-O1 e P2-O2), porque a pergunta ali é mais estreita: o efeito do contexto e da ordem muda de tamanho conforme o modelo?</p>
+<p>O runner confere, no transcript, qual modelo <em>de fato</em> produziu o trabalho — pelo volume de tokens de saída, não pela primeira chave do relatório — e recusa a sessão se não for o pedido.</p>
+
+<h2>O que é constante, e é verificado</h2>
+<div class="tw">
+<table>
+<thead><tr><th>Constante</th><th>Como é mantida</th></tr></thead>
+<tbody>
+<tr><td>Imagem do contêiner</td><td>Construída <strong>uma vez</strong> por <code>runner/build-image.mjs</code>, com <code>--provenance=false</code> para que builds de conteúdo idêntico deem o mesmo digest. Toda sessão grava o digest, e o runner recusa rodar se ele divergir do que o dataset já tem.</td></tr>
+<tr><td>Versão do CLI do agente</td><td>Gravada por sessão; o auditor exige que seja uma só em toda a coleta.</td></tr>
+<tr><td>Repositório-semente</td><td>Congelado. Os testes da semente são restaurados a partir do commit congelado antes de medir regressão.</td></tr>
+<tr><td>Enunciados e etapas de O2</td><td>Arquivos versionados; a sequência que roda e a sequência publicada vêm do mesmo lugar.</td></tr>
+<tr><td>Teto de turnos (100, por chamada)</td><td><strong>Parada de segurança contra laço infinito</strong>, não medida de qualidade nem de desempenho. Era 40 até 25/09/2026, quando passou a apertar: duas das três sessões da célula T2-P0-O1 em Opus foram cortadas, contra zero em 25 sessões de Sonnet e Haiku. Sessão cortada tem turnos, custo e duração <strong>censurados</strong> — medem o teto, não o agente — e a análise lê essas colunas. O teto não é visível ao agente, então sessão que terminou sozinha não foi afetada; só as duas censuradas foram recoletadas. Em O1 vale um teto por sessão, em O2 um por etapa.</td></tr>
+</tbody>
+</table>
+</div>
+
+</section>
+
+<!-- ══════════════════════════ O RUNNER ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-runner" aria-labelledby="t-runner" hidden>
+
+<h2>Por que existe um runner</h2>
+<p>Porque a comparação só vale se a única coisa diferente entre duas sessões for o fator sob teste. Fazer isso à mão, cinquenta vezes, garante que em algum momento alguém esquece de resetar o banco, reusa um contêiner, ou roda com a flag errada. O runner é a parte do experimento que <strong>não confia em ninguém lembrar</strong>.</p>
+
+<h2>As guardas, e o defeito que cada uma fecha</h2>
+<p>Todas nasceram de um defeito real encontrado durante a construção. Estão aqui porque a classe do defeito é a mesma nas cinco: <strong>a sessão foi rotulada de um jeito e executada de outro, e nada percebeu.</strong></p>
+
+<div class="tw">
+<table>
+<thead><tr><th>Guarda</th><th>O defeito que ela impede</th></tr></thead>
+<tbody>
+<tr><td>Recusa de sessão irrealizável</td><td><code>--task T2</code> entregava o enunciado de T1; <code>--o O2</code> rodava uma chamada só. Hoje a tabela de capacidades é fonte única: o que não puder rodar como é rotulado não roda.</td></tr>
+<tr><td>Nível de contexto obrigatório</td><td><code>--p P1</code> gravava P1 e o contêiner não recebia contexto nenhum. O parâmetro deixou de ter valor padrão: omitir dá erro.</td></tr>
+<tr><td>Modelo conferido no transcript</td><td>Uma sessão gravou &#8220;Haiku&#8221; numa coluna que é fator experimental, porque a ferramenta pegava a primeira chave do relatório em vez do modelo que fez o trabalho.</td></tr>
+<tr><td>Plugin conferido no init</td><td>Uma sessão P2 cujo plugin não carrega é uma sessão P1 com passos a mais. O evento de inicialização lista o que carregou de fato — dá para conferir, em vez de torcer.</td></tr>
+<tr><td>Digest da imagem estável</td><td>As nove primeiras sessões gravaram nove digests diferentes para o <strong>mesmo</strong> ambiente. Duas causas: a imagem era reconstruída antes de cada sessão (até 23/09), e o BuildKit anexava um atestado de proveniência cujos timestamps trocavam o <code>.Id</code> a cada build, mesmo com todas as camadas em cache (até 25/09). A coluna registrava o nonce do build, não o contêiner.</td></tr>
+<tr><td>Diff contra o commit inicial</td><td>O diff era tirado contra o índice (<code>git diff --cached</code>), e um agente que commitasse o próprio trabalho esvaziava o índice: a sessão gravava <code>session.diff</code> vazio para uma implementação inteira, e com ele <code>qualidade</code>, <code>violacoes</code> e <code>travou_sem_diff</code> errados. Aconteceu de verdade em 25/09.</td></tr>
+<tr><td>Varredura de vestígios</td><td>Qualquer diretório ou palavra do estudo alcançável dentro da cópia de trabalho aborta a sessão antes de o agente ver.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Válida, inválida, e travada</h2>
+<p>Três estados que é fácil confundir, e que significam coisas muito diferentes para a análise.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>Estado</th><th>O que aconteceu</th><th>O que a análise faz com isso</th></tr></thead>
+<tbody>
+<tr><td><code>status = valid</code></td><td>A sessão rodou até o fim e foi medida.</td><td>É dado.</td></tr>
+<tr><td><code>status = invalid</code></td><td>Falhou <strong>antes</strong> da fronteira: contêiner, rede, chave, aplicação que não subia na entrega. <code>invalid_reason</code> diz qual.</td><td>Não é dado. A sessão é refeita, e a linha inválida fica no dataset como evidência.</td></tr>
+<tr><td><code>travou = true</code></td><td>Sessão <strong>válida</strong> em que o agente bateu no teto de turnos, não deixou diff, ou deixou a aplicação sem compilar ou sem responder.</td><td><strong>É dado</strong>, com nota zero. Nunca descartado.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note gate">
+<p><strong>Esta distinção é o coração do protocolo.</strong> Uma sessão em que o agente não fez nada, ou quebrou a aplicação, é um resultado — possivelmente o resultado mais informativo da célula. Descartá-la porque &#8220;deu errado&#8221; seria filtrar o dataset pela hipótese. Três colunas separam os motivos: <code>travou_turnos</code>, <code>travou_sem_diff</code> e <code>travou_build</code>.</p>
+</div>
+
+<h2>Como o enunciado chega ao agente</h2>
+<p>Por cópia de arquivo para dentro do contêiner, num caminho fora da cópia de trabalho (<code>/tmp/statement.txt</code>), lido de volta na hora de invocar o agente. Nunca embutido na linha de comando: o texto é prosa em português com aspas e parênteses, e montar um comando de shell com esses bytes é como se introduz um defeito silencioso de citação. O caminho aparece no comando; a prosa, nunca.</p>
+
+</section>
+
+<!-- ══════════════════════════ INSTRUMENTOS ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-instr" aria-labelledby="t-instr" hidden>
+
+<h2>Quatro instrumentos independentes</h2>
+<p>Nenhum deles vê a condição da sessão. Três rodam sozinhos e são determinísticos; o quarto é um modelo respondendo perguntas fechadas sobre o diff.</p>
+
+<figure>
+<div class="board">
+<svg viewBox="0 0 980 300" role="img" aria-label="Os quatro instrumentos e as colunas do dataset que cada um alimenta.">
+<defs>
+  <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,1 L9,5 L0,9 z" fill="var(--instr)"/>
+  </marker>
+</defs>
+<text class="s-cap" x="14" y="22" fill="var(--soft)">Instrumento</text>
+  <text class="s-cap" x="640" y="22" fill="var(--soft)">Coluna que alimenta</text>
+
+  <rect x="14" y="38" width="330" height="54" rx="5" fill="var(--surface)" stroke="var(--instr)" stroke-width="1.5"/>
+  <text class="s-ttl" x="32" y="60" fill="var(--ink)">Suíte oculta &#183; 26 asserções HTTP</text>
+  <text class="s-sm"  x="32" y="78" fill="var(--soft)">só T1 &#183; roda contra a API no ar</text>
+
+  <rect x="14" y="104" width="330" height="54" rx="5" fill="var(--surface)" stroke="var(--instr)" stroke-width="1.5"/>
+  <text class="s-ttl" x="32" y="126" fill="var(--ink)">Suíte de regressão da semente</text>
+  <text class="s-sm"  x="32" y="144" fill="var(--soft)">7 arquivos restaurados congelados</text>
+
+  <rect x="14" y="170" width="330" height="54" rx="5" fill="var(--surface)" stroke="var(--instr)" stroke-width="1.5"/>
+  <text class="s-ttl" x="32" y="192" fill="var(--ink)">Script de convenções &#183; 8 regras</text>
+  <text class="s-sm"  x="32" y="210" fill="var(--soft)">determinístico, sobre o diff e o ESLint</text>
+
+  <rect x="14" y="236" width="330" height="54" rx="5" fill="var(--surface)" stroke="var(--instr)" stroke-width="1.5"/>
+  <text class="s-ttl" x="32" y="258" fill="var(--ink)">Avaliador cego &#183; Sonnet 5</text>
+  <text class="s-sm"  x="32" y="276" fill="var(--soft)">6 perguntas + 10 pontos de decisão</text>
+
+  <text class="s-mono" x="640" y="70"  fill="var(--ink)">taxa_aceitacao</text>
+  <text class="s-sm"   x="640" y="86"  fill="var(--soft)">acertos / 26 &#183; vazio em T2</text>
+  <text class="s-mono" x="640" y="136" fill="var(--ink)">regressoes</text>
+  <text class="s-sm"   x="640" y="152" fill="var(--soft)">testes da semente que passaram a falhar</text>
+  <text class="s-mono" x="640" y="202" fill="var(--ink)">violacoes</text>
+  <text class="s-sm"   x="640" y="218" fill="var(--soft)">quantas das 8 regras foram violadas</text>
+  <text class="s-mono" x="640" y="262" fill="var(--ink)">qualidade  ·  decisao_1..10</text>
+  <text class="s-sm"   x="640" y="278" fill="var(--soft)">0 a 6 &#183; categorias &#183; decisões só em T2</text>
+
+  <path class="s-ln-i" marker-end="url(#a3)" d="M350 65  L630 65"/>
+  <path class="s-ln-i" marker-end="url(#a3)" d="M350 131 L630 131"/>
+  <path class="s-ln-i" marker-end="url(#a3)" d="M350 197 L630 197"/>
+  <path class="s-ln-i" marker-end="url(#a3)" d="M350 263 L630 258"/>
+</svg>
+</div>
+</figure>
+
+<h2>1 · A suíte oculta de T1</h2>
+<p>Vinte e seis asserções HTTP contra a aplicação no ar, agrupadas em sete regras de domínio. O agente nunca as vê — elas vivem fora da cópia de trabalho e rodam depois que ele para.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>Regra</th><th>O que verifica</th><th class="num">Asserções</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Sobreposição de horário na mesma sala, em todas as formas: início dentro, fim dentro, englobando, contida, encostando exatamente na borda, sala diferente, e o mesmo via atualização.</td><td class="num">10</td></tr>
+<tr><td>2</td><td>Reserva cancelada libera o horário imediatamente.</td><td class="num">2</td></tr>
+<tr><td>3</td><td>Reserva no passado é recusada; no futuro é aceita.</td><td class="num">3</td></tr>
+<tr><td>4</td><td>Duração: 30 minutos aceito, 29 recusado, 8 horas aceito, 8h01 recusado.</td><td class="num">4</td></tr>
+<tr><td>5</td><td>Fim anterior ou igual ao início é recusado.</td><td class="num">2</td></tr>
+<tr><td>6</td><td>Sala ou usuário inexistente dá 404, não erro interno.</td><td class="num">3</td></tr>
+<tr><td>7</td><td>As recusas novas mantêm o envelope de erro que o projeto já usa.</td><td class="num">2</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note instr">
+<p><strong>A semente sem modificação acerta 13 de 26.</strong> Esse é o piso conhecido, e é o que torna a medida interpretável: uma sessão que tirasse 13 não fez nada de útil. As referências medidas até aqui: 18/26 sem contexto, 26/26 com contexto.</p>
+</div>
+
+<h2>2 · A suíte de regressão</h2>
+<p>Antes de medir, o runner <strong>restaura os sete arquivos de teste da semente</strong> a partir do commit congelado, sobrescrevendo o que o agente tenha feito com eles, e roda a suíte. A coluna <code>regressoes</code> conta quantos testes que passavam antes passaram a falhar.</p>
+<p>A restauração é o ponto: sem ela, um agente que enfraquecesse um teste para fazê-lo passar apareceria como zero regressões. Enfraquecer teste é medido separadamente, pelas regras 6 e 8 do script de convenções.</p>
+
+<h2>3 · O script de convenções</h2>
+<p>Oito regras determinísticas. Seis são análise de texto sobre o diff e sobre os dois manifestos, e rodam no host. Duas precisam do ESLint da própria semente e rodam <strong>dentro do contêiner</strong>, depois que a sessão terminou — o agente já não está mais executando, então não há risco de contaminação.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th class="num">#</th><th>O que mede</th><th>Onde</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td>Arquivo de produção criado fora de <code>src/modules/</code>, <code>src/shared/</code> ou <code>src/plugins/</code></td><td>host</td></tr>
+<tr><td class="num">2</td><td>Dependência nova no <code>package.json</code></td><td>host</td></tr>
+<tr><td class="num">3</td><td>Arquivo de configuração alterado, ou a seção <code>scripts</code> mexida</td><td>host</td></tr>
+<tr><td class="num">4</td><td>Escape de tipo: <code>any</code>, <code>as any</code>, <code>@ts-ignore</code>, asserção não-nula</td><td>contêiner</td></tr>
+<tr><td class="num">5</td><td>Nenhuma linha acrescentada em <code>tests/</code> — isto é, mudou comportamento sem escrever teste</td><td>host</td></tr>
+<tr><td class="num">6</td><td>Linha removida de um dos sete arquivos de teste da semente</td><td>host</td></tr>
+<tr><td class="num">7</td><td><code>console.*</code> em código de produção</td><td>contêiner</td></tr>
+<tr><td class="num">8</td><td>Teste marcado com <code>.skip</code>, <code>.only</code> ou <code>.todo</code></td><td>host</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>4 · O avaliador cego</h2>
+<p>Sonnet 5 — <strong>sempre Sonnet, nunca o modelo da sessão sendo avaliada</strong> — recebe três coisas e nada mais: o enunciado, o diff da sessão, e o conteúdo congelado de <code>src/shared/</code> e <code>src/plugins/</code> como material de referência. Não recebe P, não recebe O, não recebe o modelo, não recebe identificação da sessão.</p>
+
+<h3>O checklist — seis perguntas, resposta sim ou não</h3>
+<ol>
+<li>A lógica de negócio nova está na camada de serviço, e não nas rotas?</li>
+<li>As entradas novas são validadas por schema?</li>
+<li>Os caminhos de erro têm resposta explícita com código de status apropriado?</li>
+<li>Valores fixos estão nomeados, em vez de literais espalhados?</li>
+<li>Há testes que verificam comportamento observável, e não implementação interna?</li>
+<li>O código novo reusa utilitários do material de referência quando um deles se aplica?</li>
+</ol>
+<p>Cada resposta vem com uma justificativa de uma linha citando o trecho do diff que a sustenta. A soma dos &#8220;sim&#8221; é a coluna <code>qualidade</code>, de 0 a 6.</p>
+
+<h3>Os dez pontos de decisão — só T2</h3>
+<p>São as dez escolhas de projeto que o ticket RES-142 deixa em aberto. O avaliador classifica cada uma numa lista fechada de categorias, ou responde <code>ausente</code> se o diff não decidiu aquilo.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th class="num">#</th><th>Ponto</th><th>Categorias possíveis</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td>Forma da solução</td><td>endpoint novo · altera listagem existente · enriquece o erro 409 · combinação</td></tr>
+<tr><td class="num">2</td><td>Semântica do retorno</td><td>horários livres · horários ocupados · ambos</td></tr>
+<tr><td class="num">3</td><td>Granularidade dos intervalos</td><td>fixa · derivada das reservas · parametrizável</td></tr>
+<tr><td class="num">4</td><td>Janela temporal padrão</td><td>dia · semana · obrigatória no parâmetro</td></tr>
+<tr><td class="num">5</td><td>Limite de horário</td><td>comercial · 24 horas · configurável</td></tr>
+<tr><td class="num">6</td><td>Escopo de salas</td><td>uma sala · várias por parâmetro · todas</td></tr>
+<tr><td class="num">7</td><td>Fuso horário</td><td>UTC · local · explícito no contrato</td></tr>
+<tr><td class="num">8</td><td>Sala sem reservas</td><td>tudo livre · lista vazia · 404</td></tr>
+<tr><td class="num">9</td><td>Tratamento do passado</td><td>filtrado · incluído</td></tr>
+<tr><td class="num">10</td><td>Contrato do POST de reserva</td><td>inalterado · passa a sugerir alternativas no 409</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note instr">
+<p><strong>A convergência de T2 sai daqui.</strong> Para cada célula, compara-se as três repetições ponto a ponto: quantos dos dez pontos as três resolveram da mesma maneira? Isso não está no <code>resultados.csv</code> — é uma regra aplicada a três linhas, implementada em <code>tools/analysis/convergencia.mjs</code>, que se recusa a calcular uma célula incompleta.</p>
+</div>
+
+<div class="note gate">
+<p><strong>Uma limitação conhecida, que a análise precisa saber.</strong> Nas três sessões de T2 medidas até aqui, os pontos 5 (limite de horário) e 7 (fuso horário) vieram <code>ausente</code> nas três — nenhum agente tomou essas decisões explicitamente. Eles serão reportados nos dois recortes: sobre os dez pontos, e sobre os que ficaram vivos. Cortá-los seria selecionar o instrumento pelo resultado.</p>
+</div>
+
+</section>
+
+<!-- ══════════════════════════ ARTEFATOS ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-artef" aria-labelledby="t-artef" hidden>
+
+<h2>O que a coleta entrega</h2>
+<p>Duas camadas. Uma tabela achatada, que é o que a análise consome; e um arquivo por sessão, que é o que sustenta qualquer afirmação feita a partir da tabela.</p>
+
+<h3>Camada 1 — o dataset</h3>
+<p><code>resultados.csv</code>: <strong>uma linha por sessão, 41 colunas</strong>. O significado de cada coluna está em <code>docs/06-dicionario-de-dados.md</code> — este documento não substitui o dicionário.</p>
+
+<div class="note">
+<p><strong>A única coisa que você precisa saber antes de abrir o CSV:</strong> uma célula vazia tem três significados, e o dicionário abre enumerando os três. &#8220;Não se aplica&#8221; (<code>taxa_aceitacao</code> em T2, <code>decisao_*</code> em T1, <code>invalid_reason</code> em sessão válida). &#8220;Ainda não medido&#8221;. E <strong>nunca</strong> &#8220;medido e vale zero&#8221; — zero é escrito como zero.</p>
+</div>
+
+<p><code>resultados-piloto.csv</code> é um arquivo separado com uma linha: a sessão piloto de 17/09, anterior ao congelamento do protocolo. <strong>Não é dado de coleta</strong> e não deve entrar na análise.</p>
+
+<h3>Camada 2 — os artefatos por sessão</h3>
+<p>Uma pasta por sessão em <code>sessions/&lt;id&gt;/</code>, onde o id é <code>&lt;tarefa&gt;-&lt;P&gt;-&lt;O&gt;-&lt;sufixo&gt;</code>. Tudo versionado no repositório — o conjunto inteiro fica bem abaixo de cem megabytes.</p>
+
+<div class="tree">
+<b>sessions/T1-P2-O2-mxxxxxxx/</b>
+<br>├── <b>session.diff</b>              <i>o que o agente mudou — a evidência central</i>
+<br>├── <b>transcript.jsonl</b>          <i>a sessão inteira, evento a evento</i>
+<br>├── <b>transcript.md</b>             <i>o mesmo, legível por humano</i>
+<br>├── transcript-1..4.jsonl     <i>só em O2: uma por etapa encadeada</i>
+<br>├── <b>result.json</b>               <i>a linha do dataset + o detalhe da suíte oculta</i>
+<br>├── <b>conventions.json</b>          <i>as 8 regras, uma a uma, com o que violou</i>
+<br>├── <b>evaluation.json</b>           <i>checklist e pontos de decisão, com justificativas</i>
+<br>├── regressions.json          <i>saída bruta do Vitest sobre a suíte da semente</i>
+<br>├── server.log                <i>a aplicação subindo para a medição</i>
+<br>├── preflight.log             <i>a aplicação subindo antes da entrega</i>
+<br>└── agent.log                 <i>stderr do CLI do agente</i>
+</div>
+
+<div class="tw">
+<table>
+<thead><tr><th>Artefato</th><th>Para que serve na análise</th></tr></thead>
+<tbody>
+<tr><td><code>session.diff</code></td><td>É o objeto que o avaliador cego julgou. Qualquer releitura, amostra rotulada por humano, ou contestação de uma nota começa aqui.</td></tr>
+<tr><td><code>transcript.jsonl</code></td><td>Custo, turnos, tokens, chamadas de ferramenta, e o que o agente disse e fez. É a base das colunas de processo, e a única evidência de <em>como</em> o resultado surgiu.</td></tr>
+<tr><td><code>evaluation.json</code></td><td>Carrega a <strong>justificativa</strong> de cada resposta do avaliador. A coluna <code>qualidade</code> é um número; aqui está por que ele é aquele número.</td></tr>
+<tr><td><code>conventions.json</code></td><td>A coluna <code>violacoes</code> é uma contagem; aqui está <em>qual</em> convenção foi violada e onde.</td></tr>
+<tr><td><code>result.json</code></td><td>Traz a suíte oculta asserção a asserção — qual das 26 falhou, não só quantas.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Camada 3 — o registro de cada lote</h3>
+<p><code>sessions/lotes/&lt;instante&gt;.json</code>: o que o lote prometeu executar, o que de fato executou, e onde parou se parou. É o que permite responder &#8220;a coleta rodou inteira?&#8221; sem depender da memória de quem rodou.</p>
+
+<h2>O que a análise recebe, em uma frase</h2>
+<div class="note instr">
+<p>Um <code>resultados.csv</code> com <strong>50 linhas válidas</strong> e 41 colunas; um dicionário que define cada coluna e cada vazio; uma pasta de evidência por sessão; um script que calcula a convergência de T2 a partir das linhas; e um auditor que prova, de forma reexecutável, que o dataset está íntegro.</p>
+</div>
+
+<h2>Cinco coisas que a análise precisa saber antes de abrir o dataset</h2>
+<p>Todas descobertas durante a coleta, todas declaradas na seção 8 do protocolo, e <strong>nenhuma delas motivou recoleta</strong> — são limitações do instrumento, não defeitos dos dados.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>O quê</th><th>Consequência para a leitura</th></tr></thead>
+<tbody>
+<tr><td><strong>Teto em <code>taxa_aceitacao</code> para P1 e P2</strong><br>Todas as sessões de T1 em Sonnet com contexto: 26/26. P0: 18 e 21 de 26.</td><td>O efeito de <em>ter</em> contexto é grande e inequívoco. <strong>P1 contra P2 não pode ser lido de T1</strong> — os dois estão saturados. Se houver diferença, ela vem de <code>qualidade</code> e dos pontos de decisão de T2.</td></tr>
+<tr><td><strong>Piso em <code>violacoes</code></strong><br>0 em 41 das 50 sessões, 1 nas outras 9, nunca mais que 1. Quatro das oito regras nunca foram violadas.</td><td>Reportável como resultado — nesta base os agentes raramente violam convenção, em qualquer condição — mas <strong>sem resolução para comparar condições</strong>. O protocolo contava com ela como verificação independente do efeito de contexto; não dá.</td></tr>
+<tr><td><strong>Dois pontos de decisão sem variância</strong><br>Pontos 5 e 8 receberam sempre a mesma categoria quando decididos.</td><td>Contribuem convergência de graça, igualmente em toda condição. O segundo recorte do script <strong>não</strong> os remove — ele só corta pontos ausentes em todas as 30, e nenhum é. Tratar ou não é decisão da análise, e precisa ser declarada.</td></tr>
+<tr><td><strong>Teto de turnos assimétrico</strong><br>O1 tem um teto por sessão; O2, um por etapa.</td><td>O2 dispõe de quatro vezes o orçamento de turnos. Comparação de esforço entre ordens tem de ser <strong>por unidade de custo</strong>.</td></tr>
+<tr><td><strong>O controle de deriva não foi executado</strong><br>Cortado por supor coleta numa janela; a coleta ocorreu em quatro, entre 18 e 26/09.</td><td><code>cli_version</code> é constante nas 50 e <code>model_version</code> é único por modelo, então não há evidência de deriva — mas isso é <strong>ausência de evidência</strong>, não a medida que o controle teria dado.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p>Mais duas, já descritas nas abas anteriores: <strong>nove sessões anteriores ao digest estável</strong>, que mantêm o valor medido e são nomeadas pelo auditor a cada execução; e <strong>a fronteira dos passos de O2 ser instrução</strong>, com uma sessão em 23 que implementou durante a exploração — recalculável por <code>node tools/analysis/aderencia-o2.mjs</code>.</p>
+</div>
+
+<h2>O que a coleta deliberadamente não entrega</h2>
+<ul>
+<li><strong>Nenhuma coluna de conclusão.</strong> O dataset não diz qual condição é melhor.</li>
+<li><strong>Nenhuma sessão filtrada por resultado ruim.</strong> Baixa nota, diff enorme, agente que travou — tudo fica.</li>
+<li><strong>A convergência de T2 não é coluna.</strong> Ela é propriedade de uma célula de três linhas, não de uma linha.</li>
+<li><strong>As sessões inválidas não são apagadas.</strong> Ficam com <code>status = invalid</code> e o motivo, ao lado da repetição que as substituiu.</li>
+</ul>
+
+</section>
+
+<!-- ══════════════════════════ COMO RODAR ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-rodar" aria-labelledby="t-rodar" hidden>
+
+<div class="note instr">
+<p><strong>A coleta está encerrada.</strong> As 50 sessões foram coletadas entre 18 e 26 de setembro de 2026, em sete lotes. O que segue é o registro de como foram produzidas — serve para reproduzir a coleta, conferir um número, ou recoletar uma célula se a análise encontrar motivo. O auditor continua valendo e pode rodar a qualquer momento.</p>
+</div>
+
+<h2>Antes de começar</h2>
+<p>Uma vez só, e não de novo no meio da coleta — a imagem é uma constante declarada do experimento:</p>
+<pre><span class="c"># constrói a imagem da sessão e imprime o digest</span>
+node runner/build-image.mjs</pre>
+<p>Se ela já existe e o digest bate com o que o dataset tem, não rode de novo. O runner recusa qualquer sessão cuja imagem tenha mudado, a menos que a mudança seja declarada.</p>
+
+<h2>O laço da coleta</h2>
+
+<figure>
+<div class="board">
+<svg viewBox="0 0 980 190" role="img" aria-label="Laço da coleta: conferir o plano, rodar o lote, verificar com a skill, repetir.">
+<defs>
+  <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,1 L9,5 L0,9 z" fill="var(--soft)"/>
+  </marker>
+</defs>
+<rect x="14" y="40" width="200" height="72" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-ttl"  x="114" y="66" text-anchor="middle" fill="var(--ink)">Conferir o plano</text>
+  <text class="s-mono" x="114" y="86" text-anchor="middle" fill="var(--soft)">--dry-run</text>
+  <text class="s-sm"   x="114" y="102" text-anchor="middle" fill="var(--soft)">não gasta nada</text>
+
+  <rect x="256" y="40" width="200" height="72" rx="5" fill="var(--surface)" stroke="var(--cond)" stroke-width="1.5"/>
+  <text class="s-ttl"  x="356" y="66" text-anchor="middle" fill="var(--ink)">Rodar o lote</text>
+  <text class="s-mono" x="356" y="86" text-anchor="middle" fill="var(--soft)">--limite N</text>
+  <text class="s-sm"   x="356" y="102" text-anchor="middle" fill="var(--soft)">avalia no fim, sozinho</text>
+
+  <rect x="498" y="40" width="200" height="72" rx="5" fill="var(--surface)" stroke="var(--instr)" stroke-width="1.5"/>
+  <text class="s-ttl"  x="598" y="66" text-anchor="middle" fill="var(--ink)">Verificar</text>
+  <text class="s-mono" x="598" y="86" text-anchor="middle" fill="var(--soft)">/verificar-lote</text>
+  <text class="s-sm"   x="598" y="102" text-anchor="middle" fill="var(--soft)">all clear · ou parar</text>
+
+  <rect x="740" y="40" width="226" height="72" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+  <text class="s-ttl"  x="853" y="66" text-anchor="middle" fill="var(--ink)">Repetir até acabar</text>
+  <text class="s-sm"   x="853" y="88" text-anchor="middle" fill="var(--soft)">o driver relê o que falta</text>
+  <text class="s-sm"   x="853" y="104" text-anchor="middle" fill="var(--soft)">do dataset, a cada vez</text>
+
+  <path class="s-ln" marker-end="url(#a4)" d="M216 76 L252 76"/>
+  <path class="s-ln" marker-end="url(#a4)" d="M458 76 L494 76"/>
+  <path class="s-ln" marker-end="url(#a4)" d="M700 76 L736 76"/>
+  <path class="s-ln" marker-end="url(#a4)" d="M853 120 L853 150 L356 150 L356 118"/>
+  <text class="s-sm" x="600" y="168" text-anchor="middle" fill="var(--soft)">mesmo comando, sempre — ele continua de onde parou</text>
+</svg>
+</div>
+</figure>
+
+<h2>Os comandos, na ordem</h2>
+
+<ol class="steps">
+<li><strong>Veja o que vai rodar, sem gastar nada</strong>
+<pre>node tools/collect/run-grid.mjs --dry-run</pre>
+<p>Imprime a semente do embaralhamento, quantas faltam por bloco, e a lista numerada. Com a coleta encerrada, imprime <code>faltam 0 sessões</code>. Confira esse número antes de autorizar qualquer gasto.</p></li>
+
+<li><strong>Rode o primeiro lote pequeno</strong>
+<pre>node tools/collect/run-grid.mjs <b>--limite 2</b></pre>
+<p>Duas sessões, poucos minutos. O caminho de execução do driver nunca rodou contra Docker e API de verdade — foi verificado só por teste com dublês. Duas sessões provam que ele dispara o runner, deriva o número de repetição certo, imprime o custo acumulado e grava o registro do lote. <strong>Faça isso antes de confiar dez sessões a ele.</strong></p></li>
+
+<li><strong>Verifique</strong>
+<pre>/verificar-lote</pre>
+<p>Invoque a skill no Claude Code. Ela roda o auditor, confere o registro do lote contra o que foi prometido, lê um transcript inteiro, e responde <code>all clear</code> ou <code>parar</code> com o motivo em uma linha. Ela é proibida de julgar resultado — nota baixa, custo fora do padrão e célula que contraria a hipótese <strong>não são problema a reportar</strong>.</p></li>
+
+<li><strong>Rode os lotes seguintes</strong>
+<pre>node tools/collect/run-grid.mjs <b>--limite 10</b></pre>
+<p>Mesmo comando, quantas vezes precisar. O driver relê o dataset toda vez, então ele nunca repete o que já foi coletado e ninguém precisa dizer onde estava. Verifique entre um lote e o outro.</p></li>
+
+<li><strong>Termine</strong>
+<pre>node tools/collect/run-grid.mjs</pre>
+<p>Sem <code>--limite</code>, executa tudo que ainda falta.</p></li>
+</ol>
+
+<h2>Quando o driver para</h2>
+<p>Uma sessão que falhe <strong>duas vezes seguidas</strong> interrompe o lote. Isso é intencional: falhar duas vezes na mesma sessão significa que algo está quebrado, e continuar gastaria crédito produzindo mais do mesmo. A saída diz qual sessão, por quê, e quantas do lote não foram executadas.</p>
+<ul>
+<li>O que já foi coletado <strong>não se repete</strong> — conserte e rode o mesmo comando de novo.</li>
+<li>As sessões que chegaram a rodar já foram avaliadas pelo avaliador cego, mesmo com a parada.</li>
+<li>A linha inválida fica no dataset. Quando a repetição der certo, o auditor aceita a inválida porque existe uma válida equivalente.</li>
+</ul>
+
+<h2>Conferir sem gastar nada</h2>
+<pre><span class="c"># oito verificações de integridade; sai 1 se alguma reprovar</span>
+node tools/collect/check-dataset.mjs</pre>
+<p>Pode rodar quantas vezes quiser, inclusive depois da coleta inteira. Não escreve nada em lugar nenhum. As oito verificações: linha inválida sem substituta; coluna vazia fora do previsto; sessão válida não avaliada; digest da imagem constante; versão do CLI constante; plugin carregado em toda sessão P2; transcript íntegro com o número certo de eventos; e nenhum erro reportado pelo CLI.</p>
+
+<div class="note">
+<p>A verificação do digest exclui, <strong>nomeando-as</strong>, as nove sessões coletadas antes de o digest ficar estável — cada uma tem o seu, e nenhuma delas por o ambiente ter mudado. É uma nota, não uma reprovação. A análise precisa saber que, para essas nove, a evidência de que o ambiente era o mesmo não é a coluna: é a imagem base presa por digest, o <code>package-lock.json</code> e o hash da árvore <code>seed/</code>, como o dicionário registra. <strong>Elas mantêm o valor medido e não foram reescritas</strong> — as imagens em que rodaram não existem mais, e trocar valor medido por valor inferido não é coisa que um dataset deva carregar.</p>
+</div>
+
+<h2>Referência de flags do driver</h2>
+<div class="tw">
+<table>
+<thead><tr><th>Flag</th><th>Efeito</th></tr></thead>
+<tbody>
+<tr><td><code>--dry-run</code></td><td>Imprime o plano e sai. Não chama nada, não gasta nada, não grava nada.</td></tr>
+<tr><td><code>--limite N</code></td><td>Executa no máximo N sessões. Sem ela, executa tudo que falta.</td></tr>
+<tr><td><code>--seed S</code></td><td>Reproduz uma ordem anterior. A semente é impressa em toda execução e gravada no registro do lote.</td></tr>
+<tr><td><code>--dataset &lt;caminho&gt;</code></td><td>Usa outro CSV. Serve para ensaio; a coleta real não precisa dela.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note gate">
+<p><strong>O número de repetição não se digita.</strong> O driver conta quantas sessões válidas daquela célula já existem no dataset e usa a próxima. Repetir um número deixou de ser possível.</p>
+</div>
+
+</section>
+
+
+<!-- ══════════════════════════ LEITURAS POSSÍVEIS ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-leituras" aria-labelledby="t-leituras" hidden>
+
+<h2>Sugestões, não conclusões</h2>
+
+<div class="note gate">
+<p><strong>Nada nesta aba é a análise.</strong> São exemplos do que os dados coletados permitem afirmar, levantados agrupando colunas do dataset — sem nenhum teste estatístico e sem pergunta de pesquisa definida.</p>
+<p><strong>A análise real acontece depois</strong>, quando a pergunta de pesquisa e o formato do artigo estiverem definidos. Esta lista existe para que quem for analisar veja rapidamente o que há, escolha o que serve, descarte o resto e crie o que faltar.</p>
+<p>Dois limites valem para tudo aqui: <strong>n é pequeno</strong> — duas sessões por célula em T1, três em T2 — e <strong>são médias e contagens</strong>, não inferência. Separar sinal de ruído é decisão de quem analisa.</p>
+</div>
+
+<h2>Afirmações que os dados sustentam</h2>
+
+<h3>O contexto tem efeito grande em T1, e satura</h3>
+<p><code>taxa_aceitacao</code> em Sonnet, sobre 26 asserções (semente intocada = 0,500):</p>
+<div class="tw">
+<table>
+<thead><tr><th></th><th>O1</th><th>O2</th></tr></thead>
+<tbody>
+<tr><td><strong>P0</strong></td><td class="num">0,692 · 0,808</td><td class="num">0,808 · 0,692</td></tr>
+<tr><td><strong>P1</strong></td><td class="num">1,000 · 1,000</td><td class="num">1,000 · 1,000</td></tr>
+<tr><td><strong>P2</strong></td><td class="num">1,000 · 1,000</td><td class="num">1,000 · 1,000</td></tr>
+</tbody>
+</table>
+</div>
+<p>Oito de oito sessões com contexto acertaram tudo. Nenhuma sessão com contexto ficou abaixo do máximo.</p>
+
+<h3>O harness completo fecha a diferença entre modelos em T1</h3>
+<div class="tw">
+<table>
+<thead><tr><th>Modelo</th><th>P0-O1 (harness mínimo)</th><th>P2-O2 (harness completo)</th><th>Custo médio por sessão</th></tr></thead>
+<tbody>
+<tr><td>Haiku 4.5</td><td class="num">0,750</td><td class="num"><strong>1,000</strong></td><td class="num">$0,24</td></tr>
+<tr><td>Sonnet 5</td><td class="num">0,750</td><td class="num"><strong>1,000</strong></td><td class="num">$0,68</td></tr>
+<tr><td>Opus 5</td><td class="num">0,865</td><td class="num"><strong>1,000</strong></td><td class="num">$2,44</td></tr>
+</tbody>
+</table>
+</div>
+<p>Sem harness os modelos diferem; com harness completo os três empatam no teto. Para esta tarefa bem especificada, <strong>o harness substituiu o modelo</strong> — e o modelo mais barato custa a décima parte do mais caro.</p>
+
+<h3>O efeito do modelo em <code>qualidade</code> é monotônico e não satura</h3>
+<p>Haiku <strong>3,90</strong> · Sonnet <strong>5,23</strong> · Opus <strong>5,60</strong>, numa escala de 0 a 6. Diferente de <code>taxa_aceitacao</code>, esta métrica separa os três modelos em toda condição.</p>
+
+<h3>O contexto aumenta a convergência na tarefa ambígua</h3>
+<p>Sonnet, por célula: P0 <strong>0,50</strong> e <strong>0,70</strong> → P1 <strong>0,80</strong> e <strong>0,80</strong> → P2 <strong>0,80</strong> e <strong>0,70</strong>.</p>
+
+<h3>O modelo mais fraco é quem mais ganha com o harness</h3>
+<div class="tw">
+<table>
+<thead><tr><th>Modelo</th><th>Convergência P0-O1</th><th>Convergência P2-O2</th><th>Variação</th></tr></thead>
+<tbody>
+<tr><td>Haiku 4.5</td><td class="num">0,10</td><td class="num">0,70</td><td><strong>sete vezes</strong></td></tr>
+<tr><td>Sonnet 5</td><td class="num">0,50</td><td class="num">0,70</td><td>+0,20</td></tr>
+<tr><td>Opus 5</td><td class="num">0,60</td><td class="num">0,60</td><td><strong>nenhuma</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>Há interação: o harness compensa onde o modelo é fraco e não faz diferença onde ele já é forte.</p>
+
+<h3>Modelos diferentes convergem para soluções diferentes</h3>
+<p>Ponto de decisão 1 — forma da solução — em seis sessões de cada grupo:</p>
+<div class="tw">
+<table>
+<thead><tr><th>Grupo</th><th>Escolhas registradas</th></tr></thead>
+<tbody>
+<tr><td>Sonnet P1 e P2</td><td><em>endpoint novo</em> nas seis</td></tr>
+<tr><td>Sonnet P0</td><td><em>endpoint novo</em> em 4, <em>combinação</em> em 2</td></tr>
+<tr><td>Opus</td><td><em>combinação</em> em 4, <em>endpoint novo</em> em 2</td></tr>
+<tr><td>Haiku</td><td>3 ausentes, <em>enriquece o erro 409</em> em 2, <em>endpoint novo</em> em 1</td></tr>
+</tbody>
+</table>
+</div>
+<p>A convergência mede <em>se</em> as execuções concordam; isto mostra <em>no que</em> — e difere por modelo. <strong>A convergência sozinha esconde essa diferença.</strong></p>
+
+<h3>Convergência não é qualidade, e agora há evidência</h3>
+<p>A célula de <strong>menor</strong> convergência (Sonnet P0-O1, 0,50) tem a <strong>maior</strong> qualidade média (6,00). Haiku P2-O2 tem convergência 0,70 e qualidade 4,00. O protocolo declarava isso como ameaça de construto; os dados confirmam.</p>
+
+<h3>Nenhuma condição produziu comportamento destrutivo</h3>
+<p><code>travou</code> falso nas 50. <code>travou_build</code> falso nas 50. <code>regressoes</code> igual a 0 em 47 e a 1 em 3.</p>
+
+<h2>Resultados negativos — que também são conclusões</h2>
+
+<div class="note cond">
+<p><strong>Não detectamos diferença entre P1 e P2 em nada que foi medido.</strong> <code>taxa_aceitacao</code> 1,000 nos dois. <code>qualidade</code> em T1: 5,00 nos dois. Em T2: 5,67 contra 5,50. Convergência: 0,80 e 0,80 contra 0,80 e 0,70.</p>
+<p>A forma plugin não superou a forma documento neste experimento. A afirmação honesta é <strong>&#8220;não detectamos diferença&#8221;</strong>, não &#8220;são equivalentes&#8221; — T1 está no teto em ambos, e um teto esconde diferença em vez de refutá-la.</p>
+</div>
+
+<div class="note cond">
+<p><strong>A ordem segmentada não comprou nada mensurável, e custou mais.</strong> Sonnet O1 contra O2: <code>qualidade</code> 5,20 contra 5,27; <code>taxa_aceitacao</code> com o mesmo padrão em todos os níveis de P; custo <strong>$0,62 contra $0,73</strong> — 18% a mais — com 37,3 contra 41,9 turnos.</p>
+</div>
+
+<div class="note cond">
+<p><strong><code>violacoes</code> não discrimina nada.</strong> Vale 0 em 41 das 50 sessões e quatro das oito regras nunca dispararam. A leitura reportável é sobre a base, não sobre as condições: <em>nesta semente, com estas convenções, agentes raramente violam convenção de engenharia — em qualquer condição.</em></p>
+</div>
+
+<div class="note cond">
+<p><strong>O contexto máximo custa mais sem render mais em T2.</strong> Sonnet: P0 $0,64 · P1 $0,63 · <strong>P2 $0,76</strong>, com 43,6 turnos contra 38,0 — e <code>qualidade</code> em T2 não sobe (5,67 para 5,50).</p>
+</div>
+
+<h2>Perguntas que estes dados conseguem responder</h2>
+<ol>
+<li>O harness substitui o modelo? <em>Em T1 integralmente; em T2 só para o modelo fraco.</em></li>
+<li>Segmentar a ordem se paga?</li>
+<li>Onde o harness rende mais?</li>
+<li>A forma do contexto importa — documento contra procedimento invocável?</li>
+<li>Modelos convergem para desenhos diferentes, ponto a ponto?</li>
+<li>Convergência correlaciona com qualidade?</li>
+<li>Qual o custo por ponto de <code>taxa_aceitacao</code>, ou por ponto de convergência, em cada configuração?</li>
+<li>Quanto do efeito de contexto em T1 é transferência de informação de domínio e quanto é processo melhor? <strong>A resposta honesta pode ser &#8220;não separável com estes dados&#8221;</strong> — a decomposição prevista no protocolo dependia de <code>violacoes</code>, que não tem resolução.</li>
+</ol>
+
+<h2>O que estes dados não sustentam</h2>
+<ul>
+<li>Que P2 seja superior a P1, em nada</li>
+<li>Que T1 consiga distinguir P1 de P2 — teto</li>
+<li><code>violacoes</code> como evidência comparativa de qualquer coisa</li>
+<li>Qualquer medida de deriva temporal — o controle não foi executado</li>
+<li>Causalidade sobre <em>por que</em> o contexto ajuda</li>
+<li>Extrapolação para outra stack, outro domínio ou outra família de modelos</li>
+</ul>
+
+</section>
+
+<footer>
+<p>Instrumento congelado em 20/09/2026 (marco M3). Este documento descreve a execução e os artefatos; para o desenho experimental completo veja <code>docs/02-protocolo-experimental.md</code>, e para o significado de cada coluna, <code>docs/06-dicionario-de-dados.md</code>.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  function select(tab){
+    tabs.forEach(function(t){
+      var on = t === tab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    });
+    try { localStorage.setItem('handoff-tab', tab.id); } catch(e) {}
+  }
+  tabs.forEach(function(tab, i){
+    tab.addEventListener('click', function(){ select(tab); });
+    tab.addEventListener('keydown', function(e){
+      var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if(!d) return;
+      e.preventDefault();
+      var next = tabs[(i + d + tabs.length) % tabs.length];
+      next.focus(); select(next);
+    });
+  });
+  try {
+    var saved = localStorage.getItem('handoff-tab');
+    var el = saved && document.getElementById(saved);
+    if (el && tabs.indexOf(el) !== -1) select(el);
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-muh3mfug",
+  "evaluatedAt": "2026-09-25T16:22:00.635Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a nova lógica (assertWindow, assertRoomExists, listAvailableSlots, etc.) fica em `src/modules/bookings/service.ts`, e as rotas apenas chamam `service.listAvailableSlots(request.query)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A query da nova rota é validada via `AvailabilityQuery = Type.Object({ roomId: Type.String({ minLength: 1 }), ... durationMinutes: Type.Optional(Type.Integer({ minimum: 1 })) })` usada no schema da rota."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros novos usam `throw validationFailed(...)` e `throw notFound('Room')`/`notFound('User')`, cujos status codes (400/404) são verificados nos testes, ex.: `expect(response.statusCode).toBe(404);`."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Limites de duração são nomeados em `export const MIN_BOOKING_MINUTES = 30;` e `export const MAX_BOOKING_MINUTES = 480;` em vez de números soltos no service."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes usam `app.inject` e checam status code e corpo da resposta, ex.: `expect(response.json().slots).toEqual([...])`, sem inspecionar detalhes internos do service/repository."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O diff reaproveita utilitários existentes, como `import { MINUTE_IN_MS, durationMinutes, isBefore, parseInstant } from '../../shared/time.js';` e `bookingConflict, notFound, validationFailed` de `shared/errors.ts`, em vez de reimplementá-los."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.038408
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma rota nova GET /bookings/availability com seu próprio schema, service e testes, sem alterar a resposta do 409 nem substituir a listagem existente de /bookings."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O README e o service descrevem e retornam 'slots' correspondentes aos intervalos livres deixados pelas reservas ativas, não os horários ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots são calculados dinamicamente a partir dos gaps entre as reservas ativas (cursor avançando por booking.startsAt/endsAt), sem tamanho fixo de intervalo; o parâmetro durationMinutes apenas filtra os slots já calculados, não define a granularidade dos intervalos."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery exige `from` e `to` como strings obrigatórias, sem valor padrão de dia ou semana quando ausentes."
+      },
+      "5": {
+        "categoria": "ausente",
+        "justificativa": "Não há restrição a horário comercial nem limite fixo de 24h; a janela é inteiramente definida por from/to informados pelo cliente, sem lógica de corte por horário do dia."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige roomId único e a lógica do service consulta repository.listActiveBetween para uma única sala por vez, sem suporte a lista de salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "UTC",
+        "justificativa": "Os exemplos no README e nos testes usam datas ISO com sufixo 'Z' (ex.: 2026-01-05T09:00:00Z) e o código só usa parseInstant/Date sem qualquer conversão ou parâmetro de fuso, tratando tudo como instantes UTC."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'offers the whole window when the room has no booking' mostra que, sem reservas, o slot retornado é a janela inteira de from a to."
+      },
+      "9": {
+        "categoria": "filtrado",
+        "justificativa": "O service ajusta 'start' para max(from, now) e o teste 'never offers a slot that has already begun' confirma que trechos passados da janela são removidos do resultado."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro 409 continua sendo criado por bookingConflict(conflict.id) exatamente como antes, sem novo campo sugerindo horários alternativos; os testes de conflito só checam conflictingBookingId, igual ao comportamento anterior."
+      }
+    },
+    "costUsd": 0.040702
+  },
+  "totalCostUsd": 0.07911
+}

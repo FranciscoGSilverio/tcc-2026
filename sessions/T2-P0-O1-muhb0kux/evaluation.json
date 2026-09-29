@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-muhb0kux",
+  "evaluatedAt": "2026-09-25T18:53:49.933Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica nova (conflitos, sugestões, disponibilidade, validação de janela) está em service.ts (bookings/service.ts e availability/service.ts), enquanto routes.ts apenas chama `service.createBooking`, `service.searchAvailability`, etc."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "As novas rotas usam schemas Typebox como `RoomAvailabilityQuery`, `SearchAvailabilityQuery` e `RoomAvailabilityParams` aplicados via `schema: { querystring, params, response }` em routes.ts."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "O diff lança erros tipados como `notFound('Room')` (404), `bookingConflict(...)` (409) e `validationFailed(...)` (400) em service.ts, todos com AppError e status definido."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Valores como `MAX_WINDOW_DAYS = 31`, `SUGGESTION_HORIZON_MS = 7 * DAY_IN_MS`, `MAX_SUGGESTIONS = 3` e `DAY_IN_MS` estão nomeados como constantes em vez de literais soltos."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os testes em tests/availability.test.ts e tests/bookings.test.ts fazem requisições HTTP via `app.inject` e verificam status/JSON de resposta, sem acessar detalhes internos de implementação."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O código novo reusa `parseInstant`, `MINUTE_IN_MS`, `normalizeLimit/normalizeOffset/paginated`, `errorBody`/`AppError` e `DateString` do shared/ em vez de reimplementá-los, como em `import { parseInstant } from '../../shared/time.js'` e `paginated(data, total, limit, offset)`."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.049264
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "combinação",
+        "justificativa": "O diff cria endpoints novos (/rooms/:id/availability e /availability) e também enriquece o erro 409 com 'details.suggestions', combinando as duas abordagens."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "Os endpoints de disponibilidade retornam 'slots' calculados por freeSlots(), representando os intervalos livres, não os ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "freeSlots() calcula os gaps reais entre as reservas existentes (mergeIntervals + clipping), sem fatiar em blocos fixos; durationMinutes só filtra o tamanho mínimo do gap, não define granularidade fixa."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "Os schemas exigem 'from' e 'to' como strings obrigatórias e o teste 'requires the window bounds' confirma erro 400 quando ausentes, sem valor padrão de dia/semana."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há restrição a horário comercial nem parâmetro de configuração; a janela aceita qualquer intervalo de horas dentro do limite de 31 dias, como mostram os testes com horas de 6h a 20h."
+      },
+      "6": {
+        "categoria": "todas",
+        "justificativa": "O endpoint /availability lista todas as salas (paginadas), filtráveis apenas por capacidade, sem parâmetro para selecionar IDs específicos de salas."
+      },
+      "7": {
+        "categoria": "UTC",
+        "justificativa": "Datas são tratadas como instantes ISO e os testes usam Date.UTC(...) para construir os horários, sem qualquer conversão para fuso local."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'reports the whole window as free when nothing is booked' mostra que uma sala sem reservas retorna o slot inteiro da janela como livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Não há nenhuma lógica no diff que filtre ou trate horários passados; apenas assertOrderedRange checa se endsAt > startsAt, sem comparação com o momento atual."
+      },
+      "10": {
+        "categoria": "passa a sugerir alternativas no 409",
+        "justificativa": "bookingConflict agora recebe 'suggestions' e o corpo do erro 409 passa a incluir 'details.suggestions' com até 3 horários alternativos livres."
+      }
+    },
+    "costUsd": 0.057887999999999995
+  },
+  "totalCostUsd": 0.107152
+}

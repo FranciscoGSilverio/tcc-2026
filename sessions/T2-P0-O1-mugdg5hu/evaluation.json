@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P0-O1-mugdg5hu",
+  "evaluatedAt": "2026-09-25T03:18:34.259Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "A lógica de cálculo de slots disponíveis está em service.ts (getAvailableSlots), a rota só faz parseInstant e chama o serviço: 'return service.getAvailableSlots(request.query.roomId, from, to);'"
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A nova query é validada via schema TypeBox: 'export const AvailableSlotsQuery = Type.Object({ roomId: Type.String({ minLength: 1 }), from: Type.String({ minLength: 1 }), to: Type.String({ minLength: 1 }) });'"
+      },
+      "3": {
+        "resposta": "nao",
+        "justificativa": "Não há tratamento explícito de novos casos de erro (ex.: roomId inexistente, from > to) no service.getAvailableSlots; apenas o parseInstant reaproveitado lança erro, sem checagem adicional para o novo endpoint."
+      },
+      "4": {
+        "resposta": "nao",
+        "justificativa": "O diff não introduz nenhuma constante nomeada para valores fixos (durações, janelas, limites) relacionados à nova funcionalidade de slots."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes fazem requisições HTTP via app.inject e verificam status code e corpo da resposta, ex.: 'expect(response.statusCode).toBe(200); const slots = response.json().slots;'"
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O código reaproveita a utilidade existente parseInstant de shared/time.ts: 'import { parseInstant } from '../../shared/time.js';' em vez de reimplementar o parsing de datas."
+      }
+    },
+    "qualidade": 4,
+    "costUsd": 0.032966
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma nova rota GET /bookings/available-slots, com novo schema, service e repository, sem alterar o contrato de erro do POST existente."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "O service getAvailableSlots calcula os gaps entre reservas ativas e retorna esses intervalos como 'slots' disponíveis (livres), não os ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "Os slots são calculados dinamicamente a partir dos intervalos entre o início/fim das reservas existentes (findConflictsInRange), não há fatiamento em blocos fixos nem parâmetro de granularidade."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailableSlotsQuery exige `from` e `to` como strings obrigatórias (minLength:1, sem Type.Optional e sem default), portanto a janela deve ser sempre informada pelo cliente."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há qualquer lógica de horário comercial ou configuração de limite; o cálculo de slots cobre livremente todo o intervalo [from, to) informado, incluindo qualquer hora do dia."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailableSlotsQuery exige um único `roomId: Type.String`, e o service/repository operam sobre uma sala por vez, sem suporte a lista de salas ou 'todas'."
+      },
+      "7": {
+        "categoria": "UTC",
+        "justificativa": "O service serializa os limites dos slots com `.toISOString()` (UTC) e usa parseInstant para converter as entradas; não há campo explícito de timezone no contrato, mas a normalização interna e de saída é em UTC."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'returns available slots with no bookings' confirma que, sem reservas na sala, o endpoint retorna um único slot cobrindo todo o intervalo [from, to), ou seja, tudo livre."
+      },
+      "9": {
+        "categoria": "ausente",
+        "justificativa": "Nem o service nem os testes tratam explicitamente de filtrar ou incluir horários passados; o cálculo apenas usa o intervalo [from, to) fornecido pelo cliente, sem comparação com o momento atual."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro 409 continua sendo lançado da mesma forma (bookingConflict(conflict.id)), sem nenhuma alteração no payload do erro para sugerir horários alternativos; a única mudança foi na lógica de detecção de conflito (findConflict) para cobrir sobreposições completas."
+      }
+    },
+    "costUsd": 0.02847
+  },
+  "totalCostUsd": 0.061436000000000004
+}

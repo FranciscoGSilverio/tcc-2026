@@ -1,0 +1,81 @@
+{
+  "sessionId": "T2-P2-O2-mug80u5e",
+  "evaluatedAt": "2026-09-25T00:42:43.873Z",
+  "model": "claude-sonnet-5",
+  "checklist": {
+    "answers": {
+      "1": {
+        "resposta": "sim",
+        "justificativa": "Toda a lógica de conflito, janelas de disponibilidade e regras de duração fica em service.ts (assertBookingWindow, assertConflictFree, freeSlots, listAvailability), enquanto routes.ts apenas chama `service.listAvailability(request.query)`."
+      },
+      "2": {
+        "resposta": "sim",
+        "justificativa": "A nova rota usa `AvailabilityQuery` como schema de querystring: `{ schema: { querystring: AvailabilityQuery, response: { 200: AvailabilityResponse } } }`."
+      },
+      "3": {
+        "resposta": "sim",
+        "justificativa": "Erros de validação e conflito lançam AppError com código apropriado, ex.: `throw validationFailed('Booking cannot start in the past', ...)` e `throw bookingConflict(conflict.id)`, além de `getRoom`/`getUser` que produzem 404."
+      },
+      "4": {
+        "resposta": "sim",
+        "justificativa": "Valores como duração mínima/máxima e janela de disponibilidade foram nomeados em constantes: `const MIN_BOOKING_MINUTES = 30; const MAX_BOOKING_MINUTES = 480; const MAX_AVAILABILITY_DAYS = 31; const DAY_IN_MINUTES = 1440;`."
+      },
+      "5": {
+        "resposta": "sim",
+        "justificativa": "Os novos testes usam `app.inject` e verificam apenas status code e corpo da resposta, ex.: `expect(response.statusCode).toBe(409); expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);`."
+      },
+      "6": {
+        "resposta": "sim",
+        "justificativa": "O serviço reaproveita utilitários existentes como `parseInstant`, `durationMinutes` e `isBefore` de `shared/time.ts` e `validationFailed`/`bookingConflict`/`notFound` de `shared/errors.ts`, em vez de reimplementar essa lógica."
+      }
+    },
+    "qualidade": 6,
+    "costUsd": 0.035618
+  },
+  "decisionPoints": {
+    "answers": {
+      "1": {
+        "categoria": "endpoint novo",
+        "justificativa": "O diff adiciona uma rota GET /bookings/availability inteiramente nova, com seu próprio schema, service e testes, em vez de modificar a listagem existente ou o corpo do erro 409."
+      },
+      "2": {
+        "categoria": "horários livres",
+        "justificativa": "A função freeSlots calcula e retorna os intervalos livres (gaps) entre reservas ativas, e o schema AvailabilityResponse expõe 'slots' como horários disponíveis, não ocupados."
+      },
+      "3": {
+        "categoria": "derivada das reservas",
+        "justificativa": "freeSlots constrói os slots a partir dos gaps entre startsAt/endsAt das reservas existentes (cursor avançando conforme bookings), não usando uma grade fixa nem um parâmetro de granularidade."
+      },
+      "4": {
+        "categoria": "obrigatória no parâmetro",
+        "justificativa": "AvailabilityQuery define 'from' e 'to' como Type.String obrigatórios (sem Optional), e o service lança validationFailed se ausentes/ inconsistentes, não há default de dia ou semana."
+      },
+      "5": {
+        "categoria": "24 horas",
+        "justificativa": "Não há nenhuma restrição a horário comercial nem configuração de limite; a janela é livre entre from/to (até 31 dias), cobrindo qualquer hora do dia."
+      },
+      "6": {
+        "categoria": "uma sala",
+        "justificativa": "AvailabilityQuery exige roomId como string única obrigatória, e o service chama getRoom(query.roomId) para uma única sala por vez."
+      },
+      "7": {
+        "categoria": "ausente",
+        "justificativa": "O diff não introduz nenhuma indicação explícita de fuso horário (UTC, local ou contrato explícito); apenas reutiliza parseInstant/DateString já existentes sem tratar o tema."
+      },
+      "8": {
+        "categoria": "tudo livre",
+        "justificativa": "O teste 'offers the whole window when the room is free' confirma que, sem reservas, o slot retornado é o intervalo completo from-to, não uma lista vazia nem 404."
+      },
+      "9": {
+        "categoria": "filtrado",
+        "justificativa": "O código clampa windowStart = latest(from, new Date()) e o teste 'never offers a slot that has already started' confirma que horários passados são removidos da janela considerada."
+      },
+      "10": {
+        "categoria": "inalterado",
+        "justificativa": "O erro bookingConflict continua sendo lançado da mesma forma (apenas com conflictingBookingId), sem novos campos sugerindo horários alternativos no 409; os testes de conflito continuam checando apenas esse campo."
+      }
+    },
+    "costUsd": 0.033352
+  },
+  "totalCostUsd": 0.06897
+}
