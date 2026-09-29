@@ -282,13 +282,16 @@
   <line x1="20" y1="350" x2="960" y2="350" stroke="var(--line)"/>
   <text class="s-big" x="20"  y="392" fill="var(--ink)">50</text>
   <text class="s-sm"  x="20"  y="412" fill="var(--soft)">sessões no total</text>
-  <text class="s-big" x="180" y="392" fill="var(--ink)">8</text>
-  <text class="s-sm"  x="180" y="412" fill="var(--soft)">já coletadas</text>
-  <text class="s-big" x="330" y="392" fill="var(--gate)">42</text>
-  <text class="s-sm"  x="330" y="412" fill="var(--soft)">a coletar</text>
+  <text class="s-big" x="180" y="392" fill="var(--instr)">50</text>
+  <text class="s-sm"  x="180" y="412" fill="var(--soft)">coletadas</text>
+  <text class="s-big" x="330" y="392" fill="var(--instr)">0</text>
+  <text class="s-sm"  x="330" y="412" fill="var(--soft)">faltando</text>
+  <text class="s-sm"  x="470" y="384" fill="var(--soft)">coleta encerrada em 26/09/2026</text>
+  <text class="s-sm"  x="470" y="402" fill="var(--soft)">auditor: 8 de 8 verificações passam</text>
+  <text class="s-sm"  x="470" y="420" fill="var(--soft)">4 linhas inválidas, cada uma com substituta e motivo</text>
 </svg>
 </div>
-<figcaption>Contagens de 25/09/2026. As células de modelo só repetem as duas configurações extremas — sem contexto e ordem simples, contra contexto máximo e ordem segmentada — para ver se o efeito do contexto e da ordem depende do modelo.</figcaption>
+<figcaption>As células de modelo só repetem as duas configurações extremas — sem contexto e ordem simples, contra contexto máximo e ordem segmentada — para ver se o efeito do contexto e da ordem depende do modelo.</figcaption>
 </figure>
 
 <div class="note cond">
@@ -749,6 +752,26 @@
 <p>Um <code>resultados.csv</code> com <strong>50 linhas válidas</strong> e 41 colunas; um dicionário que define cada coluna e cada vazio; uma pasta de evidência por sessão; um script que calcula a convergência de T2 a partir das linhas; e um auditor que prova, de forma reexecutável, que o dataset está íntegro.</p>
 </div>
 
+<h2>Cinco coisas que a análise precisa saber antes de abrir o dataset</h2>
+<p>Todas descobertas durante a coleta, todas declaradas na seção 8 do protocolo, e <strong>nenhuma delas motivou recoleta</strong> — são limitações do instrumento, não defeitos dos dados.</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>O quê</th><th>Consequência para a leitura</th></tr></thead>
+<tbody>
+<tr><td><strong>Teto em <code>taxa_aceitacao</code> para P1 e P2</strong><br>Todas as sessões de T1 em Sonnet com contexto: 26/26. P0: 18 e 21 de 26.</td><td>O efeito de <em>ter</em> contexto é grande e inequívoco. <strong>P1 contra P2 não pode ser lido de T1</strong> — os dois estão saturados. Se houver diferença, ela vem de <code>qualidade</code> e dos pontos de decisão de T2.</td></tr>
+<tr><td><strong>Piso em <code>violacoes</code></strong><br>0 em 41 das 50 sessões, 1 nas outras 9, nunca mais que 1. Quatro das oito regras nunca foram violadas.</td><td>Reportável como resultado — nesta base os agentes raramente violam convenção, em qualquer condição — mas <strong>sem resolução para comparar condições</strong>. O protocolo contava com ela como verificação independente do efeito de contexto; não dá.</td></tr>
+<tr><td><strong>Dois pontos de decisão sem variância</strong><br>Pontos 5 e 8 receberam sempre a mesma categoria quando decididos.</td><td>Contribuem convergência de graça, igualmente em toda condição. O segundo recorte do script <strong>não</strong> os remove — ele só corta pontos ausentes em todas as 30, e nenhum é. Tratar ou não é decisão da análise, e precisa ser declarada.</td></tr>
+<tr><td><strong>Teto de turnos assimétrico</strong><br>O1 tem um teto por sessão; O2, um por etapa.</td><td>O2 dispõe de quatro vezes o orçamento de turnos. Comparação de esforço entre ordens tem de ser <strong>por unidade de custo</strong>.</td></tr>
+<tr><td><strong>O controle de deriva não foi executado</strong><br>Cortado por supor coleta numa janela; a coleta ocorreu em quatro, entre 18 e 26/09.</td><td><code>cli_version</code> é constante nas 50 e <code>model_version</code> é único por modelo, então não há evidência de deriva — mas isso é <strong>ausência de evidência</strong>, não a medida que o controle teria dado.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+<p>Mais duas, já descritas nas abas anteriores: <strong>nove sessões anteriores ao digest estável</strong>, que mantêm o valor medido e são nomeadas pelo auditor a cada execução; e <strong>a fronteira dos passos de O2 ser instrução</strong>, com uma sessão em 23 que implementou durante a exploração — recalculável por <code>node tools/analysis/aderencia-o2.mjs</code>.</p>
+</div>
+
 <h2>O que a coleta deliberadamente não entrega</h2>
 <ul>
 <li><strong>Nenhuma coluna de conclusão.</strong> O dataset não diz qual condição é melhor.</li>
@@ -761,6 +784,10 @@
 
 <!-- ══════════════════════════ COMO RODAR ══════════════════════════ -->
 <section class="panel" role="tabpanel" id="p-rodar" aria-labelledby="t-rodar" hidden>
+
+<div class="note instr">
+<p><strong>A coleta está encerrada.</strong> As 50 sessões foram coletadas entre 18 e 26 de setembro de 2026, em sete lotes. O que segue é o registro de como foram produzidas — serve para reproduzir a coleta, conferir um número, ou recoletar uma célula se a análise encontrar motivo. O auditor continua valendo e pode rodar a qualquer momento.</p>
+</div>
 
 <h2>Antes de começar</h2>
 <p>Uma vez só, e não de novo no meio da coleta — a imagem é uma constante declarada do experimento:</p>
@@ -812,7 +839,7 @@ node runner/build-image.mjs</pre>
 <ol class="steps">
 <li><strong>Veja o que vai rodar, sem gastar nada</strong>
 <pre>node tools/collect/run-grid.mjs --dry-run</pre>
-<p>Imprime a semente do embaralhamento, quantas faltam por bloco, e a lista numerada. Em 25/09/2026 dizia <code>faltam 42 sessões (principal: 23, modelo: 19)</code>. Confira esse número antes de autorizar qualquer gasto.</p></li>
+<p>Imprime a semente do embaralhamento, quantas faltam por bloco, e a lista numerada. Com a coleta encerrada, imprime <code>faltam 0 sessões</code>. Confira esse número antes de autorizar qualquer gasto.</p></li>
 
 <li><strong>Rode o primeiro lote pequeno</strong>
 <pre>node tools/collect/run-grid.mjs <b>--limite 2</b></pre>
