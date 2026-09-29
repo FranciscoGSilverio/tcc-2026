@@ -140,6 +140,22 @@
   .s-ln-c{ stroke:var(--cond); stroke-width:1.5; fill:none }
   .s-ln-i{ stroke:var(--instr); stroke-width:1.4; fill:none; stroke-dasharray:5 3 }
 
+  /* --- botões de link para o repositório --- */
+  .links{ display:flex; flex-wrap:wrap; gap:.5rem; margin:1rem 0 }
+  a.ghbtn{
+    display:inline-flex; align-items:center; gap:.5rem;
+    border:1px solid var(--line); border-radius:5px; background:var(--surface);
+    padding:.55rem .8rem; font-size:.85rem; font-weight:550;
+    color:var(--ink); text-decoration:none; line-height:1.3;
+  }
+  a.ghbtn:hover{ border-color:var(--instr); color:var(--instr) }
+  a.ghbtn:focus-visible{ outline:2px solid var(--instr); outline-offset:2px }
+  a.ghbtn .path{ font-family:var(--mono); font-size:.82em; color:var(--soft) }
+  a.ghbtn:hover .path{ color:var(--instr) }
+  a.ghbtn::after{ content:"\2197"; color:var(--soft); font-size:.9em }
+  a.ghbtn:hover::after{ color:var(--instr) }
+  .private{ font-size:.79rem; color:var(--soft); margin:.4rem 0 0 }
+
   footer{ border-top:1px solid var(--line); padding-block:1.4rem 2.5rem; font-size:.8rem; color:var(--soft) }
   footer p{ max-width:70ch }
 </style>
@@ -712,6 +728,12 @@
 <p><strong>A única coisa que você precisa saber antes de abrir o CSV:</strong> uma célula vazia tem três significados, e o dicionário abre enumerando os três. &#8220;Não se aplica&#8221; (<code>taxa_aceitacao</code> em T2, <code>decisao_*</code> em T1, <code>invalid_reason</code> em sessão válida). &#8220;Ainda não medido&#8221;. E <strong>nunca</strong> &#8220;medido e vale zero&#8221; — zero é escrito como zero.</p>
 </div>
 
+<div class="links">
+  <a class="ghbtn" href="https://github.com/FranciscoGSilverio/tcc-2026/blob/main/resultados.csv">Abrir o dataset no GitHub <span class="path">resultados.csv</span></a>
+  <a class="ghbtn" href="https://github.com/FranciscoGSilverio/tcc-2026/blob/main/docs/06-dicionario-de-dados.md">Dicionário de dados <span class="path">docs/06-dicionario-de-dados.md</span></a>
+</div>
+<p class="private">O GitHub renderiza o CSV como tabela ordenável. O repositório é <strong>privado</strong> — os links abrem só para quem tem acesso a ele.</p>
+
 <p><code>resultados-piloto.csv</code> é um arquivo separado com uma linha: a sessão piloto de 17/09, anterior ao congelamento do protocolo. <strong>Não é dado de coleta</strong> e não deve entrar na análise.</p>
 
 <h3>Camada 2 — os artefatos por sessão</h3>
@@ -745,8 +767,20 @@
 </table>
 </div>
 
+<div class="links">
+  <a class="ghbtn" href="https://github.com/FranciscoGSilverio/tcc-2026/tree/main/sessions">Navegar as 55 pastas de sessão <span class="path">sessions/</span></a>
+  <a class="ghbtn" href="https://github.com/FranciscoGSilverio/tcc-2026/tree/main/sessions/T1-P2-O2-muh9oh1r">Uma sessão de exemplo, completa <span class="path">sessions/T1-P2-O2-muh9oh1r</span></a>
+  <a class="ghbtn" href="https://github.com/FranciscoGSilverio/tcc-2026/blob/main/sessions/T1-P2-O2-muh9oh1r/transcript.md">Ler essa sessão <span class="path">transcript.md</span></a>
+  <a class="ghbtn" href="https://github.com/FranciscoGSilverio/tcc-2026/blob/main/sessions/T1-P2-O2-muh9oh1r/session.diff">O diff que ela produziu <span class="path">session.diff</span></a>
+</div>
+<p class="private">A sessão de exemplo é T1-P2-O2 em Opus, com as quatro etapas encadeadas de O2 visíveis em <code>transcript-1</code> a <code>transcript-4</code>. Para <em>ler</em> uma sessão use o <code>transcript.md</code>: o <code>.jsonl</code> passa de meio megabyte nas sessões maiores e o GitHub o mostra como texto puro. São 55 pastas e não 50 porque as quatro sessões inválidas e a piloto também ficaram arquivadas.</p>
+
 <h3>Camada 3 — o registro de cada lote</h3>
 <p><code>sessions/lotes/&lt;instante&gt;.json</code>: o que o lote prometeu executar, o que de fato executou, e onde parou se parou. É o que permite responder &#8220;a coleta rodou inteira?&#8221; sem depender da memória de quem rodou.</p>
+
+<div class="links">
+  <a class="ghbtn" href="https://github.com/FranciscoGSilverio/tcc-2026/tree/main/sessions/lotes">Os sete registros de lote <span class="path">sessions/lotes/</span></a>
+</div>
 
 <h2>O que a análise recebe, em uma frase</h2>
 <div class="note instr">
