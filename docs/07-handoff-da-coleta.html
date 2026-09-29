@@ -161,6 +161,7 @@
   <button role="tab" id="t-instr"   aria-controls="p-instr"   aria-selected="false">Os instrumentos</button>
   <button role="tab" id="t-artef"   aria-controls="p-artef"   aria-selected="false">Os artefatos</button>
   <button role="tab" id="t-rodar"   aria-controls="p-rodar"   aria-selected="false">Como rodar</button>
+  <button role="tab" id="t-leituras" aria-controls="p-leituras" aria-selected="false">Leituras possíveis</button>
 </nav>
 
 <!-- ══════════════════════════ VISÃO GERAL ══════════════════════════ -->
@@ -891,6 +892,130 @@ node tools/collect/check-dataset.mjs</pre>
 <div class="note gate">
 <p><strong>O número de repetição não se digita.</strong> O driver conta quantas sessões válidas daquela célula já existem no dataset e usa a próxima. Repetir um número deixou de ser possível.</p>
 </div>
+
+</section>
+
+
+<!-- ══════════════════════════ LEITURAS POSSÍVEIS ══════════════════════════ -->
+<section class="panel" role="tabpanel" id="p-leituras" aria-labelledby="t-leituras" hidden>
+
+<h2>Sugestões, não conclusões</h2>
+
+<div class="note gate">
+<p><strong>Nada nesta aba é a análise.</strong> São exemplos do que os dados coletados permitem afirmar, levantados agrupando colunas do dataset — sem nenhum teste estatístico e sem pergunta de pesquisa definida.</p>
+<p><strong>A análise real acontece depois</strong>, quando a pergunta de pesquisa e o formato do artigo estiverem definidos. Esta lista existe para que quem for analisar veja rapidamente o que há, escolha o que serve, descarte o resto e crie o que faltar.</p>
+<p>Dois limites valem para tudo aqui: <strong>n é pequeno</strong> — duas sessões por célula em T1, três em T2 — e <strong>são médias e contagens</strong>, não inferência. Separar sinal de ruído é decisão de quem analisa.</p>
+</div>
+
+<h2>Afirmações que os dados sustentam</h2>
+
+<h3>O contexto tem efeito grande em T1, e satura</h3>
+<p><code>taxa_aceitacao</code> em Sonnet, sobre 26 asserções (semente intocada = 0,500):</p>
+<div class="tw">
+<table>
+<thead><tr><th></th><th>O1</th><th>O2</th></tr></thead>
+<tbody>
+<tr><td><strong>P0</strong></td><td class="num">0,692 · 0,808</td><td class="num">0,808 · 0,692</td></tr>
+<tr><td><strong>P1</strong></td><td class="num">1,000 · 1,000</td><td class="num">1,000 · 1,000</td></tr>
+<tr><td><strong>P2</strong></td><td class="num">1,000 · 1,000</td><td class="num">1,000 · 1,000</td></tr>
+</tbody>
+</table>
+</div>
+<p>Oito de oito sessões com contexto acertaram tudo. Nenhuma sessão com contexto ficou abaixo do máximo.</p>
+
+<h3>O harness completo fecha a diferença entre modelos em T1</h3>
+<div class="tw">
+<table>
+<thead><tr><th>Modelo</th><th>P0-O1 (harness mínimo)</th><th>P2-O2 (harness completo)</th><th>Custo médio por sessão</th></tr></thead>
+<tbody>
+<tr><td>Haiku 4.5</td><td class="num">0,750</td><td class="num"><strong>1,000</strong></td><td class="num">$0,24</td></tr>
+<tr><td>Sonnet 5</td><td class="num">0,750</td><td class="num"><strong>1,000</strong></td><td class="num">$0,68</td></tr>
+<tr><td>Opus 5</td><td class="num">0,865</td><td class="num"><strong>1,000</strong></td><td class="num">$2,44</td></tr>
+</tbody>
+</table>
+</div>
+<p>Sem harness os modelos diferem; com harness completo os três empatam no teto. Para esta tarefa bem especificada, <strong>o harness substituiu o modelo</strong> — e o modelo mais barato custa a décima parte do mais caro.</p>
+
+<h3>O efeito do modelo em <code>qualidade</code> é monotônico e não satura</h3>
+<p>Haiku <strong>3,90</strong> · Sonnet <strong>5,23</strong> · Opus <strong>5,60</strong>, numa escala de 0 a 6. Diferente de <code>taxa_aceitacao</code>, esta métrica separa os três modelos em toda condição.</p>
+
+<h3>O contexto aumenta a convergência na tarefa ambígua</h3>
+<p>Sonnet, por célula: P0 <strong>0,50</strong> e <strong>0,70</strong> → P1 <strong>0,80</strong> e <strong>0,80</strong> → P2 <strong>0,80</strong> e <strong>0,70</strong>.</p>
+
+<h3>O modelo mais fraco é quem mais ganha com o harness</h3>
+<div class="tw">
+<table>
+<thead><tr><th>Modelo</th><th>Convergência P0-O1</th><th>Convergência P2-O2</th><th>Variação</th></tr></thead>
+<tbody>
+<tr><td>Haiku 4.5</td><td class="num">0,10</td><td class="num">0,70</td><td><strong>sete vezes</strong></td></tr>
+<tr><td>Sonnet 5</td><td class="num">0,50</td><td class="num">0,70</td><td>+0,20</td></tr>
+<tr><td>Opus 5</td><td class="num">0,60</td><td class="num">0,60</td><td><strong>nenhuma</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>Há interação: o harness compensa onde o modelo é fraco e não faz diferença onde ele já é forte.</p>
+
+<h3>Modelos diferentes convergem para soluções diferentes</h3>
+<p>Ponto de decisão 1 — forma da solução — em seis sessões de cada grupo:</p>
+<div class="tw">
+<table>
+<thead><tr><th>Grupo</th><th>Escolhas registradas</th></tr></thead>
+<tbody>
+<tr><td>Sonnet P1 e P2</td><td><em>endpoint novo</em> nas seis</td></tr>
+<tr><td>Sonnet P0</td><td><em>endpoint novo</em> em 4, <em>combinação</em> em 2</td></tr>
+<tr><td>Opus</td><td><em>combinação</em> em 4, <em>endpoint novo</em> em 2</td></tr>
+<tr><td>Haiku</td><td>3 ausentes, <em>enriquece o erro 409</em> em 2, <em>endpoint novo</em> em 1</td></tr>
+</tbody>
+</table>
+</div>
+<p>A convergência mede <em>se</em> as execuções concordam; isto mostra <em>no que</em> — e difere por modelo. <strong>A convergência sozinha esconde essa diferença.</strong></p>
+
+<h3>Convergência não é qualidade, e agora há evidência</h3>
+<p>A célula de <strong>menor</strong> convergência (Sonnet P0-O1, 0,50) tem a <strong>maior</strong> qualidade média (6,00). Haiku P2-O2 tem convergência 0,70 e qualidade 4,00. O protocolo declarava isso como ameaça de construto; os dados confirmam.</p>
+
+<h3>Nenhuma condição produziu comportamento destrutivo</h3>
+<p><code>travou</code> falso nas 50. <code>travou_build</code> falso nas 50. <code>regressoes</code> igual a 0 em 47 e a 1 em 3.</p>
+
+<h2>Resultados negativos — que também são conclusões</h2>
+
+<div class="note cond">
+<p><strong>Não detectamos diferença entre P1 e P2 em nada que foi medido.</strong> <code>taxa_aceitacao</code> 1,000 nos dois. <code>qualidade</code> em T1: 5,00 nos dois. Em T2: 5,67 contra 5,50. Convergência: 0,80 e 0,80 contra 0,80 e 0,70.</p>
+<p>A forma plugin não superou a forma documento neste experimento. A afirmação honesta é <strong>&#8220;não detectamos diferença&#8221;</strong>, não &#8220;são equivalentes&#8221; — T1 está no teto em ambos, e um teto esconde diferença em vez de refutá-la.</p>
+</div>
+
+<div class="note cond">
+<p><strong>A ordem segmentada não comprou nada mensurável, e custou mais.</strong> Sonnet O1 contra O2: <code>qualidade</code> 5,20 contra 5,27; <code>taxa_aceitacao</code> com o mesmo padrão em todos os níveis de P; custo <strong>$0,62 contra $0,73</strong> — 18% a mais — com 37,3 contra 41,9 turnos.</p>
+</div>
+
+<div class="note cond">
+<p><strong><code>violacoes</code> não discrimina nada.</strong> Vale 0 em 41 das 50 sessões e quatro das oito regras nunca dispararam. A leitura reportável é sobre a base, não sobre as condições: <em>nesta semente, com estas convenções, agentes raramente violam convenção de engenharia — em qualquer condição.</em></p>
+</div>
+
+<div class="note cond">
+<p><strong>O contexto máximo custa mais sem render mais em T2.</strong> Sonnet: P0 $0,64 · P1 $0,63 · <strong>P2 $0,76</strong>, com 43,6 turnos contra 38,0 — e <code>qualidade</code> em T2 não sobe (5,67 para 5,50).</p>
+</div>
+
+<h2>Perguntas que estes dados conseguem responder</h2>
+<ol>
+<li>O harness substitui o modelo? <em>Em T1 integralmente; em T2 só para o modelo fraco.</em></li>
+<li>Segmentar a ordem se paga?</li>
+<li>Onde o harness rende mais?</li>
+<li>A forma do contexto importa — documento contra procedimento invocável?</li>
+<li>Modelos convergem para desenhos diferentes, ponto a ponto?</li>
+<li>Convergência correlaciona com qualidade?</li>
+<li>Qual o custo por ponto de <code>taxa_aceitacao</code>, ou por ponto de convergência, em cada configuração?</li>
+<li>Quanto do efeito de contexto em T1 é transferência de informação de domínio e quanto é processo melhor? <strong>A resposta honesta pode ser &#8220;não separável com estes dados&#8221;</strong> — a decomposição prevista no protocolo dependia de <code>violacoes</code>, que não tem resolução.</li>
+</ol>
+
+<h2>O que estes dados não sustentam</h2>
+<ul>
+<li>Que P2 seja superior a P1, em nada</li>
+<li>Que T1 consiga distinguir P1 de P2 — teto</li>
+<li><code>violacoes</code> como evidência comparativa de qualquer coisa</li>
+<li>Qualquer medida de deriva temporal — o controle não foi executado</li>
+<li>Causalidade sobre <em>por que</em> o contexto ajuda</li>
+<li>Extrapolação para outra stack, outro domínio ou outra família de modelos</li>
+</ul>
 
 </section>
 
