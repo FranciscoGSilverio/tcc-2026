@@ -1,0 +1,15 @@
+{
+  "name": "tcc-2026",
+  "owner": {
+    "name": "Equipe do TCC 2026 — Engenharia de Software, INATEL"
+  },
+  "description": "Plugin da condição P2 do estudo sobre engenharia de harness para agentes de IA.",
+  "plugins": [
+    {
+      "name": "meeting-rooms-conventions",
+      "source": "./plugin/meeting-rooms-conventions",
+      "description": "Convenções e procedimentos do projeto de salas de reunião — a condição P2 do estudo, empacotada sem alteração.",
+      "version": "1.0.0"
+    }
+  ]
+}
