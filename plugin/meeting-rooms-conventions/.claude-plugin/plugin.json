@@ -1,0 +1,8 @@
+{
+  "name": "meeting-rooms-conventions",
+  "description": "Convenções e procedimentos do projeto de salas de reunião",
+  "version": "1.0.0",
+  "homepage": "https://github.com/FranciscoGSilverio/tcc-2026/tree/main/plugin/meeting-rooms-conventions",
+  "repository": "https://github.com/FranciscoGSilverio/tcc-2026",
+  "keywords": ["convencoes", "fastify", "prisma", "typescript", "testes"]
+}
