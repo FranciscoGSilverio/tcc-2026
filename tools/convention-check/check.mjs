@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { copyIn, exec } from '../../runner/lib/container.mjs';
 import { diffRules } from './diff-rules.mjs';
+import { pathToFileURL } from 'node:url';
 
 // Confirmed empirically against the frozen seed/eslint.config.js (see
 // README.md "Conferência empírica"): a production file combining `any`,
@@ -186,6 +187,9 @@ async function main() {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+// Compared as file URLs, not as a pathname string: on Windows the URL's
+// pathname is /C:/... while argv[1] is C:\..., and the string comparison
+// made every CLI here exit 0 without running.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }

@@ -11,6 +11,7 @@
 import { resolve } from 'node:path';
 import { readRows } from '../../runner/lib/dataset.mjs';
 import { GRID } from '../../tools/collect/grid.mjs';
+import { pathToFileURL } from 'node:url';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 
@@ -245,6 +246,9 @@ async function main() {
   process.stdout.write(formatReport(result));
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+// Compared as file URLs, not as a pathname string: on Windows the URL's
+// pathname is /C:/... while argv[1] is C:\..., and the string comparison
+// made every CLI here exit 0 without running.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }

@@ -85,11 +85,10 @@ só em T2, `decisao_1` a `decisao_10` na linha correspondente.
 
 ## O que ainda não existe
 
-O conjunto rotulado à mão para medir concordância entre o avaliador e uma
-classificação humana (spec D3) depende de diffs reais de T2, que ainda não
-existem em número suficiente. É o próximo passo depois desta ferramenta,
-não parte dela — fica para quando a primeira leva real de sessões de T2
-for coletada.
+O número de concordância entre o avaliador e uma classificação humana
+(spec D3). Os diffs de T2 existem desde a coleta; o kit de rotulagem e o
+cálculo estão em `tools/analysis/` (`preparar-rotulagem.mjs` e
+`concordancia.mjs`). Falta a pessoa classificar.
 
 ## Rodando os testes
 

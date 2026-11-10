@@ -10,6 +10,7 @@
 import { join, resolve } from 'node:path';
 import { readRows } from '../../runner/lib/dataset.mjs';
 import { checkDataset } from './checks.mjs';
+import { pathToFileURL } from 'node:url';
 
 const REPO = resolve(import.meta.dirname, '..', '..');
 
@@ -42,6 +43,9 @@ function main() {
   process.exit(results.some((result) => result.failures.length > 0) ? 1 : 0);
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+// Compared as file URLs, not as a pathname string: on Windows the URL's
+// pathname is /C:/... while argv[1] is C:\..., and the string comparison
+// made every CLI here exit 0 without running.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }

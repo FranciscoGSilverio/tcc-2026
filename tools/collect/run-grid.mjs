@@ -6,6 +6,7 @@ import { readRows } from '../../runner/lib/dataset.mjs';
 import { SESSION_IMAGE, imageId } from '../../runner/lib/container.mjs';
 import { cellKey, collectedCounts, missingSessions, nextRunNumber } from './grid.mjs';
 import { randomSeed, seededShuffle } from './shuffle.mjs';
+import { pathToFileURL } from 'node:url';
 
 const REPO = resolve(import.meta.dirname, '..', '..');
 
@@ -226,6 +227,9 @@ async function main() {
   if (result.stopped) process.exit(1);
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+// Compared as file URLs, not as a pathname string: on Windows the URL's
+// pathname is /C:/... while argv[1] is C:\..., and the string comparison
+// made every CLI here exit 0 without running.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }

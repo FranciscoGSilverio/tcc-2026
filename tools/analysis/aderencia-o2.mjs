@@ -24,6 +24,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { readRows } from '../../runner/lib/dataset.mjs';
 import { ORDERS } from '../../runner/lib/capabilities.mjs';
+import { pathToFileURL } from 'node:url';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 
@@ -153,6 +154,9 @@ function main() {
   }
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+// Compared as file URLs, not as a pathname string: on Windows the URL's
+// pathname is /C:/... while argv[1] is C:\..., and the string comparison
+// made every CLI here exit 0 without running.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }
