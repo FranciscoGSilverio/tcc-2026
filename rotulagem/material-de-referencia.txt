@@ -1,0 +1,192 @@
+--- plugins/error-handler.ts ---
+import type { FastifyInstance } from 'fastify';
+import { AppError, errorBody } from '../shared/errors.js';
+
+export async function errorHandlerPlugin(app: FastifyInstance): Promise<void> {
+  app.setNotFoundHandler((_request, reply) => {
+    reply.code(404).send(errorBody('NOT_FOUND', 'Route not found'));
+  });
+
+  app.setErrorHandler((error, request, reply) => {
+    if (error instanceof AppError) {
+      reply.code(error.statusCode).send(errorBody(error.code, error.message, error.details));
+      return;
+    }
+
+    if (error.validation) {
+      reply
+        .code(400)
+        .send(errorBody('VALIDATION_ERROR', 'Request payload is invalid', {
+          issues: error.validation.map((issue) => issue.message ?? 'invalid'),
+        }));
+      return;
+    }
+
+    if (typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500) {
+      reply.code(error.statusCode).send(errorBody('VALIDATION_ERROR', error.message));
+      return;
+    }
+
+    request.log.error({ err: error }, 'unhandled error');
+    reply.code(500).send(errorBody('INTERNAL_ERROR', 'Unexpected error'));
+  });
+}
+
+
+--- plugins/register-modules.ts ---
+import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
+import { amenitiesRoutes } from '../modules/amenities/routes.js';
+import { bookingsRoutes } from '../modules/bookings/routes.js';
+import { roomsRoutes } from '../modules/rooms/routes.js';
+import { usersRoutes } from '../modules/users/routes.js';
+
+export const registerModules: FastifyPluginAsyncTypebox = async (app) => {
+  app.get('/health', async () => ({ status: 'ok' }));
+  await app.register(roomsRoutes, { prefix: '/rooms' });
+  await app.register(usersRoutes, { prefix: '/users' });
+  await app.register(bookingsRoutes, { prefix: '/bookings' });
+  await app.register(amenitiesRoutes);
+};
+
+
+--- plugins/request-id.ts ---
+import { randomUUID } from 'node:crypto';
+import type { FastifyInstance } from 'fastify';
+
+export async function requestIdPlugin(app: FastifyInstance): Promise<void> {
+  app.addHook('onRequest', async (request, reply) => {
+    const incoming = request.headers['x-request-id'];
+    const id = typeof incoming === 'string' && incoming.length > 0 ? incoming : randomUUID();
+    reply.header('x-request-id', id);
+  });
+}
+
+
+--- shared/errors.ts ---
+export type ErrorCode =
+  | 'VALIDATION_ERROR'
+  | 'NOT_FOUND'
+  | 'ROOM_NAME_TAKEN'
+  | 'EMAIL_TAKEN'
+  | 'AMENITY_NAME_TAKEN'
+  | 'BOOKING_CONFLICT'
+  | 'INTERNAL_ERROR';
+
+export interface ErrorBody {
+  error: { code: ErrorCode; message: string; details: Record<string, unknown> };
+}
+
+export class AppError extends Error {
+  readonly code: ErrorCode;
+  readonly statusCode: number;
+  readonly details: Record<string, unknown>;
+
+  constructor(
+    code: ErrorCode,
+    statusCode: number,
+    message: string,
+    details: Record<string, unknown> = {},
+  ) {
+    super(message);
+    this.name = 'AppError';
+    this.code = code;
+    this.statusCode = statusCode;
+    this.details = details;
+  }
+}
+
+export function errorBody(
+  code: ErrorCode,
+  message: string,
+  details: Record<string, unknown> = {},
+): ErrorBody {
+  return { error: { code, message, details } };
+}
+
+export function validationFailed(message: string, details: Record<string, unknown> = {}): AppError {
+  return new AppError('VALIDATION_ERROR', 400, message, details);
+}
+
+export function notFound(what: string): AppError {
+  return new AppError('NOT_FOUND', 404, `${what} not found`);
+}
+
+export function roomNameTaken(name: string): AppError {
+  return new AppError('ROOM_NAME_TAKEN', 409, 'Room name is already in use', { name });
+}
+
+export function emailTaken(email: string): AppError {
+  return new AppError('EMAIL_TAKEN', 409, 'Email is already in use', { email });
+}
+
+export function bookingConflict(conflictingBookingId: string): AppError {
+  return new AppError('BOOKING_CONFLICT', 409, 'Room is already booked for this period', {
+    conflictingBookingId,
+  });
+}
+
+
+--- shared/http-reply.ts ---
+import type { FastifyReply } from 'fastify';
+import { errorBody, type ErrorCode } from './errors.js';
+
+export function replyNotFound(reply: FastifyReply, what: string): FastifyReply {
+  return reply.code(404).send(errorBody('NOT_FOUND', `${what} not found`));
+}
+
+export function replyConflict(reply: FastifyReply, code: ErrorCode, message: string): FastifyReply {
+  return reply.code(409).send(errorBody(code, message));
+}
+
+
+--- shared/pagination.ts ---
+export const DEFAULT_LIMIT = 20;
+export const MAX_LIMIT = 100;
+
+export interface Page<T> {
+  data: T[];
+  pagination: { total: number; limit: number; offset: number };
+}
+
+export function normalizeLimit(limit?: number): number {
+  if (limit === undefined || Number.isNaN(limit)) return DEFAULT_LIMIT;
+  if (limit < 1) return DEFAULT_LIMIT;
+  return Math.min(limit, MAX_LIMIT);
+}
+
+export function normalizeOffset(offset?: number): number {
+  if (offset === undefined || Number.isNaN(offset) || offset < 0) return 0;
+  return offset;
+}
+
+export function paginated<T>(data: T[], total: number, limit: number, offset: number): Page<T> {
+  return { data, pagination: { total, limit, offset } };
+}
+
+
+--- shared/schema.ts ---
+import { Type } from '@sinclair/typebox';
+
+export const DateString = Type.Unsafe<Date>(Type.String());
+
+
+--- shared/time.ts ---
+import { validationFailed } from './errors.js';
+
+export const MINUTE_IN_MS = 60_000;
+
+export function parseInstant(value: string): Date {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw validationFailed('Value is not a valid instant', { value });
+  }
+  return parsed;
+}
+
+export function durationMinutes(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / MINUTE_IN_MS);
+}
+
+export function isBefore(a: Date, b: Date): boolean {
+  return a.getTime() < b.getTime();
+}

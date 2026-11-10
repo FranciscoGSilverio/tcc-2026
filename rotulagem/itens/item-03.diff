@@ -1,0 +1,444 @@
+diff --git a/src/modules/bookings/repository.ts b/src/modules/bookings/repository.ts
+index 69797c7..4089932 100644
+--- a/src/modules/bookings/repository.ts
++++ b/src/modules/bookings/repository.ts
+@@ -24,17 +24,35 @@ export function create(data: BookingData): Promise<Booking> {
+   return prisma.booking.create({ data });
+ }
+ 
+-export function findConflictAtStart(roomId: string, startsAt: Date): Promise<Booking | null> {
++export function findOverlapping(
++  roomId: string,
++  startsAt: Date,
++  endsAt: Date,
++  excludeId?: string,
++): Promise<Booking | null> {
+   return prisma.booking.findFirst({
+     where: {
+       roomId,
+       status: BOOKING_ACTIVE,
+-      startsAt: { lte: startsAt },
++      startsAt: { lt: endsAt },
+       endsAt: { gt: startsAt },
++      ...(excludeId ? { id: { not: excludeId } } : {}),
+     },
+   });
+ }
+ 
++export function listActiveBetween(roomId: string, from: Date, to: Date): Promise<Booking[]> {
++  return prisma.booking.findMany({
++    where: {
++      roomId,
++      status: BOOKING_ACTIVE,
++      startsAt: { lt: to },
++      endsAt: { gt: from },
++    },
++    orderBy: { startsAt: 'asc' },
++  });
++}
++
+ export function findById(id: string): Promise<Booking | null> {
+   return prisma.booking.findUnique({ where: { id } });
+ }
+diff --git a/src/modules/bookings/routes.ts b/src/modules/bookings/routes.ts
+index 82aa79c..c314c3d 100644
+--- a/src/modules/bookings/routes.ts
++++ b/src/modules/bookings/routes.ts
+@@ -1,5 +1,7 @@
+ import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
+ import {
++  AvailabilityQuery,
++  AvailabilityResponse,
+   BookingIdParams,
+   BookingPage,
+   BookingResponse,
+@@ -16,6 +18,10 @@ export const bookingsRoutes: FastifyPluginAsyncTypebox = async (app) => {
+   app.get('/', { schema: { querystring: ListBookingsQuery, response: { 200: BookingPage } } },
+     async (request) => service.listBookings(request.query));
+ 
++  app.get('/availability',
++    { schema: { querystring: AvailabilityQuery, response: { 200: AvailabilityResponse } } },
++    async (request) => service.getAvailability(request.query));
++
+   app.get('/:id', { schema: { params: BookingIdParams, response: { 200: BookingResponse } } },
+     async (request) => service.getBooking(request.params.id));
+ 
+diff --git a/src/modules/bookings/schema.ts b/src/modules/bookings/schema.ts
+index 9069332..5df1fe0 100644
+--- a/src/modules/bookings/schema.ts
++++ b/src/modules/bookings/schema.ts
+@@ -4,6 +4,9 @@ import { DateString } from '../../shared/schema.js';
+ export const BOOKING_ACTIVE = 'ACTIVE';
+ export const BOOKING_CANCELLED = 'CANCELLED';
+ 
++export const MIN_DURATION_MINUTES = 30;
++export const MAX_DURATION_MINUTES = 8 * 60;
++
+ export const BookingResponse = Type.Object({
+   id: Type.String(),
+   roomId: Type.String(),
+@@ -50,6 +53,27 @@ export const BookingPage = Type.Object({
+   }),
+ });
+ 
++export const AvailabilityQuery = Type.Object({
++  roomId: Type.String({ minLength: 1 }),
++  from: Type.String({ minLength: 1 }),
++  to: Type.String({ minLength: 1 }),
++  duration: Type.Optional(Type.Integer({ minimum: 1 })),
++});
++
++export const AvailabilitySlot = Type.Object({
++  startsAt: DateString,
++  endsAt: DateString,
++});
++
++export const AvailabilityResponse = Type.Object({
++  roomId: Type.String(),
++  from: DateString,
++  to: DateString,
++  slots: Type.Array(AvailabilitySlot),
++});
++
+ export type CreateBookingInput = Static<typeof CreateBookingBody>;
+ export type UpdateBookingInput = Static<typeof UpdateBookingBody>;
+ export type ListBookingsInput = Static<typeof ListBookingsQuery>;
++export type AvailabilityQueryInput = Static<typeof AvailabilityQuery>;
++export type AvailabilityResult = Static<typeof AvailabilityResponse>;
+diff --git a/src/modules/bookings/service.ts b/src/modules/bookings/service.ts
+index f05712d..6dd9714 100644
+--- a/src/modules/bookings/service.ts
++++ b/src/modules/bookings/service.ts
+@@ -1,24 +1,73 @@
+ import type { Booking } from '@prisma/client';
+-import { bookingConflict, notFound } from '../../shared/errors.js';
++import { bookingConflict, notFound, validationFailed } from '../../shared/errors.js';
+ import {
+   normalizeLimit,
+   normalizeOffset,
+   paginated,
+   type Page,
+ } from '../../shared/pagination.js';
+-import { parseInstant } from '../../shared/time.js';
++import { durationMinutes, isBefore, parseInstant } from '../../shared/time.js';
++import * as roomRepository from '../rooms/repository.js';
++import * as userRepository from '../users/repository.js';
+ import * as repository from './repository.js';
+-import { BOOKING_CANCELLED } from './schema.js';
+-import type { CreateBookingInput, ListBookingsInput, UpdateBookingInput } from './schema.js';
++import { BOOKING_CANCELLED, MAX_DURATION_MINUTES, MIN_DURATION_MINUTES } from './schema.js';
++import type {
++  AvailabilityQueryInput,
++  AvailabilityResult,
++  CreateBookingInput,
++  ListBookingsInput,
++  UpdateBookingInput,
++} from './schema.js';
+ 
+-export async function createBooking(input: CreateBookingInput): Promise<Booking> {
+-  const startsAt = parseInstant(input.startsAt);
+-  const endsAt = parseInstant(input.endsAt);
++async function assertRoomExists(roomId: string): Promise<void> {
++  const room = await roomRepository.findById(roomId);
++  if (!room) {
++    throw notFound('Room');
++  }
++}
+ 
+-  const conflict = await repository.findConflictAtStart(input.roomId, startsAt);
++async function assertUserExists(userId: string): Promise<void> {
++  const user = await userRepository.findById(userId);
++  if (!user) {
++    throw notFound('User');
++  }
++}
++
++function assertBookableWindow(startsAt: Date, endsAt: Date): void {
++  if (!isBefore(startsAt, endsAt)) {
++    throw validationFailed('endsAt must be after startsAt');
++  }
++  if (isBefore(startsAt, new Date())) {
++    throw validationFailed('startsAt cannot be in the past');
++  }
++  const minutes = durationMinutes(startsAt, endsAt);
++  if (minutes < MIN_DURATION_MINUTES || minutes > MAX_DURATION_MINUTES) {
++    throw validationFailed(
++      `Booking duration must be between ${MIN_DURATION_MINUTES} and ${MAX_DURATION_MINUTES} minutes`,
++    );
++  }
++}
++
++async function assertNoConflict(
++  roomId: string,
++  startsAt: Date,
++  endsAt: Date,
++  excludeId?: string,
++): Promise<void> {
++  const conflict = await repository.findOverlapping(roomId, startsAt, endsAt, excludeId);
+   if (conflict) {
+     throw bookingConflict(conflict.id);
+   }
++}
++
++export async function createBooking(input: CreateBookingInput): Promise<Booking> {
++  const startsAt = parseInstant(input.startsAt);
++  const endsAt = parseInstant(input.endsAt);
++
++  assertBookableWindow(startsAt, endsAt);
++  await assertRoomExists(input.roomId);
++  await assertUserExists(input.userId);
++  await assertNoConflict(input.roomId, startsAt, endsAt);
+ 
+   return repository.create({
+     roomId: input.roomId,
+@@ -52,14 +101,69 @@ export async function listBookings(query: ListBookingsInput): Promise<Page<Booki
+   return paginated(data, total, limit, offset);
+ }
+ 
++export async function getAvailability(query: AvailabilityQueryInput): Promise<AvailabilityResult> {
++  await assertRoomExists(query.roomId);
++
++  const from = parseInstant(query.from);
++  const to = parseInstant(query.to);
++  if (!isBefore(from, to)) {
++    throw validationFailed('to must be after from');
++  }
++
++  const minDuration = query.duration ?? MIN_DURATION_MINUTES;
++  if (minDuration < MIN_DURATION_MINUTES || minDuration > MAX_DURATION_MINUTES) {
++    throw validationFailed(
++      `duration must be between ${MIN_DURATION_MINUTES} and ${MAX_DURATION_MINUTES} minutes`,
++    );
++  }
++
++  const windowStart = isBefore(from, new Date()) ? new Date() : from;
++  const bookings = await repository.listActiveBetween(query.roomId, windowStart, to);
++
++  const slots: { startsAt: Date; endsAt: Date }[] = [];
++  let cursor = windowStart;
++  for (const booking of bookings) {
++    if (isBefore(cursor, booking.startsAt) && durationMinutes(cursor, booking.startsAt) >= minDuration) {
++      slots.push({ startsAt: cursor, endsAt: booking.startsAt });
++    }
++    if (isBefore(cursor, booking.endsAt)) {
++      cursor = booking.endsAt;
++    }
++  }
++  if (isBefore(cursor, to) && durationMinutes(cursor, to) >= minDuration) {
++    slots.push({ startsAt: cursor, endsAt: to });
++  }
++
++  return { roomId: query.roomId, from: windowStart, to, slots };
++}
++
+ export async function updateBooking(id: string, input: UpdateBookingInput): Promise<Booking> {
+-  await getBooking(id);
++  const existing = await getBooking(id);
++
++  const roomId = input.roomId ?? existing.roomId;
++  const startsAt = input.startsAt !== undefined ? parseInstant(input.startsAt) : existing.startsAt;
++  const endsAt = input.endsAt !== undefined ? parseInstant(input.endsAt) : existing.endsAt;
++  const scheduleChanged =
++    input.roomId !== undefined || input.startsAt !== undefined || input.endsAt !== undefined;
++
++  if (scheduleChanged) {
++    assertBookableWindow(startsAt, endsAt);
++    if (input.roomId !== undefined) {
++      await assertRoomExists(roomId);
++    }
++    await assertNoConflict(roomId, startsAt, endsAt, id);
++  }
++
++  if (input.userId !== undefined) {
++    await assertUserExists(input.userId);
++  }
++
+   return repository.update(id, {
+     ...(input.roomId !== undefined ? { roomId: input.roomId } : {}),
+     ...(input.userId !== undefined ? { userId: input.userId } : {}),
+     ...(input.title !== undefined ? { title: input.title } : {}),
+-    ...(input.startsAt !== undefined ? { startsAt: parseInstant(input.startsAt) } : {}),
+-    ...(input.endsAt !== undefined ? { endsAt: parseInstant(input.endsAt) } : {}),
++    ...(input.startsAt !== undefined ? { startsAt } : {}),
++    ...(input.endsAt !== undefined ? { endsAt } : {}),
+   });
+ }
+ 
+diff --git a/tests/bookings.test.ts b/tests/bookings.test.ts
+index 7b4db38..1369c45 100644
+--- a/tests/bookings.test.ts
++++ b/tests/bookings.test.ts
+@@ -180,4 +180,173 @@ describe('bookings', () => {
+     const response = await book(24.5, 25.5, 'Overlap');
+     expect(response.json().error.details.conflictingBookingId).toBe(first.json().id);
+   });
++
++  it('rejects a booking that starts before and ends inside an active booking', async () => {
++    await book(24, 25);
++    const response = await book(23.5, 24.5, 'Leading overlap');
++    expect(response.statusCode).toBe(409);
++    expect(response.json().error.code).toBe('BOOKING_CONFLICT');
++  });
++
++  it('rejects moving a booking on top of another via PATCH', async () => {
++    await book(24, 25);
++    const second = await book(30, 31, 'Retro');
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${second.json().id}`,
++      payload: { startsAt: inHours(24.5), endsAt: inHours(25.5) },
++    });
++    expect(response.statusCode).toBe(409);
++  });
++
++  it('allows renaming a booking without re-checking its schedule', async () => {
++    const first = await book(24, 25);
++    await book(25, 26, 'Adjacent');
++    const response = await app.inject({
++      method: 'PATCH',
++      url: `/bookings/${first.json().id}`,
++      payload: { title: 'Renamed' },
++    });
++    expect(response.statusCode).toBe(200);
++  });
++
++  it('rejects a booking shorter than 30 minutes', async () => {
++    const response = await book(24, 24.2, 'Too short');
++    expect(response.statusCode).toBe(400);
++    expect(response.json().error.code).toBe('VALIDATION_ERROR');
++  });
++
++  it('rejects a booking longer than 8 hours', async () => {
++    const response = await book(24, 33, 'Too long');
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('rejects a booking that starts in the past', async () => {
++    const response = await book(-1, 1, 'Backwards');
++    expect(response.statusCode).toBe(400);
++  });
++
++  it('answers 404 when the room does not exist', async () => {
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId: 'missing', userId, title: 'Sync', startsAt: inHours(24), endsAt: inHours(25) },
++    });
++    expect(response.statusCode).toBe(404);
++  });
++
++  it('answers 404 when the user does not exist', async () => {
++    const response = await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId: 'missing', title: 'Sync', startsAt: inHours(24), endsAt: inHours(25) },
++    });
++    expect(response.statusCode).toBe(404);
++  });
++});
++
++describe('booking availability', () => {
++  let app: FastifyInstance;
++  let roomId: string;
++  let userId: string;
++
++  beforeAll(async () => {
++    app = await createTestApp();
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  beforeEach(async () => {
++    await resetDb();
++    const room = await app.inject({
++      method: 'POST',
++      url: '/rooms',
++      payload: { name: 'Aurora', capacity: 6 },
++    });
++    roomId = room.json().id;
++    const user = await app.inject({
++      method: 'POST',
++      url: '/users',
++      payload: { name: 'Ada Lovelace', email: 'ada@example.com' },
++    });
++    userId = user.json().id;
++  });
++
++  async function book(startHours: number, endHours: number, title = 'Sync') {
++    return app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId, title, startsAt: inHours(startHours), endsAt: inHours(endHours) },
++    });
++  }
++
++  async function availability(query: Record<string, string | number>) {
++    const search = new URLSearchParams(
++      Object.entries(query).map(([key, value]) => [key, String(value)]),
++    ).toString();
++    return app.inject({ method: 'GET', url: `/bookings/availability?${search}` });
++  }
++
++  it('answers 404 when the room does not exist', async () => {
++    const response = await availability({ roomId: 'missing', from: inHours(24), to: inHours(30) });
++    expect(response.statusCode).toBe(404);
++  });
++
++  it('returns the whole window as free when there are no bookings', async () => {
++    const from = inHours(24);
++    const to = inHours(30);
++    const response = await availability({ roomId, from, to });
++    expect(response.statusCode).toBe(200);
++    expect(response.json().slots).toHaveLength(1);
++    expect(new Date(response.json().slots[0].startsAt).getTime()).toBe(new Date(from).getTime());
++    expect(new Date(response.json().slots[0].endsAt).getTime()).toBe(new Date(to).getTime());
++  });
++
++  it('splits the window around an active booking', async () => {
++    const bookingStart = inHours(25);
++    const bookingEnd = inHours(26);
++    await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId, title: 'Sync', startsAt: bookingStart, endsAt: bookingEnd },
++    });
++    const response = await availability({ roomId, from: inHours(24), to: inHours(30) });
++    const slots = response.json().slots;
++    expect(slots).toHaveLength(2);
++    expect(new Date(slots[0].endsAt).getTime()).toBe(new Date(bookingStart).getTime());
++    expect(new Date(slots[1].startsAt).getTime()).toBe(new Date(bookingEnd).getTime());
++  });
++
++  it('returns no slots when the room is fully booked in the window', async () => {
++    await book(24, 30, 'All day');
++    const response = await availability({ roomId, from: inHours(24), to: inHours(30) });
++    expect(response.json().slots).toHaveLength(0);
++  });
++
++  it('frees the slot back up once the booking is cancelled', async () => {
++    const created = await book(25, 26);
++    await app.inject({ method: 'POST', url: `/bookings/${created.json().id}/cancel` });
++    const response = await availability({ roomId, from: inHours(24), to: inHours(30) });
++    expect(response.json().slots).toHaveLength(1);
++  });
++
++  it('drops gaps shorter than the minimum bookable duration', async () => {
++    const response = await availability({ roomId, from: inHours(24), to: inHours(24.4) });
++    expect(response.json().slots).toHaveLength(0);
++  });
++
++  it('drops gaps shorter than a requested duration', async () => {
++    const bookingEnd = inHours(26);
++    await app.inject({
++      method: 'POST',
++      url: '/bookings',
++      payload: { roomId, userId, title: 'Sync', startsAt: inHours(25), endsAt: bookingEnd },
++    });
++    const response = await availability({ roomId, from: inHours(24), to: inHours(30), duration: 120 });
++    const slots = response.json().slots;
++    expect(slots).toHaveLength(1);
++    expect(new Date(slots[0].startsAt).getTime()).toBe(new Date(bookingEnd).getTime());
++  });
+ });

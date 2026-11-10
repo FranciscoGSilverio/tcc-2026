@@ -1,0 +1,47 @@
+{
+  "aviso": "Não abra antes de terminar a rotulagem.",
+  "seed": "71e860e7",
+  "perCell": 1,
+  "items": [
+    {
+      "item": "item-01",
+      "session_id": "T2-P0-O1-muh5rlra"
+    },
+    {
+      "item": "item-02",
+      "session_id": "T2-P0-O2-mugc9fcy"
+    },
+    {
+      "item": "item-03",
+      "session_id": "T2-P1-O2-muh2v1yp"
+    },
+    {
+      "item": "item-04",
+      "session_id": "T2-P2-O2-muh3mfug"
+    },
+    {
+      "item": "item-05",
+      "session_id": "T2-P2-O1-muhego67"
+    },
+    {
+      "item": "item-06",
+      "session_id": "T2-P0-O1-muddre1p"
+    },
+    {
+      "item": "item-07",
+      "session_id": "T2-P2-O2-muh5udw3"
+    },
+    {
+      "item": "item-08",
+      "session_id": "T2-P0-O1-muifs0lb"
+    },
+    {
+      "item": "item-09",
+      "session_id": "T2-P2-O2-mugc0y54"
+    },
+    {
+      "item": "item-10",
+      "session_id": "T2-P1-O1-muh3dinh"
+    }
+  ]
+}
