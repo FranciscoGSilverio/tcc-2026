@@ -2,7 +2,11 @@
   "name": "meeting-rooms-conventions",
   "description": "Convenções e procedimentos do projeto de salas de reunião",
   "version": "1.0.0",
+  "author": {
+    "name": "Bianca Souza, Francisco Silvério, Lavínia Amaral e Vinícius Telles"
+  },
   "homepage": "https://github.com/FranciscoGSilverio/tcc-2026/tree/main/plugin/meeting-rooms-conventions",
   "repository": "https://github.com/FranciscoGSilverio/tcc-2026",
+  "license": "MIT",
   "keywords": ["convencoes", "fastify", "prisma", "typescript", "testes"]
 }
