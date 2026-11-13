@@ -63,10 +63,12 @@ test('the manifest keeps the identity the collection recorded', () => {
 test('the marketplace entry points at the published plugin', () => {
   const marketplace = readJson(join(REPO_ROOT, '.claude-plugin', 'marketplace.json'));
   const manifest = readJson(join(PUBLISHED, '.claude-plugin', 'plugin.json'));
-  const [entry, ...others] = marketplace.plugins;
+  // Other plugins may sit in the same catalogue (the experimental v2), but
+  // the P2 entry must exist exactly once and point here.
+  const entries = marketplace.plugins.filter((plugin) => plugin.name === manifest.name);
 
-  assert.equal(others.length, 0);
-  assert.equal(entry.name, manifest.name);
+  assert.equal(entries.length, 1);
+  const [entry] = entries;
   assert.equal(entry.version, manifest.version);
   assert.equal(resolve(REPO_ROOT, entry.source), PUBLISHED);
 });

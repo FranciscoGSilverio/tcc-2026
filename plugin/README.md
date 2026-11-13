@@ -4,6 +4,11 @@ O plugin publicado: a condição P2 da coleta, empacotada para o marketplace.
 O README público, que quem instala lê, está em
 `meeting-rooms-conventions/README.md`. Este aqui é para quem mantém o pacote.
 
+## Dois pacotes
+
+- `meeting-rooms-conventions/` — a condição P2, exatamente como rodou. É o que a regra abaixo protege.
+- `meeting-rooms-conventions-v2/` — versão experimental derivada, **não medida**, com hooks e sem a repetição do `CLAUDE.md`. Ela é o "plugin diferente, com outro nome" de que a regra fala; ver o README dela. Testada em `test/v2.test.mjs`.
+
 ## A regra
 
 **O pacote é uma cópia de `contexts/P2/`, nunca uma versão nova dela.** O

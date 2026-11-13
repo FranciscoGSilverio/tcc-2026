@@ -10,6 +10,12 @@
       "source": "./plugin/meeting-rooms-conventions",
       "description": "Convenções e procedimentos do projeto de salas de reunião — a condição P2 do estudo, empacotada sem alteração.",
       "version": "1.0.0"
+    },
+    {
+      "name": "meeting-rooms-conventions-v2",
+      "source": "./plugin/meeting-rooms-conventions-v2",
+      "description": "Versão experimental, não medida: o guia do projeto injetado pelo próprio plugin, skills sem repetição, uma skill para decidir ambiguidades, e hooks que bloqueiam e verificam as oito convenções.",
+      "version": "2.0.0-experimental"
     }
   ]
 }
