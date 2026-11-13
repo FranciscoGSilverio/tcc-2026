@@ -152,7 +152,7 @@ Depois de M5 sobram seis semanas para 25 sessões desassistidas, uma análise e 
 
 **Artigo:** modelo INATEL · figuras sem cor · resumo e abstract com no máximo 150 palavras · ameaças à validade presentes · artefatos referenciados e acessíveis.
 
-**Plugin:** instalável por terceiro a partir do marketplace · corresponde à condição P2 usada na coleta · README explicando origem e resultado.
+**Plugin:** instalável por terceiro a partir do marketplace · a versão idêntica à condição P2 usada na coleta continua recuperável pela tag `plugin-v1.0.0-p2` · README explicando a origem e para qual versão valem os resultados do estudo. *Revisado em 13/11/2026: o critério anterior exigia que o plugin publicado correspondesse à condição P2. Ele passou a ser um entregável derivado dos resultados e pode evoluir até a apresentação (rodada 11 do log de planejamento).*
 
 ## 6. Contingências
 

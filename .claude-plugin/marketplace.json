@@ -3,12 +3,12 @@
   "owner": {
     "name": "Bianca Souza, Francisco Silvério, Lavínia Amaral e Vinícius Telles"
   },
-  "description": "Plugin da condição P2 do estudo sobre engenharia de harness para agentes de IA.",
+  "description": "Plugin derivado do estudo sobre engenharia de harness para agentes de IA.",
   "plugins": [
     {
       "name": "meeting-rooms-conventions",
       "source": "./plugin/meeting-rooms-conventions",
-      "description": "Convenções e procedimentos do projeto de salas de reunião — a condição P2 do estudo, empacotada sem alteração.",
+      "description": "Convenções e procedimentos do projeto de salas de reunião. A versão 1.0.0 é idêntica à condição P2 do estudo.",
       "version": "1.0.0"
     }
   ]

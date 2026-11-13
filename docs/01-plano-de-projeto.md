@@ -61,11 +61,11 @@ PP3 e PP4 são as que dão relevância prática. PP3 espelha a decisão de inves
 | Entregável | Descrição |
 |---|---|
 | **Artigo** | Paper curto no modelo INATEL, reportando desenho, resultados principais e limitações |
-| **Plugin** | Publicado no marketplace, contendo as skills e rules da configuração de melhor desempenho |
+| **Plugin** | Publicado no marketplace, construído a partir dos resultados do estudo e mencionado na Discussão do artigo |
 
 **De apoio, publicados no repositório e citados no artigo:** repositório-semente congelado, enunciados das tarefas, lista de pontos de decisão, suíte de testes ocultos, prompts do avaliador cego, runner, dataset completo em CSV e dicionário de dados.
 
-**O plugin não é um produto paralelo.** Ele é o tratamento experimental de maior nível de contexto (a condição P2 do protocolo). O estudo funciona como sua validação empírica, e ele funciona como a materialização do achado — é o que permite a qualquer pessoa reproduzir a configuração de melhor resultado.
+**O plugin depende do estudo; o estudo não depende do plugin.** *Revisado em 13/11/2026 (rodada 11 do log de planejamento).* A redação anterior fazia do plugin o próprio tratamento P2 e "a materialização do achado — é o que permite a qualquer pessoa reproduzir a configuração de melhor resultado". Os dados não sustentaram a segunda parte: P2 não diferiu de P1 em nada que foi medido e custou mais. O artigo descreve o que foi medido em P2, o guia e três skills, e apresenta o plugin como entregável derivado dos resultados, que pode evoluir até a apresentação. A versão idêntica à condição medida é a tag `plugin-v1.0.0-p2`; `contexts/P2/` segue congelado.
 
 ## 7. Escopo
 

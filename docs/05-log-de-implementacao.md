@@ -25,7 +25,7 @@ Se você está retomando o projeto, leia este primeiro para saber o estado. Para
 | **Análise descritiva** | **Feita em 10/11**, itens 1 a 5 da seção 7 do protocolo | `tools/analysis/resumo.mjs` → `docs/08-analise-descritiva.md` | Leitura e redação, no artigo |
 | **Figuras do artigo** | **Geradas em 10/11**, escala de cinza com hachura, largura de coluna, PDF e PNG | `tools/analysis/figuras.py` → `docs/figuras/` | Legendas, no artigo |
 | **Concordância avaliador × humano** (item 6 da seção 7) | **Medida em 12/11.** Checklist 98%, kappa 0,91; pontos de decisão 82%, kappa 0,81 | `rotulagem/rotulos-preenchidos.csv` → `docs/09-concordancia.md` | Redação no artigo. Rotulador: Vinícius Telles e Silva |
-| **Plugin** | Empacotado em 01/10, cópia byte a byte de `contexts/P2/`, validado e carregando. Autoria e licença MIT em 12/11 | `plugin/`, `.claude-plugin/marketplace.json`, `LICENSE` | Repositório **público desde 12/11**; falta a instalação por terceiro e decidir sobre o diretório da Anthropic |
+| **Plugin** | Empacotado em 01/10, validado e carregando. Autoria e licença MIT em 12/11. **Desde 13/11, entregável derivado dos resultados, livre para evoluir** (rodada 11); a versão 1.0.0, idêntica a `contexts/P2/`, está na tag `plugin-v1.0.0-p2` | `plugin/`, `.claude-plugin/marketplace.json`, `LICENSE` | Repositório **público desde 12/11**; falta a instalação por terceiro e decidir sobre o diretório da Anthropic |
 | Artigo | Fora do repositório, escrito pela equipe | — | — |
 
 **Resumo em uma linha:** a coleta está fechada e íntegra, e a análise descritiva e as figuras existem; a concordância do avaliador foi medida e é alta; o que separa o projeto da entrega é o repositório público com o plugin instalável por terceiro, e o artigo.
@@ -52,7 +52,7 @@ Os números completos estão em `docs/08-analise-descritiva.md`; aqui só o que 
 2. **Criar a tag `seed-v1`** em `00496da`, último commit que tocou `seed/`, com mensagem dizendo que foi criada depois da coleta e por que isso não muda nada (árvore inalterada, hash `4a5e8206…` registrado no dicionário). Registrar a revisão humana da semente — quem fez e quando — ou declarar no artigo que ela não foi feita.
 3. **Plugin:** ~~autor e licença~~ feitos em 12/11; falta decidir sobre o diretório da Anthropic (exigiria um ícone).
 4. **Tornar o repositório público** e pedir a alguém de fora que instale o plugin pelo marketplace (`/plugin marketplace add FranciscoGSilverio/tcc-2026`). É critério de pronto de M7 e do artigo.
-5. **Artigo**, com a equipe: entrega em 14/11.
+5. **Artigo**, com a equipe: entrega em 14/11. Devolutiva do orientador recebida em 13/11 (41 notas). A nota sobre a Tabela III (combinações diferentes por modelo) foi respondida sem coleta nova: toda comparação entre modelos passa a usar só P0-O1 e P2-O2 — decisão e motivos na rodada 10 do `00-log-sessao-planejamento.md`. Na mesma data, o plugin deixou de ser tratado no artigo como a condição medida: P2 passa a ser descrito como o guia mais três skills, e o plugin aparece na Discussão como entregável (rodada 11).
 
 ## Itens em aberto
 

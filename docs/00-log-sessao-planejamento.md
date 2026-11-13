@@ -756,3 +756,73 @@ Quatro causas foram levantadas e verificadas contra a evidência.
 A sessão piloto mediu o enunciado antigo e não é comparável com o que vier depois. Não é descartada — nenhuma sessão é, por princípio já declarado nesta rodada 5 do log —, mas sai do dataset de coleta e passa a `resultados-piloto.csv`, com este registro do motivo. O dataset de coleta (`resultados.csv`) recomeça vazio, com o mesmo cabeçalho de 41 colunas, que não muda. Nenhuma coluna foi acrescentada ou removida: `violacoes` e `qualidade` já existiam e estavam vazias.
 
 A suíte oculta e a implementação de referência não foram tocadas: as 26 asserções continuam idênticas, a linha de base contra a semente intocada continua 13/26 e a referência continua 26/26. Só o enunciado mudou, depois de a suíte e a referência já estarem prontas e validadas — o que precisa ser declarado no artigo como reescrita à luz de um resultado, não como ajuste anterior aos dados.
+
+---
+
+# Rodada 10 — 13/11/2026
+
+Devolutiva do orientador sobre a primeira versão revisada do artigo (`TCC_2026_revisado`, 41 notas). Esta rodada registra a decisão sobre uma delas, a que questiona o desenho; as demais são de redação e formatação e não mudam o desenho.
+
+## R10.1 A nota
+
+Sobre a Tabela III (sessões por modelo: Sonnet 5 em 6 combinações, 30 sessões; Haiku 4.5 e Opus 5 em 2 combinações, 10 sessões cada): *"Por que o teste com combinações diferentes? Isso invalida a comparação final pois a torna injusta."*
+
+## R10.2 Diagnóstico: onde a nota procede e onde não
+
+**Não procede contra o desenho.** As células de modelo não são uma redução feita durante a coleta: estão no desenho desde a rodada 1 (seção 4 deste log; protocolo, seção 4.2). A grade completa P × O roda no Sonnet para isolar contexto e ordem (PP1, PP2). Haiku e Opus existem só para PP3, que compara o ganho de trocar o harness com o ganho de trocar o modelo, e para isso os três modelos rodam nas mesmas duas configurações (P0-O1 e P2-O2), com o mesmo número de sessões por configuração. Nessa comparação nenhum modelo é favorecido.
+
+**Procede contra o texto.** Vários trechos dos resultados comparam modelos somando todas as sessões do Sonnet, das seis configurações, contra as duas configurações extremas dos outros dois: custo médio por modelo, complexidade por modelo (Fig. 4), consulta de horários sem limite (1 de 18 do Sonnet contra 5 de 6 do Opus), requisito de quem organiza várias reservas sem guia, e requisito explícito de T2. São grupos de composição diferente, e é aí que a crítica se sustenta.
+
+## R10.3 Decisão: recusado coletar as células que faltam; o texto é corrigido
+
+**Decisão do usuário, 13/11/2026.** Não se coletam Haiku e Opus nas quatro configurações intermediárias. A resposta ao orientador defende o desenho, e o artigo é corrigido para que toda comparação entre modelos use apenas as sessões P0-O1 e P2-O2 dos três (10 sessões por modelo).
+
+**Por que a coleta foi recusada:**
+
+1. **Não responde à crítica que procede.** A parte da nota que se sustenta é sobre como o texto agrega as sessões, e se corrige recalculando sobre dados que já existem.
+2. **Compraria uma pergunta nova, não validade para as atuais.** Completar a grade permitiria estudar a interação entre modelo e contexto ou ordem, o que nenhuma PP pergunta. Com duas ou três repetições por célula e análise descritiva, oito células novas somariam sobretudo ruído. A ausência delas não invalida a PP3, então a regra de que o escopo só cresce quando a falta invalida a pesquisa não é atendida.
+3. **Pioraria a comparação em vez de melhorá-la.** `model_version` registra o apelido (`claude-opus-5`), não uma versão datada, e o controle de deriva não foi executado (protocolo, seção 8). Células coletadas sete semanas depois das de setembro misturariam o efeito de configuração com o efeito do tempo, sem como separá-los, a menos que se recoletassem também células de controle.
+4. **Custo.** Opus nas quatro configurações: cerca de US$ 49 (4 × [2 × 1,80 + 3 × 2,87], médias observadas por sessão em T1 e T2). Só o Opus não basta: o Haiku viraria o modelo incompleto e a mesma crítica valeria para ele (mais cerca de US$ 5). Com avaliação cega, cerca de US$ 56 no total, mais do que tudo o que a coleta e a avaliação custaram até aqui (US$ 53,80 + 2,83). A isso se somam a reauditoria, a reanálise, o refazimento das Tabelas III e V e das Figs. 3 a 5 e a reescrita de Resultados e Discussão, com a entrega em 14/11.
+
+**O que fica no artigo:** a limitação já declarada (em Haiku e Opus não se separa contexto de ordem) permanece, e testar esses modelos nas configurações intermediárias passa a constar como trabalho futuro.
+
+## R10.4 Consequência
+
+Nenhuma alteração em dados, ferramentas ou protocolo. A lista dos trechos e figuras do artigo a corrigir, com o texto atual e as mudanças necessárias, é o próximo passo da redação.
+
+---
+
+# Rodada 11 — 13/11/2026
+
+## R11.1 Decisão: o plugin deixa de ser a condição P2 e passa a ser derivado dos resultados
+
+**Decisão do usuário, 13/11/2026.** O artigo não depende do plugin. O que foi medido em P2 passa a ser descrito pelo que o agente recebeu: o guia (`CLAUDE.md`, idêntico ao de P1) e um conjunto de três skills. O plugin aparece no artigo como entregável, mencionado na Discussão, construído a partir dos resultados e com uma ideia de toolkit para trabalhar com agentes de programação. A dependência vai num sentido só: o plugin depende do estudo, o estudo não depende do plugin.
+
+**Motivo:** o plugin não está pronto e pode evoluir até a apresentação (M9). Enquanto ele fosse a própria condição P2, qualquer mudança nele o afastaria do que foi medido, e o artigo estaria citando um artefato diferente do que descreve.
+
+**Isto reverte uma restrição desta sessão de planejamento.** A seção 6 da rodada 1 dizia "O plugin é a condição P2, não um entregável paralelo", e o plano de projeto (seção 6) descrevia o plugin como "a materialização do achado — é o que permite a qualquer pessoa reproduzir a configuração de melhor resultado". Os dados já tinham enfraquecido essa segunda frase: P2 não diferiu de P1 em nada que foi medido e custou mais, e a própria Discussão do artigo recomenda pôr as regras no arquivo de instruções em vez de depender de skills opcionais. A devolutiva original do orientador (o plugin "funciona bem como artefato de apresentação", seção 1) continua atendida.
+
+## R11.2 O que isso não muda
+
+- **Nada nos dados, no protocolo ou em `contexts/P2/`.** A condição que rodou continua congelada e continua sendo o que o artigo descreve. Tecnicamente, as skills de P2 foram carregadas como um pacote local de plugin (`contexts/P2/plugin/`, via `--plugin-dir`). Isso é detalhe de implementação, registrado no repositório. O artigo descreve o conteúdo que o agente recebeu, e não nega o mecanismo.
+- **Os resultados sobre P2 continuam no artigo**, atribuídos às skills: sem diferença contra P1, consulta em 14 das 20 sessões em que estavam disponíveis, nenhuma no Haiku.
+
+## R11.3 Consequências pendentes no repositório
+
+Ficam registradas aqui para não serem esquecidas; nenhuma foi executada nesta rodada:
+
+1. `plugin/README.md` ("O pacote é uma cópia de `contexts/P2/`, nunca uma versão nova dela") e `plugin/test/fidelity.test.mjs`, que reprova qualquer divergência byte a byte com `contexts/P2/`. Essa guarda impede justamente a evolução decidida aqui. Antes de mudá-la, marcar com uma tag o estado atual do pacote (1.0.0, idêntico a P2), para que a versão equivalente à condição medida continue recuperável.
+2. `plugin/meeting-rooms-conventions/README.md` apresenta o plugin como "o tratamento P2" e reporta o resultado do estudo sobre ele. Quando o plugin mudar, isso deixa de ser verdade.
+3. `docs/03-plano-de-execucao.md`, seção 5: o critério de pronto "corresponde à condição P2 usada na coleta" sai. `docs/01-plano-de-projeto.md`, seção 6: a descrição do entregável muda.
+
+## R11.4 Execução das consequências, na mesma data
+
+**Decisão do usuário:** executar as três, começando pela tag.
+
+1. **Tag `plugin-v1.0.0-p2`**, anotada, no commit `e7e7392`. Antes de criá-la, a guarda de fidelidade passou (4 de 4) e o pacote estava limpo contra o HEAD. É o ponto em que o plugin publicado ainda equivale à condição medida.
+2. **Guarda de fidelidade retirada.** `plugin/test/fidelity.test.mjs` virou `plugin/test/marketplace.test.mjs`. Ficou só a verificação de que o catálogo aponta para o pacote e tem a mesma versão do manifesto, que continua valendo enquanto o plugin evolui. As três verificações byte a byte contra `contexts/P2/` saíram; elas existem no histórico e valem para a tag.
+3. **READMEs.** O de manutenção (`plugin/README.md`) troca "o pacote é uma cópia de `contexts/P2/`" pela regra nova e manda subir a versão a cada mudança de conteúdo. O público diz que a 1.0.0 é idêntica a P2, separa "como instalar" de "como reproduzir P2" (pela tag ou por `contexts/P2/`, nunca pelo `main`) e declara que os resultados do estudo valem para a condição P2, não para versões posteriores. O catálogo deixa de chamar o plugin de "a condição P2 do estudo, empacotada sem alteração".
+4. **Planos.** Critério de pronto do plugin (plano de execução, seção 5) e descrição do entregável (plano de projeto, seção 6) revisados, com a data e a referência a esta rodada.
+
+`contexts/P2/` e o runner não foram tocados.
+
