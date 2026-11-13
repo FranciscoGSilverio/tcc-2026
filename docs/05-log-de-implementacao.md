@@ -1,6 +1,6 @@
 # Log de Implementação
 
-**Atualizado em:** 10/11/2026 (sexta revisão)
+**Atualizado em:** 12/11/2026 (sétima revisão)
 
 ## Para que serve este documento
 
@@ -24,11 +24,11 @@ Se você está retomando o projeto, leia este primeiro para saber o estado. Para
 | **Coleta** | **Encerrada em 26/09.** 50 sessões válidas, 4 inválidas com substituta e motivo, 7 lotes. Auditor: 8 de 8 | `resultados.csv`, `sessions/` | Nada |
 | **Análise descritiva** | **Feita em 10/11**, itens 1 a 5 da seção 7 do protocolo | `tools/analysis/resumo.mjs` → `docs/08-analise-descritiva.md` | Leitura e redação, no artigo |
 | **Figuras do artigo** | **Geradas em 10/11**, escala de cinza com hachura, largura de coluna, PDF e PNG | `tools/analysis/figuras.py` → `docs/figuras/` | Legendas, no artigo |
-| **Concordância avaliador × humano** (item 6 da seção 7) | **Não medida.** Kit de rotulagem às cegas e cálculo prontos em 10/11; kit gerado em `rotulagem/` (semente `71e860e7`) | `tools/analysis/preparar-rotulagem.mjs`, `concordancia.mjs` | **Uma pessoa da equipe classificar os 10 diffs** |
-| **Plugin** | Empacotado em 01/10, cópia byte a byte de `contexts/P2/`, validado e carregando | `plugin/`, `.claude-plugin/marketplace.json` | Autor, licença, repositório público e instalação por terceiro — lista em `plugin/README.md` |
+| **Concordância avaliador × humano** (item 6 da seção 7) | **Medida em 12/11.** Checklist 98%, kappa 0,91; pontos de decisão 82%, kappa 0,81 | `rotulagem/rotulos-preenchidos.csv` → `docs/09-concordancia.md` | Redação no artigo. Rotulador: Vinícius Telles e Silva |
+| **Plugin** | Empacotado em 01/10, cópia byte a byte de `contexts/P2/`, validado e carregando. Autoria e licença MIT em 12/11 | `plugin/`, `.claude-plugin/marketplace.json`, `LICENSE` | Repositório **público desde 12/11**; falta a instalação por terceiro e decidir sobre o diretório da Anthropic |
 | Artigo | Fora do repositório, escrito pela equipe | — | — |
 
-**Resumo em uma linha:** a coleta está fechada e íntegra, e a análise descritiva e as figuras existem; o que separa o projeto da entrega é a concordância do avaliador (uma tarde de rotulagem humana), o repositório público com o plugin instalável, e o artigo.
+**Resumo em uma linha:** a coleta está fechada e íntegra, e a análise descritiva e as figuras existem; a concordância do avaliador foi medida e é alta; o que separa o projeto da entrega é o repositório público com o plugin instalável por terceiro, e o artigo.
 
 ## Correção de 10/11: os CLIs não rodavam no Windows
 
@@ -48,23 +48,22 @@ Os números completos estão em `docs/08-analise-descritiva.md`; aqui só o que 
 
 ## Próximos passos, em ordem
 
-1. **Rotular o kit de concordância.** Uma pessoa, sozinha, seguindo `rotulagem/LEIA-ME.md`, sem abrir `chave.json` nem `sessions/`. Depois, `node tools/analysis/concordancia.mjs`. Sem esse número o artigo não pode afirmar que o avaliador é confiável — e `qualidade` e convergência dependem inteiramente dele.
+1. ~~Rotular o kit de concordância~~ — feito em 12/11, resultado e leitura em `docs/09-concordancia.md`. Rotulador: Vinícius Telles e Silva. Para o artigo: os desacordos em d5, d7 e d9 têm direção única (humano lê comportamento implícito, avaliador exige posição explícita), então a convergência nesses pontos é de posições explícitas.
 2. **Criar a tag `seed-v1`** em `00496da`, último commit que tocou `seed/`, com mensagem dizendo que foi criada depois da coleta e por que isso não muda nada (árvore inalterada, hash `4a5e8206…` registrado no dicionário). Registrar a revisão humana da semente — quem fez e quando — ou declarar no artigo que ela não foi feita.
-3. **Plugin:** `author` e `owner` com os nomes da equipe, licença, e decidir sobre o diretório da Anthropic.
+3. **Plugin:** ~~autor e licença~~ feitos em 12/11; falta decidir sobre o diretório da Anthropic (exigiria um ícone).
 4. **Tornar o repositório público** e pedir a alguém de fora que instale o plugin pelo marketplace (`/plugin marketplace add FranciscoGSilverio/tcc-2026`). É critério de pronto de M7 e do artigo.
 5. **Artigo**, com a equipe: entrega em 14/11.
 
 ## Itens em aberto
 
 **De metodologia, a declarar no artigo:**
-- Concordância do avaliador com humano — enquanto não medida, é a principal ameaça ao construto de `qualidade` e convergência.
+- Concordância do avaliador com humano — medida com um rotulador e 10 itens; alta, mas com critério divergente em d5, d7 e d9 (ver `docs/09-concordancia.md`).
 - P0 é avaliado contra regras de domínio não informadas a ele (D3 da reavaliação de T1), e a decomposição que deveria isolar isso dependia de `violacoes`, que não tem resolução.
 - A suíte oculta e a referência foram escritas pelo mesmo agente.
 - O controle de deriva não foi executado; ausência de evidência de deriva não é a medida.
 - A semente foi escrita com assistência de modelo da mesma família; a revisão humana é critério de aceite sem registro.
 
 **Administrativos:**
-- Nomes dos integrantes (autoria do plugin e do artigo).
 - Revisão de literatura — feita fora do repositório, junto com o artigo.
 
 ## Custo

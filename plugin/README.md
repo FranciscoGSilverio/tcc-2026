@@ -57,8 +57,8 @@ O evento `system/init` precisa listar `meeting-rooms-conventions` em
 - [x] `claude plugin validate` passando no plugin e no catálogo
 - [x] Plugin carregando por `--plugin-dir`, com as três skills
 - [x] README público com origem, instalação e resultado
-- [ ] `author` no `plugin.json` e `owner` no catálogo (o validador avisa que falta autor) — nomes da equipe
-- [ ] Licença
+- [x] `author` no `plugin.json` e `owner` no catálogo — Bianca Souza, Francisco Silvério, Lavínia Amaral e Vinícius Telles (12/11/2026)
+- [x] Licença — MIT, em `LICENSE` na raiz e dentro do plugin (que é copiado sozinho para o cache de quem instala), e `license` no `plugin.json`
 - [x] Conferir os números do README público contra a análise final — conferidos em 10/11/2026 contra `docs/08-analise-descritiva.md`: 18 e 21 de 26 em P0, 26/26 em P1 e P2, custo médio de US$ 0,76 em P2 e US$ 0,63 em P1
 - [ ] Repositório público (M7) e instalação por terceiro a partir do marketplace — critério de pronto
-- [ ] Decidir se também submete ao diretório da Anthropic (`claude.ai/directory/manage`) ou fica só no marketplace próprio
+- [ ] Decidir se também submete ao diretório da Anthropic (`claude.ai/directory/manage`) ou fica só no marketplace próprio. Se submeter, falta um ícone quadrado PNG (512–2048 px) em `.claude-plugin/icon.png` — o validador avisa, e o ícone só é lido na primeira submissão
