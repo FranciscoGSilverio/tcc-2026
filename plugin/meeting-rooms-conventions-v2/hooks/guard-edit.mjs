@@ -8,23 +8,11 @@ import { join } from 'node:path';
 import {
   CONFIG_FILES, MANIFEST_FILES, baseCommit, git, isProject, projectDir, projectPath, readInput,
 } from './lib/project.mjs';
-import { removedLines } from './lib/guards.mjs';
+import { applyEdit, originalLinesRemoved } from './lib/guards.mjs';
 
 function block(message) {
   process.stderr.write(`${message}\n`);
   process.exit(2);
-}
-
-function editPairs(toolName, toolInput, absolutePath) {
-  if (toolName === 'Edit') return [[toolInput.old_string ?? '', toolInput.new_string ?? '']];
-  if (toolName === 'MultiEdit') {
-    return (toolInput.edits ?? []).map((edit) => [edit.old_string ?? '', edit.new_string ?? '']);
-  }
-  if (toolName === 'Write') {
-    const before = existsSync(absolutePath) ? readFileSync(absolutePath, 'utf8') : '';
-    return [[before, toolInput.content ?? '']];
-  }
-  return [];
 }
 
 const input = readInput();
@@ -47,10 +35,10 @@ if (path.startsWith('tests/') && path.endsWith('.test.ts')) {
   const base = baseCommit(dir, input.session_id);
   const original = base ? git(dir, ['show', `${base}:${path}`]) : null;
   if (original !== null) {
-    const originalLines = new Set(original.split(/\r?\n/));
-    const removed = editPairs(input.tool_name, toolInput, join(dir, path))
-      .flatMap(([before, after]) => removedLines(before, after))
-      .filter((line) => originalLines.has(line));
+    const absolute = join(dir, path);
+    const current = existsSync(absolute) ? readFileSync(absolute, 'utf8') : '';
+    const after = applyEdit(input.tool_name, toolInput, current);
+    const removed = originalLinesRemoved(original, current, after);
     if (removed.length > 0) {
       block(
         `Bloqueado pela convenção do projeto: a edição remove ${removed.length} linha(s) que ` +

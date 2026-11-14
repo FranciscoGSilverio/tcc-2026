@@ -30,3 +30,43 @@ export function removedLines(before, after) {
   }
   return removed;
 }
+
+// The file's content after an Edit, MultiEdit or Write, given its content
+// now. Line endings are normalised first, because the edit strings the
+// agent sends use \n whatever the file on disk uses. An edit whose
+// old_string is not found leaves the content as it is -- the tool itself
+// will refuse it.
+export function applyEdit(toolName, toolInput, current) {
+  const text = current.replace(/\r\n/g, '\n');
+  const replace = (content, oldString = '', newString = '', all = false) => {
+    if (!oldString || !content.includes(oldString)) return content;
+    return all ? content.split(oldString).join(newString) : content.replace(oldString, () => newString);
+  };
+  if (toolName === 'Write') return toolInput.content ?? '';
+  if (toolName === 'Edit') {
+    return replace(text, toolInput.old_string, toolInput.new_string, toolInput.replace_all);
+  }
+  if (toolName === 'MultiEdit') {
+    return (toolInput.edits ?? []).reduce(
+      (content, edit) => replace(content, edit.old_string, edit.new_string, edit.replace_all), text);
+  }
+  return text;
+}
+
+// Lines of the original file that this edit takes out: present in the
+// original more times than in the file after the edit, and not already
+// missing before it. Comparing whole files, by count, is what tells an
+// agent editing a test it wrote itself apart from one deleting an original
+// test -- the two often share lines like `const response = await app.inject({`.
+export function originalLinesRemoved(original, current, after) {
+  const missingNow = removedLines(original, current);
+  const remaining = new Map();
+  for (const line of missingNow) remaining.set(line, (remaining.get(line) ?? 0) + 1);
+  const newlyMissing = [];
+  for (const line of removedLines(original, after)) {
+    const count = remaining.get(line) ?? 0;
+    if (count > 0) remaining.set(line, count - 1);
+    else newlyMissing.push(line);
+  }
+  return newlyMissing;
+}

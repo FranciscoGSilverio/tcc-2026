@@ -7,7 +7,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { installsPackage, removedLines } from '../meeting-rooms-conventions-v2/hooks/lib/guards.mjs';
+import { applyEdit, installsPackage, originalLinesRemoved, removedLines } from '../meeting-rooms-conventions-v2/hooks/lib/guards.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const V2 = join(REPO_ROOT, 'plugin', 'meeting-rooms-conventions-v2');
@@ -71,6 +71,15 @@ test('installsPackage tells installing apart from restoring', () => {
 test('removedLines counts moves as kept and deletions as removed', () => {
   assert.deepEqual(removedLines('a\nb\nc', 'c\na\nb\nd'), []);
   assert.deepEqual(removedLines('a\nb\nc', 'a\nc'), ['b']);
+});
+
+test('editing a test the agent wrote is not removing an original one, even when they share lines', () => {
+  const original = 'it(a, () => {\n  const r = go();\n});\n';
+  const current = `${original}it(b, () => {\n  const r = go();\n});\n`;
+  const ownEdit = applyEdit('Edit', { old_string: 'it(b, () => {\n  const r = go();\n', new_string: 'it(b, () => {\n' }, current);
+  assert.deepEqual(originalLinesRemoved(original, current, ownEdit), []);
+  const originalEdit = applyEdit('Write', { content: 'it(b, () => {\n  const r = go();\n});\n' }, current);
+  assert.deepEqual(originalLinesRemoved(original, current, originalEdit), ['it(a, () => {']);
 });
 
 test('every hook is a no-op outside the meeting-rooms project', () => {
