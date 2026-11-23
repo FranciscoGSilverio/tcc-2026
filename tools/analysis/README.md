@@ -57,6 +57,8 @@ saída. Requer matplotlib.
 - `fig2-t2-convergencia-grade` — convergência de T2 na grade principal.
 - `fig3-modelo-x-harness` — os três modelos nas duas configurações extremas,
   T1 e T2 lado a lado.
+- `artigo-fig2` a `artigo-fig5` — as figuras do artigo final; ver "Os
+  critérios do artigo final", abaixo.
 
 ## `preparar-rotulagem.mjs` e `concordancia.mjs`
 
@@ -80,3 +82,56 @@ O segundo compara os rótulos com os `evaluation.json` arquivados e dá a
 concordância bruta e o kappa de Cohen por pergunta, por ponto e agregados,
 listando cada desacordo com a justificativa do avaliador. Rótulo fora da lista
 fechada é erro, como no avaliador (D7).
+
+## Os critérios do artigo final
+
+Acrescentados em 23/11/2026, **depois** da entrega do artigo. O artigo
+avaliou as sessões por critérios que não estavam no protocolo (C2, a
+complexidade de C3, C4, a convergência substantiva de C5 e o esforço de
+C6), e os números deles não tinham script nem dado no repositório. Estes
+scripts são **reconstruções**: aplicam aos artefatos arquivados regras
+escritas a partir das definições da seção III-F do artigo. Onde a regra é
+heurística, o cabeçalho de cada script diz exatamente qual é, e as
+exceções decididas à mão estão numa tabela no próprio script, com o id da
+sessão e o motivo.
+
+Quase todos os números do artigo se reproduzem. Onde não, o script publica
+o que os dados dão, sem forçar o número do artigo, e a divergência está em
+`docs/10-reproducao-do-artigo.md`, que liga cada afirmação do artigo ao
+comando que a reproduz.
+
+| Script | Critério do artigo | Lê | Escreve |
+|---|---|---|---|
+| `requisitos-t1.mjs` | C2 em T1, Fig. 2, "48% → 100%" | `sessions/*/result.json` (`hidden.byRule`) | nada |
+| `requisitos-t2.mjs` | C2 em T2 (seção IV-D) | `session.diff`, `resultados.csv` | `docs/dados/requisitos-t2.csv` com `--csv` |
+| `convergencia.mjs` | C5, convergência oficial e substantiva, Fig. 5 | `resultados.csv` | nada |
+| `complexidade.mjs` | C3, complexidade ciclomática, Fig. 4 | `session.diff`, imagem `meeting-rooms-api:1.0.0` | `docs/dados/complexidade.csv` |
+| `seguranca.mjs` | C4, Tabela VI | `session.diff`, `result.json` | `docs/dados/seguranca.csv` com `--csv` |
+| `esforco.mjs` | C6, esforço; leituras antes da 1ª edição; skills consultadas | `transcript*.jsonl` | `docs/dados/esforco.csv` com `--csv` |
+
+```
+node tools/analysis/requisitos-t1.mjs
+node tools/analysis/requisitos-t2.mjs [--json] [--csv]
+node tools/analysis/convergencia.mjs [--json]
+node tools/analysis/complexidade.mjs              # Docker; grava o CSV
+node tools/analysis/complexidade.mjs --do-csv     # sem Docker: agrega o CSV publicado
+node tools/analysis/seguranca.mjs [--json] [--csv]
+node tools/analysis/esforco.mjs [--json] [--csv]
+```
+
+`convergencia.mjs` continua sendo a regra oficial do protocolo; a medida
+substantiva é uma coluna a mais, com a mesma fórmula do artigo
+(C = D/10), em que concordar em `ausente` não conta.
+
+Os CSVs de `docs/dados/` são publicados para que se possa conferir sessão
+por sessão sem rodar nada, inclusive sem Docker. O de complexidade tem uma
+linha por função tocada, e as funções da semente com `session_id=semente`.
+
+`figuras.py` desenha também as Figs. 2 a 5 do artigo a partir destes
+scripts, como `artigo-fig2` a `artigo-fig5` em `docs/figuras/`. São
+redesenhos com os mesmos dados e o mesmo estilo em cinza, não cópia do PDF.
+A Fig. 1 é um diagrama do processo, sem dados.
+
+Para rodar os testes, use o glob: `node --test tools/analysis/test/*.test.mjs`.
+No Windows com Node 22, `node --test tools/analysis/test/` trata o
+diretório como módulo e falha.
