@@ -1,0 +1,572 @@
+session_id,task,model,p_level,o_level,arquivo,funcao,linha,linha_final,complexidade
+semente,,,,,src/app.ts,buildApp,12,30,3
+semente,,,,,src/config.ts,loadConfig,7,17,5
+semente,,,,,src/db/client.ts,disconnect,5,7,1
+semente,,,,,src/modules/amenities/queries.ts,listAmenities,4,6,1
+semente,,,,,src/modules/amenities/queries.ts,findAmenityById,8,10,1
+semente,,,,,src/modules/amenities/queries.ts,findAmenityByName,12,14,1
+semente,,,,,src/modules/amenities/queries.ts,insertAmenity,16,18,1
+semente,,,,,src/modules/amenities/queries.ts,deleteAmenity,20,22,1
+semente,,,,,src/modules/amenities/queries.ts,findRoom,24,26,1
+semente,,,,,src/modules/amenities/queries.ts,linkAmenity,28,34,1
+semente,,,,,src/modules/amenities/queries.ts,unlinkAmenity,36,38,1
+semente,,,,,src/modules/amenities/routes.ts,Async arrow function,27,74,1
+semente,,,,,src/modules/amenities/routes.ts,Async arrow function,29,36,2
+semente,,,,,src/modules/amenities/routes.ts,Async arrow function,39,39,1
+semente,,,,,src/modules/amenities/routes.ts,Async arrow function,42,49,2
+semente,,,,,src/modules/amenities/routes.ts,Async arrow function,52,63,3
+semente,,,,,src/modules/amenities/routes.ts,Async arrow function,66,73,2
+semente,,,,,src/modules/bookings/repository.ts,create,23,25,1
+semente,,,,,src/modules/bookings/repository.ts,findConflictAtStart,27,36,1
+semente,,,,,src/modules/bookings/repository.ts,findById,38,40,1
+semente,,,,,src/modules/bookings/repository.ts,list,42,59,6
+semente,,,,,src/modules/bookings/repository.ts,update,61,63,1
+semente,,,,,src/modules/bookings/repository.ts,updateStatus,65,67,1
+semente,,,,,src/modules/bookings/repository.ts,remove,69,71,1
+semente,,,,,src/modules/bookings/routes.ts,Async arrow function,12,34,1
+semente,,,,,src/modules/bookings/routes.ts,Async arrow function,14,14,1
+semente,,,,,src/modules/bookings/routes.ts,Async arrow function,17,17,1
+semente,,,,,src/modules/bookings/routes.ts,Async arrow function,20,20,1
+semente,,,,,src/modules/bookings/routes.ts,Async arrow function,24,24,1
+semente,,,,,src/modules/bookings/routes.ts,Async arrow function,28,28,1
+semente,,,,,src/modules/bookings/routes.ts,Async arrow function,30,33,1
+semente,,,,,src/modules/bookings/service.ts,createBooking,14,30,2
+semente,,,,,src/modules/bookings/service.ts,getBooking,32,38,2
+semente,,,,,src/modules/bookings/service.ts,listBookings,40,53,3
+semente,,,,,src/modules/bookings/service.ts,updateBooking,55,64,6
+semente,,,,,src/modules/bookings/service.ts,cancelBooking,66,72,2
+semente,,,,,src/modules/bookings/service.ts,deleteBooking,74,77,1
+semente,,,,,src/modules/rooms/repository.ts,create,11,13,1
+semente,,,,,src/modules/rooms/repository.ts,findById,15,17,1
+semente,,,,,src/modules/rooms/repository.ts,findByName,19,21,1
+semente,,,,,src/modules/rooms/repository.ts,list,23,34,2
+semente,,,,,src/modules/rooms/repository.ts,update,36,38,1
+semente,,,,,src/modules/rooms/repository.ts,remove,40,42,1
+semente,,,,,src/modules/rooms/routes.ts,Async arrow function,12,30,1
+semente,,,,,src/modules/rooms/routes.ts,Async arrow function,14,14,1
+semente,,,,,src/modules/rooms/routes.ts,Async arrow function,17,17,1
+semente,,,,,src/modules/rooms/routes.ts,Async arrow function,20,20,1
+semente,,,,,src/modules/rooms/routes.ts,Async arrow function,24,24,1
+semente,,,,,src/modules/rooms/routes.ts,Async arrow function,26,29,1
+semente,,,,,src/modules/rooms/service.ts,createRoom,12,18,2
+semente,,,,,src/modules/rooms/service.ts,getRoom,20,26,2
+semente,,,,,src/modules/rooms/service.ts,listRooms,28,33,1
+semente,,,,,src/modules/rooms/service.ts,updateRoom,35,44,4
+semente,,,,,src/modules/rooms/service.ts,deleteRoom,46,49,1
+semente,,,,,src/modules/users/repository.ts,create,11,13,1
+semente,,,,,src/modules/users/repository.ts,findById,15,17,1
+semente,,,,,src/modules/users/repository.ts,findByEmail,19,21,1
+semente,,,,,src/modules/users/repository.ts,list,23,34,2
+semente,,,,,src/modules/users/repository.ts,update,36,38,1
+semente,,,,,src/modules/users/repository.ts,remove,40,42,1
+semente,,,,,src/modules/users/routes.ts,Async arrow function,12,30,1
+semente,,,,,src/modules/users/routes.ts,Async arrow function,14,14,1
+semente,,,,,src/modules/users/routes.ts,Async arrow function,17,17,1
+semente,,,,,src/modules/users/routes.ts,Async arrow function,20,20,1
+semente,,,,,src/modules/users/routes.ts,Async arrow function,24,24,1
+semente,,,,,src/modules/users/routes.ts,Async arrow function,26,29,1
+semente,,,,,src/modules/users/service.ts,assertValidEmail,14,18,3
+semente,,,,,src/modules/users/service.ts,assertValidName,20,24,2
+semente,,,,,src/modules/users/service.ts,createUser,26,34,2
+semente,,,,,src/modules/users/service.ts,getUser,36,42,2
+semente,,,,,src/modules/users/service.ts,listUsers,44,49,1
+semente,,,,,src/modules/users/service.ts,updateUser,51,64,5
+semente,,,,,src/modules/users/service.ts,deleteUser,66,69,1
+semente,,,,,src/plugins/error-handler.ts,errorHandlerPlugin,4,32,1
+semente,,,,,src/plugins/error-handler.ts,Arrow function,5,7,1
+semente,,,,,src/plugins/error-handler.ts,Arrow function,9,31,6
+semente,,,,,src/plugins/error-handler.ts,Arrow function,19,19,2
+semente,,,,,src/plugins/register-modules.ts,Async arrow function,7,13,1
+semente,,,,,src/plugins/register-modules.ts,Async arrow function,8,8,1
+semente,,,,,src/plugins/request-id.ts,requestIdPlugin,4,10,1
+semente,,,,,src/plugins/request-id.ts,Async arrow function,5,9,3
+semente,,,,,src/server.ts,main,5,19,1
+semente,,,,,src/server.ts,Async arrow function,9,13,1
+semente,,,,,src/server.ts,Arrow function,15,15,1
+semente,,,,,src/server.ts,Arrow function,16,16,1
+semente,,,,,src/shared/errors.ts,Constructor,19,30,2
+semente,,,,,src/shared/errors.ts,errorBody,33,39,2
+semente,,,,,src/shared/errors.ts,validationFailed,41,43,2
+semente,,,,,src/shared/errors.ts,notFound,45,47,1
+semente,,,,,src/shared/errors.ts,roomNameTaken,49,51,1
+semente,,,,,src/shared/errors.ts,emailTaken,53,55,1
+semente,,,,,src/shared/errors.ts,bookingConflict,57,61,1
+semente,,,,,src/shared/http-reply.ts,replyNotFound,4,6,1
+semente,,,,,src/shared/http-reply.ts,replyConflict,8,10,1
+semente,,,,,src/shared/pagination.ts,normalizeLimit,9,13,4
+semente,,,,,src/shared/pagination.ts,normalizeOffset,15,18,4
+semente,,,,,src/shared/pagination.ts,paginated,20,22,1
+semente,,,,,src/shared/time.ts,parseInstant,5,11,2
+semente,,,,,src/shared/time.ts,durationMinutes,13,15,1
+semente,,,,,src/shared/time.ts,isBefore,17,19,1
+T1-P0-O1-mu69pgsx,T1,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,createIfNoOverlap,24,39,1
+T1-P0-O1-mu69pgsx,T1,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,Async arrow function,25,38,2
+T1-P0-O1-mu69pgsx,T1,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,updateIfNoOverlap,41,65,4
+T1-P0-O1-mu69pgsx,T1,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,Async arrow function,50,64,2
+T1-P0-O1-mu69pgsx,T1,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,assertValidPeriod,14,21,2
+T1-P0-O1-mu69pgsx,T1,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,createBooking,23,35,1
+T1-P0-O1-mu69pgsx,T1,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,updateBooking,60,85,8
+T1-P1-O1-mu69tn5j,T1,claude-sonnet-5,P1,O1,src/modules/bookings/repository.ts,findConflict,27,42,2
+T1-P1-O1-mu69tn5j,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,assertValidWindow,19,51,6
+T1-P1-O1-mu69tn5j,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,createBooking,53,68,1
+T1-P1-O1-mu69tn5j,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,updateBooking,93,118,14
+T2-P0-O1-mudcr5pg,T2,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T2-P0-O1-mudcr5pg,T2,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,findActiveInRange,44,54,1
+T2-P0-O1-mudcr5pg,T2,claude-sonnet-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P0-O1-mudcr5pg,T2,claude-sonnet-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P0-O1-mudcr5pg,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,createBooking,19,41,3
+T2-P0-O1-mudcr5pg,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,updateBooking,66,97,15
+T2-P0-O1-mudcr5pg,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,getAvailability,126,154,8
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,findOverlapping,27,43,2
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,findActiveInRange,45,55,1
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,computeGaps,29,45,6
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,suggestSlots,47,54,1
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,Arrow function,53,53,1
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,assertNoConflict,56,67,2
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,createBooking,69,82,1
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,getAvailability,84,96,3
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,updateBooking,121,139,12
+T2-P0-O1-mudcyv6z,T2,claude-sonnet-5,P0,O1,src/shared/errors.ts,bookingConflict,57,65,2
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,listActiveInRange,44,54,1
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,findRoomById,56,58,1
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,createBooking,26,42,2
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,updateBooking,67,93,14
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,getAvailability,108,149,9
+T2-P0-O1-muddre1p,T2,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,Arrow function,124,132,3
+T1-P2-O1-mue3d690,T1,claude-sonnet-5,P2,O1,src/modules/bookings/repository.ts,findConflict,27,42,2
+T1-P2-O1-mue3d690,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,assertRoomExists,25,30,2
+T1-P2-O1-mue3d690,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,assertUserExists,32,37,2
+T1-P2-O1-mue3d690,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,assertValidWindow,39,61,5
+T1-P2-O1-mue3d690,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,assertNoConflict,63,73,2
+T1-P2-O1-mue3d690,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,createBooking,75,92,1
+T1-P2-O1-mue3d690,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,updateBooking,117,150,16
+T1-P0-O2-mue3ic8e,T1,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,findOverlap,27,42,2
+T1-P0-O2-mue3ic8e,T1,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,assertValidRange,16,23,2
+T1-P0-O2-mue3ic8e,T1,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,createBooking,25,49,4
+T1-P0-O2-mue3ic8e,T1,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,updateBooking,74,102,11
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findOverlapping,27,43,2
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findActiveOverlapping,45,55,1
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,earliest,28,30,2
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,latest,32,34,2
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertDurationInRange,36,44,3
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertBookingWindow,46,56,3
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertConflictFree,58,68,2
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,freeSlots,70,98,5
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,Arrow function,77,81,3
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,createBooking,100,116,1
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,listAvailability,141,172,5
+T2-P2-O2-mug80u5e,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,updateBooking,174,205,15
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,findOverlapping,33,48,2
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,listActiveBetween,50,60,1
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,createBatch,62,107,1
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,Async arrow function,65,106,6
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,Arrow function,71,74,3
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/routes.ts,Async arrow function,16,47,1
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/routes.ts,Async arrow function,22,23,1
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/routes.ts,Async arrow function,27,27,1
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,createBooking,21,37,2
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,updateBooking,62,83,13
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,getAvailability,98,123,6
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,createBookingsBatch,125,139,2
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,Arrow function,126,132,1
+T2-P0-O2-mug9m7tj,T2,claude-sonnet-5,P0,O2,src/shared/errors.ts,bookingBatchConflict,70,77,1
+T2-P2-O2-mug9y1b7,T2,claude-haiku-4-5,P2,O2,src/modules/bookings/repository.ts,findConflict,27,36,1
+T2-P2-O2-mug9y1b7,T2,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,createBooking,14,30,2
+T2-P0-O1-mugaf8rz,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/repository.ts,findAvailableSlots,73,107,4
+T2-P0-O1-mugaf8rz,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/repository.ts,Arrow function,96,96,2
+T2-P0-O1-mugaf8rz,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,createBooking,14,41,2
+T2-P0-O1-mugaf8rz,T2,claude-haiku-4-5,P0,O1,src/shared/errors.ts,bookingConflict,57,65,2
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,transaction,36,38,1
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,create,40,42,2
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,findOverlapping,44,57,3
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,update,82,84,2
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,assertEndsAfterStart,25,32,2
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,assertNotInThePast,34,40,2
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,assertRoomExists,42,46,2
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,assertUserExists,48,52,2
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,createBooking,54,86,1
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Async arrow function,66,85,2
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,updateBooking,111,159,16
+T1-P0-O1-mugau3vr,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Async arrow function,147,158,3
+T2-P2-O1-mugbng1s,T2,claude-sonnet-5,P2,O1,src/modules/bookings/repository.ts,findRoomById,42,44,1
+T2-P2-O1-mugbng1s,T2,claude-sonnet-5,P2,O1,src/modules/bookings/repository.ts,listActiveOverlapping,46,56,1
+T2-P2-O1-mugbng1s,T2,claude-sonnet-5,P2,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P2-O1-mugbng1s,T2,claude-sonnet-5,P2,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P2-O1-mugbng1s,T2,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,getAvailability,86,116,8
+T2-P2-O1-mugbng1s,T2,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,addSlot,118,122,2
+T1-P1-O2-mugbwclq,T1,claude-sonnet-5,P1,O2,src/modules/bookings/repository.ts,findOverlap,27,42,2
+T1-P1-O2-mugbwclq,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertValidDuration,19,30,4
+T1-P1-O2-mugbwclq,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertIsFuture,32,36,2
+T1-P1-O2-mugbwclq,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertRoomExists,38,43,2
+T1-P1-O2-mugbwclq,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertUserExists,45,50,2
+T1-P1-O2-mugbwclq,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,createBooking,52,73,2
+T1-P1-O2-mugbwclq,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,updateBooking,98,135,17
+T2-P2-O2-mugc0y54,T2,claude-haiku-4-5,P2,O2,src/modules/bookings/repository.ts,findConflict,38,53,2
+T2-P2-O2-mugc0y54,T2,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,createBooking,14,30,2
+T2-P2-O2-mugc0y54,T2,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,updateBooking,55,78,13
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,listActiveForRoom,44,54,1
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,computeFreeSlots,28,53,6
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,suggestAlternatives,55,63,1
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,createBooking,65,83,2
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,getRoomAvailability,85,102,4
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,updateBooking,127,148,13
+T2-P0-O2-mugc9fcy,T2,claude-sonnet-5,P0,O2,src/shared/errors.ts,bookingConflict,62,70,2
+T1-P1-O1-mugclikn,T1,claude-sonnet-5,P1,O1,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T1-P1-O1-mugclikn,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,assertValidPeriod,21,32,4
+T1-P1-O1-mugclikn,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,assertFuture,34,38,2
+T1-P1-O1-mugclikn,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,assertRoomExists,40,45,2
+T1-P1-O1-mugclikn,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,assertUserExists,47,52,2
+T1-P1-O1-mugclikn,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,assertNoConflict,54,64,2
+T1-P1-O1-mugclikn,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,createBooking,66,83,1
+T1-P1-O1-mugclikn,T1,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,updateBooking,108,140,15
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,transaction,36,38,1
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,create,40,42,2
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,findOverlapping,50,61,3
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,roomExists,67,69,1
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,userExists,71,73,1
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,update,94,96,2
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,assertEndsAfterStart,14,21,2
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,assertRoomExists,23,27,2
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,assertUserExists,29,33,2
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,createBooking,35,62,1
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Async arrow function,42,61,2
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,updateBooking,87,129,15
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Async arrow function,119,128,2
+T1-P0-O1-mugcrfmz,T1,claude-opus-5,P0,O1,src/shared/time.ts,parseInstant,11,17,3
+T2-P2-O2-mugd3ds7,T2,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,findOverlap,27,42,2
+T2-P2-O2-mugd3ds7,T2,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,listActiveOverlapping,44,54,1
+T2-P2-O2-mugd3ds7,T2,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,findRoomById,56,58,1
+T2-P2-O2-mugd3ds7,T2,claude-sonnet-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P2-O2-mugd3ds7,T2,claude-sonnet-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P2-O2-mugd3ds7,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,createBooking,27,43,2
+T2-P2-O2-mugd3ds7,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,updateBooking,68,89,13
+T2-P2-O2-mugd3ds7,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,listAvailableSlots,104,141,9
+T2-P0-O1-mugdg5hu,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/repository.ts,findConflict,27,36,1
+T2-P0-O1-mugdg5hu,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/repository.ts,findConflictsInRange,73,87,1
+T2-P0-O1-mugdg5hu,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,15,44,1
+T2-P0-O1-mugdg5hu,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,23,27,1
+T2-P0-O1-mugdg5hu,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,createBooking,14,30,2
+T2-P0-O1-mugdg5hu,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,getAvailableSlots,89,123,4
+T2-P0-O1-mugdg5hu,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,Arrow function,118,121,1
+T1-P0-O1-mugdl5bw,T1,claude-haiku-4-5,P0,O1,src/modules/bookings/repository.ts,findConflict,27,40,1
+T1-P0-O1-mugdl5bw,T1,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,createBooking,14,34,3
+T1-P0-O1-mugdl5bw,T1,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,updateBooking,59,84,15
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,findConflict,28,44,2
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,createChecked,46,53,1
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,Async arrow function,47,52,2
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,updateChecked,82,93,1
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,Async arrow function,87,92,2
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,assertValidWindow,16,28,4
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,assertFuture,30,34,2
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,createBooking,36,56,2
+T1-P2-O2-mugdovul,T1,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,updateBooking,81,118,15
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/repository.ts,listActiveBetween,44,54,1
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertRoomExists,22,27,2
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertUserExists,29,34,2
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertBookableWindow,36,49,5
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertNoConflict,51,61,2
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,createBooking,63,79,1
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,getAvailability,104,138,12
+T2-P1-O2-muh2v1yp,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,updateBooking,140,168,14
+T2-P1-O1-muh34wz8,T2,claude-sonnet-5,P1,O1,src/modules/bookings/repository.ts,findActiveByRoomInRange,38,48,1
+T2-P1-O1-muh34wz8,T2,claude-sonnet-5,P1,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P1-O1-muh34wz8,T2,claude-sonnet-5,P1,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P1-O1-muh34wz8,T2,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,getRoomAvailability,86,115,7
+T2-P1-O1-muh3dinh,T2,claude-sonnet-5,P1,O1,src/modules/bookings/repository.ts,findOverlapping,27,36,1
+T2-P1-O1-muh3dinh,T2,claude-sonnet-5,P1,O1,src/modules/bookings/repository.ts,listActiveInRange,38,48,1
+T2-P1-O1-muh3dinh,T2,claude-sonnet-5,P1,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P1-O1-muh3dinh,T2,claude-sonnet-5,P1,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P1-O1-muh3dinh,T2,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,createBooking,32,48,2
+T2-P1-O1-muh3dinh,T2,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,getRoomAvailability,50,78,8
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,overlapping,30,37,1
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findConflict,39,49,2
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,listActiveBetween,51,56,1
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findRoomById,58,60,1
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findUserById,62,64,1
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,14,42,1
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,25,25,1
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertWindow,31,46,5
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertRoomExists,48,52,2
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertUserExists,54,58,2
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertNoConflict,60,70,2
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,createBooking,72,88,1
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,listAvailableSlots,113,154,8
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,Arrow function,151,151,1
+T2-P2-O2-muh3mfug,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,updateBooking,156,183,14
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findOverlap,27,43,2
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findRoom,49,51,1
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findUser,53,55,1
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertValidInterval,17,32,5
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertRoomExists,34,39,2
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertUserExists,41,46,2
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertNoOverlap,48,58,2
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,createBooking,60,76,1
+T1-P2-O2-muh46s2t,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,updateBooking,101,130,14
+T1-P2-O2-muh55045,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/repository.ts,findConflictingBooking,27,36,1
+T1-P2-O2-muh55045,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,validateBookingRules,19,50,7
+T1-P2-O2-muh55045,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,createBooking,52,70,2
+T1-P2-O2-muh55045,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,getBooking,72,78,2
+T1-P2-O2-muh55045,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,listBookings,80,93,3
+T1-P2-O2-muh55045,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,updateBooking,95,119,16
+T1-P2-O2-muh55045,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,cancelBooking,121,127,2
+T1-P2-O2-muh55045,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,deleteBooking,129,132,1
+T2-P0-O1-muh5rlra,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/repository.ts,findConflict,27,37,2
+T2-P0-O1-muh5rlra,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,createBooking,14,30,2
+T2-P0-O1-muh5rlra,T2,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,updateBooking,55,73,10
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,listActiveBetween,44,54,1
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,assertValidDuration,25,37,4
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,assertFutureStart,39,43,2
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,createBooking,45,66,2
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,updateBooking,91,128,17
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,getAvailability,130,164,5
+T2-P2-O2-muh5udw3,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,Arrow function,141,145,1
+T1-P2-O2-muh9oh1r,T1,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findOverlapping,34,44,2
+T1-P2-O2-muh9oh1r,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertInterval,19,34,4
+T1-P2-O2-muh9oh1r,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertFuture,36,40,2
+T1-P2-O2-muh9oh1r,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertNoOverlap,42,57,3
+T1-P2-O2-muh9oh1r,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,createBooking,59,78,1
+T1-P2-O2-muh9oh1r,T1,claude-opus-5,P2,O2,src/modules/bookings/service.ts,updateBooking,103,134,14
+T2-P1-O1-muhag2fi,T2,claude-sonnet-5,P1,O1,src/modules/bookings/repository.ts,listOverlapping,27,43,2
+T2-P1-O1-muhag2fi,T2,claude-sonnet-5,P1,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P1-O1-muhag2fi,T2,claude-sonnet-5,P1,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P1-O1-muhag2fi,T2,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,createBooking,21,37,2
+T2-P1-O1-muhag2fi,T2,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,updateBooking,62,82,13
+T2-P1-O1-muhag2fi,T2,claude-sonnet-5,P1,O1,src/modules/bookings/service.ts,getAvailability,97,123,6
+T2-P2-O1-muhamomm,T2,claude-sonnet-5,P2,O1,src/modules/bookings/repository.ts,findActiveOverlapping,38,48,1
+T2-P2-O1-muhamomm,T2,claude-sonnet-5,P2,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P2-O1-muhamomm,T2,claude-sonnet-5,P2,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P2-O1-muhamomm,T2,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,getRoomAvailability,86,120,9
+T2-P2-O1-muhamomm,T2,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,Arrow function,119,119,1
+T1-P1-O2-muhawah5,T1,claude-sonnet-5,P1,O2,src/modules/bookings/repository.ts,findOverlap,27,42,2
+T1-P1-O2-muhawah5,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertValidPeriod,19,32,5
+T1-P1-O2-muhawah5,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertRoomAndUserExist,34,45,3
+T1-P1-O2-muhawah5,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,createBooking,47,66,2
+T1-P1-O2-muhawah5,T1,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,updateBooking,91,122,17
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/routes.ts,Async arrow function,11,25,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/routes.ts,Async arrow function,14,14,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/routes.ts,Async arrow function,24,24,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,getRoomAvailability,22,34,3
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,searchAvailability,36,57,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,Arrow function,50,50,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,Arrow function,54,54,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,describe,59,73,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,minimumMs,75,77,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,parseWindow,79,94,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,overlapWhere,30,43,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,createIfFree,50,59,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,Async arrow function,51,58,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,updateIfFree,62,75,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,Async arrow function,67,74,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,findBusyIntervals,78,100,4
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,Arrow function,95,95,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,createBooking,16,37,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,updateBooking,62,96,11
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,assertRoomAndUserExist,111,118,5
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,suggestAlternatives,124,140,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Arrow function,136,139,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/modules/rooms/repository.ts,list,24,37,3
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/plugins/register-modules.ts,Async arrow function,8,15,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/shared/errors.ts,bookingConflict,59,71,2
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/shared/errors.ts,Arrow function,64,67,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/shared/intervals.ts,mergeIntervals,12,30,6
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/shared/intervals.ts,Arrow function,13,13,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/shared/intervals.ts,freeSlots,37,64,6
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/shared/intervals.ts,Arrow function,43,46,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/shared/intervals.ts,Arrow function,47,47,1
+T2-P0-O1-muhb0kux,T2,claude-opus-5,P0,O1,src/shared/time.ts,assertOrderedRange,23,34,3
+T1-P2-O2-muhckhv4,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/repository.ts,findConflict,38,47,1
+T1-P2-O2-muhckhv4,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,validateBookingDomainRules,16,38,5
+T1-P2-O2-muhckhv4,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,createBooking,40,71,4
+T1-P2-O2-muhckhv4,T1,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,updateBooking,96,144,22
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/repository.ts,findConflict,27,42,2
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/repository.ts,listActiveInRange,44,54,1
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertBookingWindow,34,47,5
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertRoomExists,49,54,2
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,assertUserExists,56,61,2
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,createBooking,63,82,2
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,updateBooking,107,139,15
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,listAvailability,154,189,9
+T2-P1-O2-muhcqs8o,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,Arrow function,187,187,1
+T2-P2-O2-muhczm73,T2,claude-haiku-4-5,P2,O2,src/modules/bookings/repository.ts,findConflict,27,42,2
+T2-P2-O2-muhczm73,T2,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,createBooking,14,30,2
+T2-P2-O2-muhczm73,T2,claude-haiku-4-5,P2,O2,src/modules/bookings/service.ts,updateBooking,55,79,13
+T2-P2-O2-muhczm73,T2,claude-haiku-4-5,P2,O2,src/shared/errors.ts,bookingConflict,57,67,1
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,findOverlapping,27,43,2
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,findRoomById,45,47,1
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,createBooking,20,36,2
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,updateBooking,61,82,13
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,clip,97,101,3
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,getAvailability,103,137,7
+T2-P2-O2-muhd7m46,T2,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,Arrow function,116,120,1
+T2-P1-O2-muhdk5kb,T2,claude-sonnet-5,P1,O2,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T2-P1-O2-muhdk5kb,T2,claude-sonnet-5,P1,O2,src/modules/bookings/repository.ts,findActiveInWindow,44,54,1
+T2-P1-O2-muhdk5kb,T2,claude-sonnet-5,P1,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P1-O2-muhdk5kb,T2,claude-sonnet-5,P1,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P1-O2-muhdk5kb,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,createBooking,21,37,2
+T2-P1-O2-muhdk5kb,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,updateBooking,62,83,13
+T2-P1-O2-muhdk5kb,T2,claude-sonnet-5,P1,O2,src/modules/bookings/service.ts,getAvailability,98,125,9
+T1-P0-O1-muhdrwes,T1,claude-sonnet-5,P0,O1,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T1-P0-O1-muhdrwes,T1,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,assertValidPeriod,16,23,2
+T1-P0-O1-muhdrwes,T1,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,assertRoomExists,25,30,2
+T1-P0-O1-muhdrwes,T1,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,assertUserExists,32,37,2
+T1-P0-O1-muhdrwes,T1,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,createBooking,39,59,2
+T1-P0-O1-muhdrwes,T1,claude-sonnet-5,P0,O1,src/modules/bookings/service.ts,updateBooking,84,116,16
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,create,25,27,2
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,findConflict,29,45,3
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,findById,47,49,2
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,listActiveInRange,51,61,1
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,update,82,88,2
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/routes.ts,Async arrow function,16,46,1
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/routes.ts,Async arrow function,22,22,1
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/routes.ts,Async arrow function,29,29,1
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,isWriteConflict,24,26,3
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,withConflictRetry,28,37,6
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,createBooking,39,56,1
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,Arrow function,43,54,1
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,Async arrow function,44,54,2
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,updateBooking,81,115,1
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,Arrow function,82,113,1
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,Async arrow function,83,113,14
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,getAvailability,137,162,8
+T2-P0-O2-muhdv05x,T2,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,createBookingsBatch,164,184,4
+T1-P0-O1-muhe618n,T1,claude-haiku-4-5,P0,O1,src/modules/bookings/repository.ts,findConflict,38,47,1
+T1-P0-O1-muhe618n,T1,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,createBooking,16,49,5
+T1-P0-O1-muhe618n,T1,claude-haiku-4-5,P0,O1,src/modules/bookings/service.ts,updateBooking,74,118,21
+T1-P2-O2-muhea79w,T1,claude-sonnet-5,P2,O2,src/modules/bookings/repository.ts,findOverlap,27,42,2
+T1-P2-O2-muhea79w,T1,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,assertValidPeriod,19,30,5
+T1-P2-O2-muhea79w,T1,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,createBooking,32,56,4
+T1-P2-O2-muhea79w,T1,claude-sonnet-5,P2,O2,src/modules/bookings/service.ts,updateBooking,81,111,19
+T2-P2-O1-muhego67,T2,claude-sonnet-5,P2,O1,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T2-P2-O1-muhego67,T2,claude-sonnet-5,P2,O1,src/modules/bookings/repository.ts,findActiveInRange,44,54,1
+T2-P2-O1-muhego67,T2,claude-sonnet-5,P2,O1,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P2-O1-muhego67,T2,claude-sonnet-5,P2,O1,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P2-O1-muhego67,T2,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,createBooking,27,43,2
+T2-P2-O1-muhego67,T2,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,updateBooking,68,91,14
+T2-P2-O1-muhego67,T2,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,getAvailability,106,134,8
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/routes.ts,Async arrow function,5,8,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/routes.ts,Async arrow function,7,7,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,resolveWindow,29,40,4
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,roomsInScope,42,55,3
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,findAvailability,61,86,2
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,Arrow function,69,69,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,Arrow function,73,80,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,Arrow function,77,77,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,suggestOpenings,92,107,2
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/service.ts,Arrow function,103,106,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/slots.ts,slot,9,11,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/slots.ts,fits,14,17,2
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/slots.ts,freeSlots,27,46,5
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/slots.ts,openings,52,56,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/availability/slots.ts,Arrow function,55,55,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,findOverlapping,34,49,2
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,findActiveOverlapping,52,62,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,requireRoomAndUser,17,24,3
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,requireFree,30,40,2
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,createBooking,42,53,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,updateBooking,78,102,13
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/modules/rooms/repository.ts,list,24,38,3
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/plugins/register-modules.ts,Async arrow function,8,15,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/shared/errors.ts,bookingConflict,66,74,2
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/shared/time.ts,parseInterval,22,26,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/shared/time.ts,requireOrdered,28,36,2
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/shared/time.ts,minutesToMs,42,44,1
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/shared/time.ts,maxDate,50,52,2
+T2-P0-O1-muieojn9,T2,claude-opus-5,P0,O1,src/shared/time.ts,minDate,54,56,2
+T1-P2-O1-muifiv02,T1,claude-sonnet-5,P2,O1,src/modules/bookings/repository.ts,findOverlapping,27,42,2
+T1-P2-O1-muifiv02,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,validateBookingWindow,19,30,5
+T1-P2-O1-muifiv02,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,ensureRoomExists,32,37,2
+T1-P2-O1-muifiv02,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,ensureUserExists,39,44,2
+T1-P2-O1-muifiv02,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,createBooking,46,66,2
+T1-P2-O1-muifiv02,T1,claude-sonnet-5,P2,O1,src/modules/bookings/service.ts,updateBooking,91,121,14
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/availability.ts,mergeIntervals,21,38,5
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/availability.ts,Arrow function,23,23,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/availability.ts,Arrow function,24,24,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/availability.ts,freeSlots,44,65,6
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/availability.ts,Arrow function,50,53,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/availability.ts,suggestSlots,71,86,3
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,runInTransaction,31,33,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,create,35,37,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,findOverlapping,43,59,4
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,listBusyIntervals,62,77,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,findExistingRoomIds,79,82,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,Arrow function,81,81,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,findExistingUserIds,84,87,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,Arrow function,86,86,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/repository.ts,update,112,118,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,17,44,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,23,24,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,50,60,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/routes.ts,Async arrow function,59,59,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,createBooking,73,91,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Async arrow function,81,90,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,createBookingsBatch,98,176,4
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Arrow function,102,108,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Arrow function,111,121,3
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Arrow function,126,127,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Async arrow function,145,175,5
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,getRoomAvailability,179,206,5
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,updateBooking,231,271,10
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Async arrow function,251,270,10
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,conflictFor,290,304,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,suggestAlternatives,306,320,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,loadKnownReferences,322,330,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Arrow function,326,326,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Arrow function,327,327,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,missingReference,332,339,3
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,batchRejected,341,347,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Arrow function,342,342,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,Arrow function,344,344,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,asFailure,349,352,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/modules/bookings/service.ts,toIso,354,359,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/plugins/register-modules.ts,Async arrow function,7,14,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/shared/errors.ts,bookingConflict,57,65,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/shared/time.ts,addMinutes,28,30,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/shared/time.ts,addDays,32,34,1
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/shared/time.ts,earliest,36,38,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/shared/time.ts,latest,40,42,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/shared/time.ts,overlaps,44,46,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/shared/time.ts,toInterval,49,57,2
+T2-P0-O1-muifs0lb,T2,claude-opus-5,P0,O1,src/shared/time.ts,parseInterval,59,61,1
+T1-P0-O2-muigc6jv,T1,claude-sonnet-5,P0,O2,src/modules/bookings/repository.ts,findConflict,27,42,2
+T1-P0-O2-muigc6jv,T1,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,assertOrdered,14,18,2
+T1-P0-O2-muigc6jv,T1,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,createBooking,20,37,2
+T1-P0-O2-muigc6jv,T1,claude-sonnet-5,P0,O2,src/modules/bookings/service.ts,updateBooking,62,84,13
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findOverlapping,27,43,2
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,listActiveBetween,45,55,1
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findRoomById,61,63,1
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/repository.ts,findUserById,65,67,1
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,14,40,1
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/routes.ts,Async arrow function,23,23,1
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,earliest,40,42,2
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,latest,44,46,2
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,addMinutes,48,50,1
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertWindow,52,67,5
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertRoomExists,69,74,2
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,assertUserExists,76,81,2
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,freeSlots,86,107,6
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,nextAvailableStart,109,118,2
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,conflictFor,120,128,2
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,createBooking,130,149,2
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,listAvailability,174,194,4
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/modules/bookings/service.ts,updateBooking,196,230,16
+T2-P2-O2-muigfrfy,T2,claude-opus-5,P2,O2,src/shared/errors.ts,bookingConflict,57,65,2
