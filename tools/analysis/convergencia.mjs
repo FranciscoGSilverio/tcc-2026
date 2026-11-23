@@ -115,6 +115,27 @@ export function convergenceOverPoints(cellRows, points) {
   };
 }
 
+// The substantive convergence of the article (section III-F, f.5): the
+// same rule over all ten points, but a point counts as converged only when
+// the three rows agree on a category that was actually implemented. Three
+// sessions that all left a point "ausente" agreed to do nothing there,
+// and the official rule counts that as convergence -- which made Haiku
+// P2-O2, where two of three sessions built nothing for the user, look
+// predictable (0,70) when it converged on nothing (0,00). The denominator
+// stays ten, as in the article's C = D/10, so both measures share a scale.
+//
+// Added on 23/11/2026, after the article: until then the substantive
+// number existed only in the article, with no script behind it.
+export function substantiveConvergence(cellRows, points = POINTS) {
+  let converged = 0;
+  for (const point of points) {
+    const categories = cellRows.map((row) => row[decisionColumn(point)]);
+    if (new Set(categories).size === 1 && categories[0] !== 'ausente') converged += 1;
+  }
+  const total = points.length;
+  return { converged, total, ratio: total === 0 ? 0 : converged / total };
+}
+
 function countLabel(count) {
   if (count === 0) return '0 sessões válidas e classificadas (requer exatamente 3)';
   if (count < 3) return `${count} sessões válidas e classificadas (requer exatamente 3)`;
@@ -145,6 +166,7 @@ export function analyze(allRows) {
   const firstCut = computed.map(({ cell, resolved }) => ({
     cell,
     convergence: convergenceOverPoints(resolved.rows, POINTS),
+    substantive: substantiveConvergence(resolved.rows),
   }));
 
   const scope = {
@@ -196,9 +218,11 @@ function formatFraction(convergence) {
 }
 
 function formatCellTable(entries, header) {
-  const lines = [`célula                ${header}   categorias distintas/ponto`];
-  for (const { cell, convergence } of entries) {
-    lines.push(`${cell.padEnd(21)} ${formatFraction(convergence).padStart(17)}   ${formatNumber(convergence.avgDistinct).padStart(24)}`);
+  const withSubstantive = entries.some((entry) => entry.substantive);
+  const lines = [`célula                ${header}   categorias distintas/ponto${withSubstantive ? '   substantiva(10)' : ''}`];
+  for (const { cell, convergence, substantive } of entries) {
+    const tail = substantive ? `   ${formatFraction(substantive).padStart(16)}` : '';
+    lines.push(`${cell.padEnd(21)} ${formatFraction(convergence).padStart(17)}   ${formatNumber(convergence.avgDistinct).padStart(24)}${tail}`);
   }
   return lines;
 }
@@ -243,6 +267,13 @@ async function main() {
   );
   const rows = readRows(datasetPath);
   const result = analyze(rows);
+  if (process.argv.includes('--json')) {
+    process.stdout.write(`${JSON.stringify(result.firstCut.map(({ cell, convergence, substantive }) => ({
+      cell, oficial: convergence.ratio, substantiva: substantive.ratio,
+    })), null, 2)}
+`);
+    return;
+  }
   process.stdout.write(formatReport(result));
 }
 

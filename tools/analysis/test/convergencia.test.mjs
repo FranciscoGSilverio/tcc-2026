@@ -5,7 +5,9 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { appendRow, emptyRow, readRows } from '../../../runner/lib/dataset.mjs';
-import { analyze, convergenceOverPoints, formatReport, POINTS } from '../convergencia.mjs';
+import {
+  analyze, convergenceOverPoints, formatReport, POINTS, substantiveConvergence,
+} from '../convergencia.mjs';
 
 const SCRIPT_PATH = resolve(import.meta.dirname, '..', 'convergencia.mjs');
 
@@ -238,3 +240,27 @@ test('the model cells are cells: each is computed on its own, never mixed with s
   }
 });
 
+
+test('substantive convergence does not count agreement on "ausente"', () => {
+  // The Haiku P2-O2 case from the article: three sessions that agree on
+  // seven points by all leaving them untouched, and differ on the rest.
+  const base = ['ausente', 'ausente', 'ausente', 'ausente', 'ausente', 'ausente', 'ausente'];
+  const rows = [
+    makeRow({ pLevel: 'P2', oLevel: 'O2', categories: [...base, 'x', 'y', 'z'] }),
+    makeRow({ pLevel: 'P2', oLevel: 'O2', categories: [...base, 'y', 'z', 'x'] }),
+    makeRow({ pLevel: 'P2', oLevel: 'O2', categories: [...base, 'z', 'x', 'y'] }),
+  ];
+  assert.equal(convergenceOverPoints(rows, POINTS).ratio, 0.7);
+  assert.equal(substantiveConvergence(rows).ratio, 0);
+});
+
+test('substantive convergence counts agreement on an implemented choice, over ten', () => {
+  const rows = [0, 1, 2].map(() => makeRow({
+    pLevel: 'P1', oLevel: 'O1',
+    categories: ['a1', 'a2', 'a3', 'ausente', 'ausente', 'a6', 'a7', 'a8', 'a9', 'a10'],
+  }));
+  rows[2].decisao_10 = 'outra';
+  const result = substantiveConvergence(rows);
+  assert.equal(result.converged, 7);
+  assert.equal(result.total, 10);
+});
