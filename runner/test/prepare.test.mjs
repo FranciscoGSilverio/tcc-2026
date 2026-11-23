@@ -55,7 +55,7 @@ test('applyContext copies the P1 context file into the working copy', () => {
   const calls = [];
   applyContext({ name: 'x', pLevel: 'P1', repoRoot: REPO, copy: (...a) => calls.push(a) });
   assert.equal(calls.length, 1);
-  assert.match(calls[0][1], /contexts\/P1\/CLAUDE\.md$/);
+  assert.match(calls[0][1], /contexts[\\/]P1[\\/]CLAUDE\.md$/);
   assert.equal(calls[0][2], '/app/CLAUDE.md');
 });
 

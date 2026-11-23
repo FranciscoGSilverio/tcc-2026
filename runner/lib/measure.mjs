@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { copyIn, exec, execDetached } from './container.mjs';
 import {
   checkConventions, readFrozenManifest, readManifestFromContainer, runEslintInContainer,
@@ -40,11 +40,15 @@ function captureDiff(name, outDir, baselineCommit) {
 }
 
 function restoreFrozenTests(name, repoRoot) {
+  // Each frozen file is read straight from git, with no shell and no tar:
+  // a host path interpolated into `sh -c` loses its backslashes on
+  // Windows, and GNU tar reads the `C:` of a Windows path as a remote host.
   const staging = mkdtempSync(join(tmpdir(), 'frozen-tests-'));
-  execFileSync('sh', ['-c',
-    `git -C ${repoRoot} archive HEAD seed/tests | tar -x -C ${staging}`]);
   for (const file of SEED_TEST_FILES) {
-    copyIn(name, join(staging, 'seed', file), `/app/${file}`);
+    const local = join(staging, file);
+    mkdirSync(dirname(local), { recursive: true });
+    writeFileSync(local, execFileSync('git', ['-C', repoRoot, 'show', `HEAD:seed/${file}`]));
+    copyIn(name, local, `/app/${file}`);
   }
 }
 

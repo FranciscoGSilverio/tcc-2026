@@ -1,0 +1,7 @@
+# Tudo o que é texto fica em LF também na cópia de trabalho, em qualquer
+# sistema. Vários arquivos vão para dentro do contêiner Linux da sessão
+# (patch de referência, scripts, a semente), e um checkout no Windows com
+# core.autocrlf=true os convertia para CRLF: o reference.patch deixava de
+# aplicar e o substituto `reference` do runner virava sessão inválida.
+# No índice do git tudo já estava em LF; isto não muda nenhum byte versionado.
+* text=auto eol=lf
