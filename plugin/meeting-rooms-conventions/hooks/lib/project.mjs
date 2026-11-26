@@ -66,7 +66,7 @@ export function git(dir, args) {
 
 function stateFile(sessionId) {
   const safe = String(sessionId || 'sem-sessao').replace(/[^\w-]/g, '_');
-  return join(tmpdir(), 'meeting-rooms-conventions-v2', `${safe}.json`);
+  return join(tmpdir(), 'meeting-rooms-conventions', `${safe}.json`);
 }
 
 export function readState(sessionId) {

@@ -1,4 +1,4 @@
-// The experimental v2 plugin: its hooks run as real processes against a
+// The plugin's hooks: they run as real processes against a
 // throwaway git repository shaped like the seed, the way Claude Code runs
 // them (JSON on stdin, exit code and stdout/stderr back).
 import assert from 'node:assert/strict';
@@ -7,16 +7,16 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { applyEdit, installsPackage, originalLinesRemoved, removedLines } from '../meeting-rooms-conventions-v2/hooks/lib/guards.mjs';
+import { applyEdit, installsPackage, originalLinesRemoved, removedLines } from '../meeting-rooms-conventions/hooks/lib/guards.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
-const V2 = join(REPO_ROOT, 'plugin', 'meeting-rooms-conventions-v2');
-const HOOKS = join(V2, 'hooks');
+const PKG = join(REPO_ROOT, 'plugin', 'meeting-rooms-conventions');
+const HOOKS = join(PKG, 'hooks');
 
 const SEED_TEST = "import { test } from 'vitest';\n\ntest('keeps a booking', () => {\n  expect(1).toBe(1);\n});\n";
 
 function makeProject({ name = 'meeting-rooms-api' } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'mrc-v2-'));
+  const dir = mkdtempSync(join(tmpdir(), 'mrc-'));
   const manifest = { name, scripts: { test: 'vitest run' }, dependencies: { fastify: '5.2.1' } };
   writeFileSync(join(dir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   writeFileSync(join(dir, 'tsconfig.json'), '{}\n');
@@ -48,6 +48,12 @@ test('the scoring rules are a byte-for-byte copy of the ones the collection used
     readFileSync(join(HOOKS, 'lib', 'diff-rules.mjs'))
       .equals(readFileSync(join(REPO_ROOT, 'tools', 'convention-check', 'diff-rules.mjs'))),
   );
+});
+
+test('the package has the four skills and the hooks', () => {
+  for (const s of ['convencoes-do-projeto', 'escrever-testes', 'estender-modulo', 'decidir-ambiguidades'])
+    assert.doesNotThrow(() => readFileSync(join(PKG, 'skills', s, 'SKILL.md')), s);
+  assert.doesNotThrow(() => readFileSync(join(PKG, 'hooks', 'hooks.json')));
 });
 
 test('hooks.json references only scripts that exist', () => {
