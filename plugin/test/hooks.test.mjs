@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { applyEdit, installsPackage, originalLinesRemoved, removedLines } from '../meeting-rooms-conventions/hooks/lib/guards.mjs';
@@ -15,11 +15,12 @@ const HOOKS = join(PKG, 'hooks');
 
 const SEED_TEST = "import { test } from 'vitest';\n\ntest('keeps a booking', () => {\n  expect(1).toBe(1);\n});\n";
 
-function makeProject({ name = 'meeting-rooms-api' } = {}) {
+function makeProject({ name = 'meeting-rooms-api', makefile = null } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'mrc-'));
   const manifest = { name, scripts: { test: 'vitest run' }, dependencies: { fastify: '5.2.1' } };
   writeFileSync(join(dir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   writeFileSync(join(dir, 'tsconfig.json'), '{}\n');
+  if (makefile) writeFileSync(join(dir, 'Makefile'), makefile);
   mkdirSync(join(dir, 'tests'));
   writeFileSync(join(dir, 'tests', 'bookings.test.ts'), SEED_TEST);
   mkdirSync(join(dir, 'src', 'modules', 'rooms'), { recursive: true });
@@ -239,6 +240,57 @@ test('the stop check flags a source change with no test', () => {
     const output = JSON.parse(runHook('stop-check.mjs', dir, { session_id: session }).stdout);
     assert.match(output.reason, /Convenção 5 /);
     assert.match(output.reason, /ESLint indisponível/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// A change that breaks none of the eight conventions: source plus a new test.
+function cleanChange(dir) {
+  writeFileSync(join(dir, 'src', 'modules', 'rooms', 'service.ts'), 'export const a = 2;\n');
+  writeFileSync(join(dir, 'tests', 'bookings.test.ts'), `${SEED_TEST}\ntest('a is 2', () => {});\n`);
+}
+
+test('the stop check runs make verify and sends the agent back when it fails', () => {
+  const dir = makeProject({ makefile: 'verify:\n\t@echo FALHOU-VERIFY; exit 1\n' });
+  try {
+    const session = newSession();
+    runHook('session-start.mjs', dir, { session_id: session });
+    cleanChange(dir);
+    const output = JSON.parse(runHook('stop-check.mjs', dir, { session_id: session }).stdout);
+    assert.equal(output.decision, 'block');
+    assert.match(output.reason, /make verify/);
+    assert.match(output.reason, /FALHOU-VERIFY/);
+    assert.match(output.reason, /mesmo comando que o CI do repositório/);
+    assert.match(output.reason, /verificação 1 de 2/);
+    assert.doesNotMatch(output.reason, /Convenção \d/);
+
+    assert.match(runHook('stop-check.mjs', dir, { session_id: session }).stdout, /verificação 2 de 2/);
+    assert.equal(runHook('stop-check.mjs', dir, { session_id: session }).stdout, '');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the stop check lets the session end when make verify passes', () => {
+  const dir = makeProject({ makefile: 'verify:\n\t@true\n' });
+  try {
+    const session = newSession();
+    runHook('session-start.mjs', dir, { session_id: session });
+    cleanChange(dir);
+    assert.equal(runHook('stop-check.mjs', dir, { session_id: session }).stdout, '');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the stop check does not run make verify when nothing changed', () => {
+  const dir = makeProject({ makefile: 'verify:\n\t@touch rodou.txt\n' });
+  try {
+    const session = newSession();
+    runHook('session-start.mjs', dir, { session_id: session });
+    assert.equal(runHook('stop-check.mjs', dir, { session_id: session }).stdout, '');
+    assert.equal(existsSync(join(dir, 'rodou.txt')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
