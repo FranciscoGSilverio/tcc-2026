@@ -30,6 +30,19 @@ Na versão 1.0.0, o pacote tem esta origem:
 | `meeting-rooms-conventions/.claude-plugin/plugin.json` | `contexts/P2/plugin/.claude-plugin/plugin.json`, com metadados de publicação acrescentados |
 | `../.claude-plugin/marketplace.json` | catálogo do marketplace |
 
+Na versão 2.0.0 (25/11/2026), a v2 experimental da branch `plugin-v2`
+(Bianca Souza) foi fundida neste pacote, que continua sendo um só:
+
+| Publicado | O que é |
+|---|---|
+| `hooks/` | Os hooks da v2: referência do time injetada no início, bloqueios na edição, e no fim da sessão as oito convenções mais `make verify` |
+| `hooks/referencia-do-time.md` | O que o time compartilha (as oito convenções, a regra para decisões em aberto, a verificação) |
+| `skills/` | As quatro skills da v2 |
+| `templates/CLAUDE.md` | Só o que é específico do repositório; as convenções saíram dele e vivem na referência |
+
+`hooks/lib/diff-rules.mjs` é cópia byte a byte de
+`tools/convention-check/diff-rules.mjs`, e um teste reprova se divergir.
+
 **Ao mudar o conteúdo**, suba a `version` no `plugin.json` e no catálogo, e
 revise o README público: a seção sobre o estudo vale para a condição P2, não
 para versões posteriores.
@@ -50,8 +63,9 @@ claude plugin validate ./plugin/meeting-rooms-conventions
 claude plugin validate .
 ```
 
-O primeiro reprova se o catálogo não apontar para esta pasta ou se a versão do
-catálogo divergir da do `plugin.json`. A guarda de fidelidade contra
+`marketplace.test.mjs` reprova se o catálogo não apontar para esta pasta ou se
+a versão do catálogo divergir da do `plugin.json`. `hooks.test.mjs` roda cada
+hook como processo, sobre um repositório git descartável no formato da semente. A guarda de fidelidade contra
 `contexts/P2/`, que reprovava qualquer byte diferente, foi retirada junto com a
 regra antiga; ela existe no histórico, na tag `plugin-v1.0.0-p2`.
 
@@ -63,15 +77,17 @@ claude -p "ok" --plugin-dir ./plugin/meeting-rooms-conventions --output-format s
 ```
 
 O evento `system/init` precisa listar `meeting-rooms-conventions` em
-`plugins` e as três skills, com prefixo `meeting-rooms-conventions:`, em
-`skills`. Conferido em 01/10/2026, com o CLI 2.1.286.
+`plugins` e as quatro skills, com prefixo `meeting-rooms-conventions:`, em
+`skills`. Conferido em 01/10/2026, com o CLI 2.1.286, e na 2.0.0 em 25/11/2026, com o
+CLI 2.1.331.
 
 ## O que falta
 
 - [x] Estrutura do pacote, cópia fiel de P2 (até 1.0.0), catálogo do marketplace
 - [x] Guarda de fidelidade contra `contexts/P2/` — retirada em 13/11/2026 (rodada 11); a versão fiel é a tag `plugin-v1.0.0-p2`
 - [x] `claude plugin validate` passando no plugin e no catálogo
-- [x] Plugin carregando por `--plugin-dir`, com as três skills
+- [x] Plugin carregando por `--plugin-dir`, com as três skills (quatro na 2.0.0)
+- [x] Fundir a v2 neste pacote como 2.0.0 (25/11/2026)
 - [x] README público com origem, instalação e resultado
 - [x] `author` no `plugin.json` e `owner` no catálogo — Bianca Souza, Francisco Silvério, Lavínia Amaral e Vinícius Telles (12/11/2026)
 - [x] Licença — MIT, em `LICENSE` na raiz e dentro do plugin (que é copiado sozinho para o cache de quem instala), e `license` no `plugin.json`
