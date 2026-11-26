@@ -826,3 +826,165 @@ Ficam registradas aqui para não serem esquecidas; nenhuma foi executada nesta r
 
 `contexts/P2/` e o runner não foram tocados.
 
+
+---
+
+# Rodada 12 — 18/11/2026
+
+Sessão de preparação da banca (M9). Registra o formato e o roteiro da apresentação, a revisão da branch `plugin-v2` e a decisão sobre como apresentar o plugin. Nada nos dados, no protocolo, em `contexts/P2/` ou no artigo foi alterado.
+
+## R12.1 Formato e roteiro da apresentação
+
+**Formato:** 30 minutos de apresentação do grupo e 30 de arguição. A apresentação vai em PDF, exportado do deck de slides.
+
+**Roteiro:** cinco blocos e um apêndice, cerca de 29 minutos com 1 de folga. O plugin deixa de ser um slide solto no fim: ele absorve o antigo slide "O que não fez diferença", porque aquele resultado é o ponto de partida do plugin.
+
+| Bloco | Conteúdo | Tempo |
+|---|---|---|
+| Problema e pergunta | Motivação, a dor do pedido vago e a hipótese, PP1 a PP4, os três fatores | cerca de 7 min |
+| Método | As duas tarefas, o desenho de 50 sessões, a medição, a confiabilidade do avaliador | cerca de 6:30 |
+| Resultados | A coleta, a T1, a T2, a PP3 | cerca de 7 min |
+| Plugin | Dos resultados ao plugin, como os hooks agem, o caso do Haiku, o contrafactual nas 50 sessões | cerca de 5 min |
+| Fechamento | Limitações, respostas às PPs, trabalho futuro | cerca de 3:30 |
+| Apêndice | Uma pergunta provável da banca por slide, com a resposta e onde ela está no repositório | só na arguição |
+
+O plano está em `docs/10-plano-de-apresentacao.pdf` (fonte `.tex` ao lado) e o deck em `docs/apresentacao/`.
+
+## R12.2 Revisão da branch `plugin-v2`
+
+Três commits de 13/11 (Bianca Souza): o pacote `meeting-rooms-conventions-v2`, com hooks que bloqueiam e verificam as oito convenções, o guia do projeto injetado no início da sessão e uma skill nova, `decidir-ambiguidades`. Os 17 testes da pasta `plugin/test/` passam. Nada foi alterado na branch. Achados, em ordem de importância:
+
+1. **Conflita com a `main`.** A base é `e7e7392`, anterior à rodada 11. A branch edita `plugin/test/fidelity.test.mjs`, que a `main` apagou, e põe uma segunda entrada no catálogo, que `marketplace.test.mjs` da `main` proíbe.
+2. **Dois pacotes ou um.** A v2 virou pacote separado porque a regra antiga proibia mexer no plugin publicado; a rodada 11 derrubou essa regra.
+3. **O guia perdeu a ressalva sobre `amenities`** ("não é uma ordem para reorganizar o que já existe"), que é a mitigação da ameaça "Texto de contexto pode induzir dano (T1)" do protocolo.
+4. **O bloqueio de edição não vê o terminal.** `guard-edit` só age em Edit, Write, MultiEdit e NotebookEdit; `sed -i` e heredoc passam, e o protocolo (seção 3.3) registra que o Opus edita assim. A verificação no encerramento pega depois.
+5. **`decidir-ambiguidades` cobre 9 dos 10 pontos de decisão da T2** (só d10 fica de fora). O README da v2 já declara isso.
+6. **Menores:** `homepage` aponta para um caminho que só existe depois do merge; sem git o encerramento não verifica e não avisa; sem `session_id` o estado é compartilhado entre sessões.
+
+## R12.3 Números levantados nesta sessão, sem coleta nova
+
+Calculados sobre os transcripts e as colunas existentes, com scripts descartáveis que não foram versionados (ver R12.6, item 5):
+
+- **Consulta às skills na P2** (invocar a skill ou ler o arquivo dela): Sonnet 9 de 10, Opus 5 de 5, Haiku 0 de 5, total 14 de 20. As skills estavam listadas no início das 5 sessões do Haiku.
+- **Violações:** 9 de 50 sessões com `violacoes = 1`, 8 delas em P0. A nona é `T2-P2-O2-muhczm73`, Haiku com as skills disponíveis e não consultadas. Por convenção: 6 na convenção 6, uma em cada uma das convenções 3, 4 e 5.
+- **Verificação antes de encerrar:** as 50 sessões rodaram testes, typecheck ou lint pelo menos uma vez, e nenhuma voltou a editar depois da última verificação. Contagem heurística por padrões de comando.
+- **Replay do caso do Haiku:** o `guard-edit` da v2, aplicado ao Edit registrado no transcript, bloquearia a edição ("a edição remove 2 linha(s) que `tests/shared.test.ts` já tinha no início da sessão (convenção 6)"). As regras de diff da v2 sobre `session.diff` apontam a convenção 6. O teste original que passou a falhar é "errors carries the conflicting booking in the details", com `TypeError`, porque o agente mudou a assinatura de `bookingConflict`.
+
+## R12.4 Decisão: o plugin é apresentado como conclusão dos resultados, sem coleta nova
+
+**Decisão do usuário, 18/11/2026:** opção A. Só slides, nada roda ao vivo.
+
+**O argumento** é uma escada de três degraus: informação sempre presente (P1) funcionou; procedimento opcional (skills da P2, etapas do O2) não acrescentou e custou mais, e o Haiku nunca consultou as skills; verificação feita por código (o plugin v2) é o degrau seguinte, não medido. Duas distinções precisam aparecer: no O2 as etapas eram prompts e o modelo decidia, nos hooks o código decide; e a previsibilidade que os hooks dão é a do estado final da sessão, não a das decisões que o estudo mediu como convergência.
+
+**Alternativas rejeitadas:**
+
+- **B, rodar a v2 no runner como condição nova.** Recusada. Na T1 não há o que melhorar (o Haiku com harness já tirou 26 de 26); na T2 a convergência sairia favorecida por construção, porque a skill de ambiguidades espelha os pontos de decisão; 2 ou 3 sessões coletadas sete semanas depois, sem controle de deriva, misturariam o efeito do tempo. A ausência desses números não invalida nada na pesquisa.
+- **C, pipeline de CI com o agente como orquestrador.** Não adotada. A versão completa custa horas e expõe a pergunta "isso não é o O2?". Um portão de testes também não mudaria resultado medido: as 50 sessões já verificavam, e o que faltou à T1 sem contexto foi regra de domínio, que nenhum teste do projeto pega.
+
+## R12.5 Consequência para o deck
+
+Os slides "Como o plugin age numa sessão", "Um caso real" e o segundo slide de perguntas sobre o plugin descrevem o plugin depois das mudanças de R12.6. As notas do apresentador desses slides dizem de qual mudança cada um depende.
+
+## R12.6 Mudanças no plugin necessárias para os slides (pendentes, não executadas)
+
+1. Fundir a v2 no próprio plugin como versão 2.0.0, em vez de um segundo pacote. Resolve o conflito com a `main` e o teste do catálogo; a tag `plugin-v1.0.0-p2` continua reproduzindo a P2.
+2. Acrescentar `make verify` à verificação de encerramento, dizendo que ela garante o que as 50 sessões já faziam.
+3. Corrigir o README sobre edições pelo terminal: bloqueio na hora para as ferramentas de edição, verificação final para tudo.
+4. Devolver ao guia a ressalva sobre `amenities`, e levar para o guia só a regra geral de `decidir-ambiguidades` ("decisão em aberto fica registrada em schema, constante e teste"), sem a lista que espelha d1 a d9.
+5. Versionar o replay como `tools/analysis/contrafactual-v2.mjs`, para que a mensagem do slide do caso do Haiku e a contagem das 9 sessões saiam de um comando.
+6. Os menores de R12.2, item 6.
+
+## R12.7 Pendências de apresentação que não são do plugin
+
+- Revisão humana da semente e tag `seed-v1`: continuam abertas (slide de apêndice "Quem revisou a semente?" tem marcadores `[Pendente]`).
+- Nome do orientador e data da banca na capa.
+- Conferir a redação do slide "O que as quatro perguntas responderam" com a seção de Resultados do artigo.
+- As figuras do artigo foram geradas na largura de uma coluna; no deck elas aparecem como estão. Gerar de novo em tamanho de slide é opcional.
+
+---
+
+# Rodada 13 — 24/11/2026
+
+Enxugamento do deck da banca. Substitui o roteiro de R12.1. Nada nos dados, no protocolo, no plugin ou no artigo foi alterado.
+
+## R13.1 Por quê
+
+O deck de 18/11 tinha 21 slides de fala (cerca de 29 min) e 10 de apêndice. O grupo achou exagerado: a apresentação dura de 20 a 30 min, e o deck encostava no teto, sem margem. A responsabilidade já estava dividida em quatro blocos (Abertura, Vinícius; Metodologia, Francisco; Resultados, Lavínia; Plugin, Bianca), e o quinto bloco do roteiro anterior, Fechamento, não tinha dono nessa divisão.
+
+## R13.2 Decisões do usuário
+
+- **Alvo de cerca de 24 min, com 6 por integrante.** Fica uns 4 min de margem para cada limite.
+- **Apêndice removido.** As respostas às perguntas prováveis passam para as notas do slide em que cada assunto aparece.
+- **Fechamento dividido:** as respostas às PPs fecham os Resultados (Lavínia); limitações, trabalho futuro e encerramento ficam com a Bianca, depois do plugin.
+- **A abertura não é fundida:** "Motivação" e "A dor real" continuam separadas, para que o Vinícius tenha 6 min.
+
+## R13.3 Roteiro novo: 17 slides
+
+| Bloco | Quem | Slides | Tempo |
+|---|---|---|---|
+| Abertura | Vinícius | Capa, Motivação, A dor real, PP1 a PP4, Os três fatores | cerca de 6 min |
+| Metodologia | Francisco | Duas tarefas, Desenho, Medição e confiabilidade | cerca de 6 min |
+| Resultados | Lavínia | T1 com a coleta, T2, PP3, Respostas às PPs | cerca de 6 min |
+| Plugin e encerramento | Bianca | Escada, Como age, Nas 50 sessões, Limitações, Encerramento com trabalho futuro | cerca de 6 min |
+
+**Fundidos:** "Confiabilidade" entra em "Medição" como uma faixa com os dois números de concordância. "A coleta" vira uma linha no slide da T1. "Trabalho futuro" vai para o encerramento.
+
+**Cortados:** "Um caso real (Haiku)", que continua na fala da Bianca e na nota do contrafactual, e os 10 slides de apêndice.
+
+Spec em `docs/superpowers/specs/2026-11-24-apresentacao-enxuta-design.md`. O plano (`docs/10`), o README do deck e o deck publicado foram atualizados.
+
+### R13.4 Merge dos Resultados da Lavínia (24/11)
+
+A Lavínia reescreveu o bloco de Resultados num .pptx exportado do deck. Os slides 1 a 8 e 14 a 18 vieram iguais, com texto e notas. Os quatro slides dela (`fig-t1`, `fig-t2`, `fig-pp3`, `respostas`) viraram cinco, em linguagem mais direta e sem figuras: `res-contexto`, `res-ordem`, `res-modelos`, `res-vago` e `discussao`. Foram refeitos em HTML no estilo do deck, com o texto e as notas dela.
+
+Os números foram conferidos com `resultados.csv` e `docs/08`. Batem: 75 % e 100 %, 18 % a mais de custo em O2, US$ 0,24, 0,69 e 2,44 por sessão, Opus com 87 %, qualidade 6 e 4, e "8 vezes menos por teste ganho" (sobre a linha de base de 13/26). Decisões do Francisco sobre os pontos levantados:
+
+- **Convergência substantiva no slide 12** (0,35 → 0,63, que não conta concordância em "ausente"): mantida. A definição e a tabela foram para `docs/08`, seção 7, e a nota do slide diz que não é a métrica do artigo.
+- **"Mais limitado" com o guia** (uma sala por vez em 12 de 12): mantido como está. Registro: sem o guia o Sonnet também escolheu "uma sala" nas 6 sessões de P0.
+- **"46 de 50" na lição 4** (reservas simultâneas): mantido. A contagem não está registrada no repositório.
+- **Tempo:** o bloco dela fica com cerca de 8 min, e o total com cerca de 26 min.
+
+# Rodada 14 — plugin ligado aos resultados e revisão do deck (25/11/2026)
+
+## R14.1 Por quê
+
+O grupo recebeu o retorno de que a parte do plugin estava desconectada do resto da apresentação: falava de v1 e v2 e entrava em detalhe técnico. Também houve retorno de que vários slides tinham informação demais para acompanhar a fala.
+
+## R14.2 Decisões do usuário sobre o plugin
+
+- **O gancho:** o que dependia de o agente escolher usar nem sempre foi usado. As skills da P2 foram abertas em 14 de 20 sessões, e o Haiku não abriu nenhuma nas 5 dele (`tools/analysis/esforco.mjs`). O plugin parte disso: o que importa entra sempre no contexto, e o que não pode falhar é verificado por código.
+- **Divisão do conhecimento.** O que é específico do repositório fica no `CLAUDE.md` dele: arquitetura, comandos e regras de domínio. O que o time compartilha fica numa referência distribuída pelo plugin: as 8 convenções, a regra para decisões em aberto e como o trabalho é verificado. Condição para valer: a referência é injetada pelo hook de início de sessão, nunca deixada para o agente consultar, e nenhum texto aparece nos dois lugares.
+- **O CI é do repositório, não do plugin.** O `ci.yml` da semente já roda `make verify` em todo push e PR. O plugin se liga a ele rodando o mesmo comando no fim da sessão. Não há workflow de CI dentro do plugin.
+- **Mudança mínima e quase só aditiva** sobre a v2 da Bianca. Proposta de um hook que carregaria a skill na primeira edição: retirada, porque a referência sempre presente já cobre o caso.
+- **Regra:** nenhum texto novo diz que o plugin não foi medido, seja em slides, notas, plano ou README. As rodadas anteriores deste log não foram reescritas.
+
+## R14.3 O plugin 2.0.0 (na `main`, com push em 25/11)
+
+- **A v2 virou o pacote único.** A branch `plugin-v2` foi fundida por merge, o que preservou a autoria da Bianca, e `meeting-rooms-conventions-v2/` passou a ser `meeting-rooms-conventions/` na versão 2.0.0. O catálogo continua com uma entrada.
+- **Referência e `CLAUDE.md` separados.** `hooks/referencia-do-time.md` substitui o guia injetado. O `templates/CLAUDE.md` perdeu a seção das convenções e ganhou uma linha dizendo que elas chegam pelo plugin. Um teste reprova se algum parágrafo aparecer nos dois.
+- **`make verify` no fim do turno.** O `stop-check` roda `make verify` quando a sessão alterou algo e o projeto tem esse alvo. Um diff que já passou não é verificado de novo. Numa cópia da semente, a verificação levou 9,5 s.
+- **Testes e validação:** 21 testes em `plugin/test/` e `claude plugin validate` passando no plugin e no catálogo. A revisão final da branch encontrou dois problemas importantes, ambos corrigidos com teste: `make verify` repetido a cada fim de turno e a skill `convencoes-do-projeto` contradizendo o hook.
+- **Menores adiados:**
+  - `make verify` sem timeout próprio (o hook tem 300 s);
+  - o limite de 2 devoluções vale para a sessão inteira;
+  - o README fala em "fim da sessão", mas o hook dispara a cada fim de turno;
+  - o `setup` da semente pode recriar o banco local se o schema mudar pelo terminal;
+  - duas linhas antigas em `plugin/README.md`;
+  - falta teste para `Makefile` sem o alvo `verify`.
+- **A tag `plugin-v1.0.0-p2`** continua reproduzindo a P2. Não foi criada tag para a 2.0.0.
+
+Spec em `docs/superpowers/specs/2026-11-25-plugin-ligado-aos-resultados-design.md` e plano em `docs/superpowers/plans/2026-11-25-plugin-ligado-aos-resultados.md`.
+
+## R14.4 Deck: 17 slides, cerca de 26 min
+
+- **Bloco 4 (Bianca), 4 slides:**
+  - Gancho (14): mesmas 20 sessões da P2 em pontos; skills abertas em 14 de 20 contra CLAUDE.md no contexto em 20 de 20.
+  - Fluxograma (15): Contexto → Agente → Verificação → CI → Merge, com as skills como único passo tracejado e a volta ao agente quando a verificação falha.
+  - Problema → solução (16).
+  - Encerramento (17).
+- **Saíram** Escada, Como o plugin age, Contrafactual e Limitações. As respostas que estavam em Limitações foram para a tabela de arguição do `docs/10`.
+- **Slides mais ilustrativos:** o 5 (fatores, com as chaves MODELO e HARNESS), o 8 (a coleta como fluxo de ícones) e os 14 a 16 foram refeitos com menos texto. O detalhe foi para as notas.
+- **Artigo final (25/11):** as perguntas do slide 4 passaram a ter a redação do artigo, seção III-A. A convergência substantiva (0,35 → 0,63) é a medida do próprio artigo (III-F, Fig. 5), então a ressalva nas notas do slide 12 saiu. O "46 de 50" está na Tabela VI do artigo.
+- **SVG nos slides:** o deck desenha cada SVG como imagem isolada, então as cores vão em hexadecimal nos atributos, nunca em `var()`.
+- **O grupo editou o deck no navegador ao mesmo tempo.** Toda publicação partiu da versão mais recente de cada arquivo, e a cópia em `docs/apresentacao/project/` foi mantida idêntica ao deck publicado. A capa já tem orientador e data da banca (27/11/2026).
+- **Sem commit:** slides, plano de apresentação e specs. O deck vai ser importado para o Google Slides.

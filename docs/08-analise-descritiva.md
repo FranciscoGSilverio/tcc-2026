@@ -124,3 +124,7 @@ Amplitude máxima: **0,115** (média 0,046). Em `qualidade`, nas 20 células das
 ## 6. Concordância do avaliador cego com humano
 
 Fora deste script: `node tools/analysis/concordancia.mjs`, sobre a amostra rotulada à mão (ver `tools/analysis/README.md`).
+
+## 7. Convergência substantiva (T2)
+
+A convergência substantiva conta só os pontos de decisão em que as três execuções da célula registraram a mesma categoria **e essa categoria não é `ausente`**. É a medida que o artigo usa (seção III-F, Tabela V e Fig. 5). Ela é calculada por `node tools/analysis/convergencia.mjs`, na coluna `substantiva(10)`, e a ligação com cada número do artigo está em `docs/10-reproducao-do-artigo.md`. No Sonnet, a média das células sobe de 0,35 sem contexto (P0) para 0,63 com contexto (P1 e P2). No Haiku ela é 0 nas duas células: a convergência de 0,70 em P2-O2 vem inteira de pontos em que as três execuções concordaram em não decidir.
