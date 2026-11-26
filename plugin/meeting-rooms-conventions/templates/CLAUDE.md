@@ -53,33 +53,10 @@ vez de inventar um envelope próprio: `validationFailed(message)` para 400,
 Os mesmos comandos existem como scripts do `package.json` (`npm run
 typecheck`, `npm run lint`, `npm run build`, `npm test`).
 
-## Convenções observadas nesta base
+## Convenções
 
-Um código que segue estas convenções costuma ser aceito sem ressalvas:
-
-1. Arquivo de código de produção novo entra em `src/modules/<recurso>/`,
-   `src/shared/` ou `src/plugins/` — nunca solto em outro lugar de `src/`.
-2. Nenhuma dependência nova é acrescentada ao `package.json` para resolver
-   este tipo de tarefa; o que já está instalado é suficiente.
-3. Arquivos de configuração (`tsconfig.json`, `eslint.config.js`,
-   `.prettierrc`, `vitest.config.ts`, `Makefile`, `Dockerfile`, arquivos do
-   Docker Compose, `.editorconfig`, `.gitignore`, o schema do Prisma) e a
-   seção `scripts` do `package.json` não precisam mudar para este tipo de
-   tarefa.
-4. Escapes de tipo — `any`, `as any`, `@ts-ignore`, `@ts-expect-error`,
-   asserção não-nula com `!` — não são o padrão do projeto. Quando um
-   valor não pode ser tipado com precisão, prefira modelar o tipo (o
-   auxiliar `DateString` de `src/shared/schema.ts` é um exemplo já pronto
-   para strings de data) em vez de escapar da checagem.
-5. Mudança de comportamento vem acompanhada de teste que observa esse
-   comportamento, não apenas de código de produção.
-6. Os testes já existentes descrevem comportamento que continua valendo.
-   Acrescentar teste a um arquivo de teste existente é comum e esperado;
-   remover ou enfraquecer um teste existente para fazê-lo passar não é.
-7. Chamadas de `console.*` não aparecem em código de produção — o projeto
-   não tem esse padrão de log. Em código de teste não há problema.
-8. Teste marcado para não rodar (`.skip`, `.only`, `.todo`) não fica
-   parado no repositório: ou o teste roda, ou não existe.
+As convenções do time chegam pelo plugin `meeting-rooms-conventions`, no
+início de cada sessão.
 
 ## Regras de domínio — reservas
 

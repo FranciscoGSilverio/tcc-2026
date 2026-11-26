@@ -104,16 +104,36 @@ test('every hook is a no-op outside the meeting-rooms project', () => {
   }
 });
 
-test('session start injects the project guide', () => {
+test('session start injects the team reference, not the repository guide', () => {
   const dir = makeProject();
   try {
     const result = runHook('session-start.mjs', dir, { session_id: newSession() });
     const output = JSON.parse(result.stdout);
     assert.equal(output.hookSpecificOutput.hookEventName, 'SessionStart');
-    assert.match(output.hookSpecificOutput.additionalContext, /Regras de domínio — reservas/);
+    const context = output.hookSpecificOutput.additionalContext;
+    for (const expected of [/Convenções do time/, /schema, constante e teste/, /make verify/, /CI do repositório/, /decidir-ambiguidades/]) {
+      assert.match(context, expected);
+    }
+    assert.doesNotMatch(context, /Regras de domínio — reservas/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// What is specific to the repository lives in its CLAUDE.md; what the team
+// shares comes from the plugin. Saying the same thing in both is what made
+// the P2 condition pay twice for the same text.
+test('the team reference and the CLAUDE.md template share no paragraph', () => {
+  const paragraphs = (text) => new Set(text.split(/\n\s*\n/)
+    .map((p) => p.trim().replace(/\s+/g, ' '))
+    .filter((p) => p.length >= 40 && !p.startsWith('#')));
+  const reference = readFileSync(join(HOOKS, 'referencia-do-time.md'), 'utf8');
+  const template = readFileSync(join(PKG, 'templates', 'CLAUDE.md'), 'utf8');
+  const shared = [...paragraphs(reference)].filter((p) => paragraphs(template).has(p));
+  assert.deepEqual(shared, []);
+  assert.match(template, /Regras de domínio — reservas/);
+  assert.match(template, /não é uma ordem para reorganizar/);
+  assert.match(template, /convenções do time chegam pelo plugin/);
 });
 
 test('the edit guard blocks configuration and the manifest, and lets source through', () => {

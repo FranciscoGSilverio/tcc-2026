@@ -7,7 +7,7 @@ description: Use ao acrescentar comportamento a um módulo existente desta API �
 
 Procedimento para acrescentar comportamento a um módulo de
 `src/modules/<recurso>/`. A arquitetura e as regras de domínio estão no
-guia do projeto, já no seu contexto; aqui está a ordem de trabalho.
+`CLAUDE.md` do repositório, já no seu contexto; aqui está a ordem de trabalho.
 
 ## Passo a passo
 
@@ -32,5 +32,5 @@ antes a skill `decidir-ambiguidades`.
 ## Ao mexer com reservas
 
 Toda operação que cria ou altera sala ou horário de uma reserva precisa
-respeitar as regras de domínio do guia. Reaproveite as verificações que o
+respeitar as regras de domínio do `CLAUDE.md`. Reaproveite as verificações que o
 serviço de reservas já tem em vez de reimplementá-las.
