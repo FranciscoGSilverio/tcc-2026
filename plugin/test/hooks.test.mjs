@@ -295,3 +295,33 @@ test('the stop check does not run make verify when nothing changed', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// Stop fires at the end of every turn. Once a check passed, later turns that
+// change nothing must not pay for make verify again.
+test('the stop check does not verify again until something changes after a passing check', () => {
+  const counterDir = mkdtempSync(join(tmpdir(), 'mrc-contagem-'));
+  const counter = join(counterDir, 'rodou.txt');
+  const dir = makeProject({ makefile: `verify:\n\t@echo x >> ${counter}\n` });
+  const runs = () => (existsSync(counter) ? readFileSync(counter, 'utf8').trim().split('\n').length : 0);
+  try {
+    const session = newSession();
+    runHook('session-start.mjs', dir, { session_id: session });
+    cleanChange(dir);
+    assert.equal(runHook('stop-check.mjs', dir, { session_id: session }).stdout, '');
+    assert.equal(runHook('stop-check.mjs', dir, { session_id: session }).stdout, '');
+    assert.equal(runs(), 1);
+
+    writeFileSync(join(dir, 'src', 'modules', 'rooms', 'service.ts'), 'export const a = 3;\n');
+    runHook('stop-check.mjs', dir, { session_id: session });
+    assert.equal(runs(), 2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(counterDir, { recursive: true, force: true });
+  }
+});
+
+test('the conventions skill does not contradict what the stop check runs', () => {
+  const skill = readFileSync(join(PKG, 'skills', 'convencoes-do-projeto', 'SKILL.md'), 'utf8');
+  assert.doesNotMatch(skill, /não se os testes passam/);
+  assert.match(skill, /make verify/);
+});

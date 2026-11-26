@@ -26,5 +26,6 @@ Ela devolve a lista do que falhou, com arquivo quando há. Corrija cada item
 e encerre de novo. Ela insiste no máximo duas vezes por sessão; depois
 disso deixa encerrar, mas o problema continua no código.
 
-Rode também `make verify` antes de encerrar: a verificação automática
-olha convenções, não se os testes passam.
+A mesma verificação roda `make verify` (typecheck, lint, build e testes),
+o mesmo comando que o CI do repositório roda em todo pull request. Se ele
+falhar, a saída vem junto com a lista.

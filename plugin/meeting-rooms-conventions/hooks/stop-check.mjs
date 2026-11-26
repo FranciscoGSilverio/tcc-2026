@@ -7,7 +7,8 @@
 //
 // It sends the agent back at most MAX_BLOCKS times per session, so a
 // violation the agent cannot fix never traps it in a loop.
-import { checkProject, RULE_NAMES } from './lib/conventions.mjs';
+import { createHash } from 'node:crypto';
+import { checkProject, RULE_NAMES, sessionDiff } from './lib/conventions.mjs';
 import { runVerify } from './lib/verify.mjs';
 import { baseCommit, isProject, projectDir, readInput, readState, writeState } from './lib/project.mjs';
 
@@ -24,12 +25,20 @@ if (blocks >= MAX_BLOCKS) process.exit(0);
 const base = baseCommit(dir, input.session_id);
 if (!base) process.exit(0);
 
+// Stop fires at the end of every turn. A diff that already passed is not
+// checked again, so a turn that changes nothing pays for nothing.
+const fingerprint = createHash('sha256').update(sessionDiff(dir, base) ?? '').digest('hex');
+if (state.passed === fingerprint) process.exit(0);
+
 const result = checkProject(dir, base);
 if (result.skipped) process.exit(0);
 
 const verify = runVerify(dir);
 const verifyFailed = verify.ran && !verify.ok;
-if (result.violations.length === 0 && !verifyFailed) process.exit(0);
+if (result.violations.length === 0 && !verifyFailed) {
+  writeState(input.session_id, { ...state, base, passed: fingerprint });
+  process.exit(0);
+}
 
 writeState(input.session_id, { ...state, base, blocks: blocks + 1 });
 const lines = [];
