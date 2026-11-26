@@ -1,0 +1,12 @@
+{
+  "name": "meeting-rooms-conventions-v2",
+  "description": "Convenções do projeto de salas de reunião, com verificação automática por hooks — versão experimental derivada da condição P2, não medida",
+  "version": "2.0.0-experimental",
+  "author": {
+    "name": "Bianca Souza, Francisco Silvério, Lavínia Amaral e Vinícius Telles"
+  },
+  "homepage": "https://github.com/FranciscoGSilverio/tcc-2026/tree/main/plugin/meeting-rooms-conventions-v2",
+  "repository": "https://github.com/FranciscoGSilverio/tcc-2026",
+  "license": "MIT",
+  "keywords": ["convencoes", "fastify", "prisma", "typescript", "testes", "hooks"]
+}
